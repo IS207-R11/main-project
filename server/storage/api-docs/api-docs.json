@@ -1,0 +1,2203 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "FoodLife API Documentation",
+        "description": "RESTful API specifications for FoodLife Backend",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/api",
+            "description": "API Server"
+        }
+    ],
+    "paths": {
+        "/auth/signin": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User sign in",
+                "description": "Authenticate user with username and password, returns access and refresh tokens",
+                "operationId": "3b511fa8d20576f762b94d044fe91438",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "username",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "example": "john_doe"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Secret123!"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sign in successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "access_token": {
+                                            "type": "string"
+                                        },
+                                        "refresh_token": {
+                                            "type": "string"
+                                        },
+                                        "token_type": {
+                                            "type": "string",
+                                            "example": "Bearer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials or disabled account"
+                    }
+                }
+            }
+        },
+        "/auth/signup": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User sign up",
+                "description": "Register a new user account with username, email, and password",
+                "operationId": "67fd37db7cecd428148771f4e12fb15a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "username",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "example": "new_user"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "new_user@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Secret123!"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/auth/signout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User sign out",
+                "description": "Invalidate refresh token and log user out",
+                "operationId": "e331a57ed9b27dc4b469e8e1ca2c3470",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "example": "john_doe"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Signed out successfully"
+                    }
+                }
+            }
+        },
+        "/auth/refresh-token": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Refresh access token",
+                "description": "Provide a valid refresh token to get a new access token",
+                "operationId": "0bf199e19c06d23a1bf8759c4648856a",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "refreshToken": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Token refreshed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "access_token": {
+                                            "type": "string"
+                                        },
+                                        "token_type": {
+                                            "type": "string",
+                                            "example": "Bearer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid or expired refresh token"
+                    }
+                }
+            }
+        },
+        "/auth/change-password/{userID}": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Change user password",
+                "description": "Update password for a specific user (Allowed for OWNER and ADMIN)",
+                "operationId": "dcfa1f46d3d8df589fd1818fdcbf2369",
+                "parameters": [
+                    {
+                        "name": "userID",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "newPassword"
+                                ],
+                                "properties": {
+                                    "oldPassword": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "newPassword": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password changed successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized or incorrect old password"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods": {
+            "get": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Get list of foods with filters, pagination, and sorting",
+                "operationId": "d0bcfb89a41dea9059c953cff927c2d7",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "session",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "MORNING",
+                                "LUNCH",
+                                "EVENING",
+                                "AFTERNOON"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "is_veg",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        }
+                    },
+                    {
+                        "name": "price_range",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "number"
+                            }
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "food_name",
+                                "price"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "asc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of foods"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Create a new food item (USER or ADMIN)",
+                "operationId": "1ba74cb395bebf4c325820651c43f4dc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "food_name",
+                                    "is_veg"
+                                ],
+                                "properties": {
+                                    "food_name": {
+                                        "type": "string",
+                                        "example": "Pho Bo"
+                                    },
+                                    "quip": {
+                                        "type": "string"
+                                    },
+                                    "sub": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50000
+                                    },
+                                    "image_url": {
+                                        "type": "string"
+                                    },
+                                    "note": {
+                                        "type": "string"
+                                    },
+                                    "is_veg": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "sessions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "MORNING",
+                                                "LUNCH",
+                                                "EVENING",
+                                                "AFTERNOON"
+                                            ]
+                                        }
+                                    },
+                                    "nutritions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2,
+                                            3
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Food created successfully"
+                    },
+                    "400": {
+                        "description": "Constraint violation or invalid foreign key"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/options": {
+            "get": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Search foods and return top 5 options (ID and name only)",
+                "operationId": "98ade332d6f159894ac652a7633aecef",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Top 5 food options"
+                    }
+                }
+            }
+        },
+        "/foods/{foodId}": {
+            "put": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Update a food item (ADMIN only)",
+                "operationId": "8ecf59be36b267c40f2bf5c0ab40ea2a",
+                "parameters": [
+                    {
+                        "name": "foodId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "food_name": {
+                                        "type": "string"
+                                    },
+                                    "quip": {
+                                        "type": "string"
+                                    },
+                                    "sub": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "image_url": {
+                                        "type": "string"
+                                    },
+                                    "note": {
+                                        "type": "string"
+                                    },
+                                    "is_veg": {
+                                        "type": "boolean"
+                                    },
+                                    "sessions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "nutritions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Food updated successfully"
+                    },
+                    "400": {
+                        "description": "Constraint violation"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Food not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Delete food item (ADMIN only)",
+                "operationId": "9f48dac34ea1ddb51f45e5bf599a6237",
+                "parameters": [
+                    {
+                        "name": "foodId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Food deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Food not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/{foodId}/change-status": {
+            "put": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Change food status (ADMIN or MODERATOR)",
+                "operationId": "315c4ca941c8230bd3f1cf12606478e5",
+                "parameters": [
+                    {
+                        "name": "foodId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "ACTIVE",
+                                            "PENDING",
+                                            "DISABLED"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Food status updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Food not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/gacha": {
+            "get": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Random gacha food recommendations",
+                "operationId": "78ccaa2ca568fc28573a33cf59fa24dc",
+                "parameters": [
+                    {
+                        "name": "num",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "session",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "MORNING",
+                                "LUNCH",
+                                "EVENING",
+                                "AFTERNOON"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "is_veg",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        }
+                    },
+                    {
+                        "name": "price_range",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "number"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Random list of foods"
+                    }
+                }
+            }
+        },
+        "/foods/favorite/{userId}": {
+            "get": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Get favorite foods of a user (OWNER only, status ACTIVE)",
+                "operationId": "00ffcb2ea5be9f91b1ab8c4a199d49b2",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Favorite foods list"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/scanned/{userId}": {
+            "get": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Get scanned foods history of a user (OWNER only, status ACTIVE)",
+                "operationId": "f254247f4fc91879e3d0de4dde0364db",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Scanned foods list"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/eaten/{userId}": {
+            "get": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Get eaten foods history of a user (OWNER only)",
+                "operationId": "8a17295835eb93ee3eca66fa089d7c6e",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Eaten foods list"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/favorite": {
+            "post": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Add food to favorites (OWNER only)",
+                "operationId": "1d3bacb1fb470bfef342272b5cd99ba6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "food_id"
+                                ],
+                                "properties": {
+                                    "food_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Added to favorites"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Food not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Remove food from favorites via query param (OWNER only)",
+                "operationId": "eae72680c26bede74a811b8dc0c4ed0c",
+                "parameters": [
+                    {
+                        "name": "food_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removed from favorites"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/scanned": {
+            "post": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Add food to scanned history (OWNER only)",
+                "operationId": "67be04092286b1b956b896beead25437",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "food_id"
+                                ],
+                                "properties": {
+                                    "food_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Added to scanned history"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Food not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/eaten": {
+            "post": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Record an eaten meal with food items (OWNER only)",
+                "operationId": "06a90d20b07426f4a839c21350a1a3a8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "meal_type",
+                                    "items"
+                                ],
+                                "properties": {
+                                    "meal_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "BREAKFAST",
+                                            "LUNCH",
+                                            "DINNER",
+                                            "SNACK"
+                                        ]
+                                    },
+                                    "eaten_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "note": {
+                                        "type": "string"
+                                    },
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "food_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "quantity": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 1.5
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Eaten food recorded successfully"
+                    },
+                    "400": {
+                        "description": "Foreign key error or invalid item"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Delete eaten food entry via query param (OWNER only)",
+                "operationId": "e65fa05cb7e4d8d76c681fa32eb8ef35",
+                "parameters": [
+                    {
+                        "name": "eaten_food_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Eaten food entry deleted"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Eaten food not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/health-profiles/{userId}": {
+            "get": {
+                "tags": [
+                    "Health Profiles"
+                ],
+                "summary": "Get list of health profiles for a user",
+                "operationId": "5a9046abf1463cef5fcb8922375e80d2",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of health profiles"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Health Profiles"
+                ],
+                "summary": "Create a new health profile",
+                "operationId": "f9ebf19f59c5245af848a3ab10447bec",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "weight",
+                                    "height",
+                                    "date_of_measuring",
+                                    "measuring_method"
+                                ],
+                                "properties": {
+                                    "weight": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 65.5
+                                    },
+                                    "height": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 170
+                                    },
+                                    "date_of_measuring": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-20"
+                                    },
+                                    "measuring_method": {
+                                        "type": "string",
+                                        "enum": [
+                                            "STANDING",
+                                            "LAYING"
+                                        ]
+                                    },
+                                    "labor_level": {
+                                        "type": "string",
+                                        "enum": [
+                                            "LOW",
+                                            "MID",
+                                            "HEAVY"
+                                        ]
+                                    },
+                                    "maternity_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "FIRST_3_MONTHS",
+                                            "MID_3_MONTHS",
+                                            "FINAL_3_MONTHS",
+                                            "BREASTFEEDING"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Health profile created successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/health-profiles/{userId}/{profileId}": {
+            "put": {
+                "tags": [
+                    "Health Profiles"
+                ],
+                "summary": "Update a health profile",
+                "operationId": "e9b88126908c54ae86ebba7c5a902e9f",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "profileId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "weight": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "height": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "date_of_measuring": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "measuring_method": {
+                                        "type": "string",
+                                        "enum": [
+                                            "STANDING",
+                                            "LAYING"
+                                        ]
+                                    },
+                                    "labor_level": {
+                                        "type": "string",
+                                        "enum": [
+                                            "LOW",
+                                            "MID",
+                                            "HEAVY"
+                                        ]
+                                    },
+                                    "maternity_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "FIRST_3_MONTHS",
+                                            "MID_3_MONTHS",
+                                            "FINAL_3_MONTHS",
+                                            "BREASTFEEDING"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Health profile updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Health profile not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/health-profiles/{profileId}": {
+            "delete": {
+                "tags": [
+                    "Health Profiles"
+                ],
+                "summary": "Delete a health profile (OWNER only)",
+                "operationId": "46009154674ca22e556ade6b4a96bd8a",
+                "parameters": [
+                    {
+                        "name": "profileId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Health profile deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Health profile not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/nutritions": {
+            "get": {
+                "tags": [
+                    "Nutritions"
+                ],
+                "summary": "Get list of nutritions with search and sorting",
+                "operationId": "2b40e060b7ea7636b74350d09e0b22ce",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "asc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of nutritions"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Nutritions"
+                ],
+                "summary": "Create a new nutrition item (USER or ADMIN)",
+                "operationId": "e7f180b050ff938f1bee83bebedb3358",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nutrition_name"
+                                ],
+                                "properties": {
+                                    "nutrition_name": {
+                                        "type": "string",
+                                        "example": "Protein"
+                                    },
+                                    "calories": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 4
+                                    },
+                                    "serving_size_g": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 100
+                                    },
+                                    "fat_total_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "fat_saturated_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "fat_trans_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "protein_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "sodium_mg": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "potassium_mg": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "cholesterol_mg": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "carbohydrates_total_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "fiber_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "sugar_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Nutrition created successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/nutritions/options": {
+            "get": {
+                "tags": [
+                    "Nutritions"
+                ],
+                "summary": "Search nutritions and return top 5 options (ID and name only)",
+                "operationId": "4517f440ad1600bfb61f9a67529bb9b8",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Top 5 nutrition options"
+                    }
+                }
+            }
+        },
+        "/nutritions/{nutritionId}": {
+            "get": {
+                "tags": [
+                    "Nutritions"
+                ],
+                "summary": "Get details of a nutrition item",
+                "operationId": "2122e7ca4d5bcde5048c2237628ce682",
+                "parameters": [
+                    {
+                        "name": "nutritionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nutrition details"
+                    },
+                    "404": {
+                        "description": "Nutrition not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Nutritions"
+                ],
+                "summary": "Update nutrition item (ADMIN only)",
+                "operationId": "b310904c7844b11ac6329074479a81c5",
+                "parameters": [
+                    {
+                        "name": "nutritionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nutrition_name": {
+                                        "type": "string"
+                                    },
+                                    "calories": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "serving_size_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "fat_total_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "fat_saturated_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "fat_trans_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "protein_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "sodium_mg": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "potassium_mg": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "cholesterol_mg": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "carbohydrates_total_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "fiber_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "sugar_g": {
+                                        "type": "number",
+                                        "format": "float"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Nutrition updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Nutrition not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Nutritions"
+                ],
+                "summary": "Delete nutrition item (ADMIN only)",
+                "operationId": "0a448e1c8aa978bc885f65a9cc212c2d",
+                "parameters": [
+                    {
+                        "name": "nutritionId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nutrition deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Nutrition not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/reports": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get list of reports (ADMIN or MODERATOR)",
+                "operationId": "81a8afd2aa3c69c6b5565682c3a78dd7",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "resolved_at",
+                                "created_at"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of reports"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Submit a feedback or error report (USER)",
+                "operationId": "39a2e936857d7fa55026c1daac0f01d0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "content"
+                                ],
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "default": "ERROR",
+                                        "enum": [
+                                            "COMMENT",
+                                            "ERROR"
+                                        ]
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "App crashes on food detail"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Steps to reproduce the crash..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Report created successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/reports/{reportId}/change-status": {
+            "put": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Change status of a report (ADMIN or MODERATOR)",
+                "operationId": "46d9e264066d5a558c0ffdb9949d3914",
+                "parameters": [
+                    {
+                        "name": "reportId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "RESOLVED",
+                                            "PENDING"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Report status updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Report not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Server status health check",
+                "description": "Check if the backend server is running",
+                "operationId": "0cb9ed9a3c71c48e41602fffb66e0b88",
+                "responses": {
+                    "200": {
+                        "description": "Server is running",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string",
+                                    "example": "Server is running"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get list of users with pagination and search",
+                "operationId": "7208c29037df2b8bb02499ba39ed8a78",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of users with pagination"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/users/{id}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user details by ID",
+                "operationId": "6946bbab7898f59a09e3c8e529a38907",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User details"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update user profile (OWNER only)",
+                "operationId": "05028d02ea3e9a99abd6260cfe05b179",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "username": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "date_of_birth": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "avatar_url": {
+                                        "type": "string"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "MALE",
+                                            "FEMALE"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete user account (OWNER or ADMIN)",
+                "operationId": "b3d28da5dc9de7fc1bd425f93b54ff7b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/users/{id}/change-status": {
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Change user status (ADMIN or MODERATOR)",
+                "operationId": "495937f0e48c9e05c38963d8851f0678",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "ACTIVE",
+                                            "DISABLED",
+                                            "BANNED"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Enter Bearer Token in format: Bearer <token>",
+                "name": "Authorization",
+                "in": "header",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Authentication",
+            "description": "Authentication"
+        },
+        {
+            "name": "Foods",
+            "description": "Foods"
+        },
+        {
+            "name": "Health Profiles",
+            "description": "Health Profiles"
+        },
+        {
+            "name": "Nutritions",
+            "description": "Nutritions"
+        },
+        {
+            "name": "Reports",
+            "description": "Reports"
+        },
+        {
+            "name": "System",
+            "description": "System"
+        },
+        {
+            "name": "Users",
+            "description": "Users"
+        }
+    ],
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ]
+}
