@@ -8,8 +8,8 @@ use OpenApi\Attributes as OA;
 
 #[OA\Info(
     version: '1.0.0',
-    title: 'FoodLife API Documentation',
-    description: 'RESTful API specifications for FoodLife Backend'
+    title: 'AnGi API Documentation',
+    description: 'RESTful API specifications for AnGi Backend'
 )]
 #[OA\Server(
     url: '/api',

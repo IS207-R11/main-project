@@ -118,11 +118,11 @@ class AuthController extends Controller
         }
 
         $username = $request->input('username');
-        $email = $request->input('email') ?? ($username.'@foodlife.app');
+        $email = $request->input('email') ?? ($username.'@AnGi.app');
 
         // Check if generated email exists
         if (User::where('email', $email)->exists()) {
-            $email = $username.'_'.time().'@foodlife.app';
+            $email = $username.'_'.time().'@AnGi.app';
         }
 
         $user = User::create([

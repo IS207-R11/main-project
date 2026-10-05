@@ -1,8 +1,8 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "FoodLife API Documentation",
-        "description": "RESTful API specifications for FoodLife Backend",
+        "title": "AnGi API Documentation",
+        "description": "RESTful API specifications for AnGi Backend",
         "version": "1.0.0"
     },
     "servers": [

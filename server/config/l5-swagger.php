@@ -5,7 +5,7 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'FoodLife API Documentation',
+                'title' => 'AnGi API Documentation',
             ],
             'routes' => [
                 /*
