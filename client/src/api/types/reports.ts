@@ -19,6 +19,7 @@ export interface Report {
   content: string;
   resolved_at: string | null;
   created_at: string | null;
+  updated_at?: string | null;
 }
 
 export interface SubmitReportRequest {
@@ -31,4 +32,7 @@ export interface ChangeReportStatusRequest {
   status: ReportStatus;
 }
 
-export type ListReportsParams = SortablePaginationParams;
+export interface ListReportsParams extends SortablePaginationParams {
+  status?: ReportStatus;
+  type?: ReportType;
+}

@@ -9,21 +9,27 @@ export interface SignInResponse {
   access_token: string;
   refresh_token: string;
   token_type: string;
+  user?: User;
 }
 
 export interface SignUpRequest {
   username: string;
   password: string;
   email?: string;
+  address?: string;
 }
 
 export interface SignUpResponse {
   message: string;
+  access_token?: string;
+  refresh_token?: string;
+  token_type?: string;
   user: User;
 }
 
 export interface SignOutRequest {
   username?: string;
+  refreshToken?: string;
 }
 
 export interface RefreshTokenRequest {

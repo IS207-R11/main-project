@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 use OpenApi\Attributes as OA;
 
 class AuthController extends Controller
@@ -52,6 +53,13 @@ class AuthController extends Controller
     )]
     public function signin(Request $request): JsonResponse
     {
+        $raw = $request->getContent();
+        if ($request->isJson() && !empty($raw) && json_decode($raw) === null && json_last_error() !== JSON_ERROR_NONE) {
+            return response()->json([
+                'message' => 'Dữ liệu JSON không hợp lệ: '.json_last_error_msg().'. Vui lòng kiểm tra lại cú pháp (ví dụ: dấu phẩy thừa).',
+            ], 400);
+        }
+
         $validator = Validator::make($request->all(), [
             'username' => 'required|string',
             'password' => 'required|string',
@@ -112,10 +120,25 @@ class AuthController extends Controller
     )]
     public function signup(Request $request): JsonResponse
     {
+        $raw = $request->getContent();
+        if ($request->isJson() && !empty($raw) && json_decode($raw) === null && json_last_error() !== JSON_ERROR_NONE) {
+            return response()->json([
+                'message' => 'Dữ liệu JSON không hợp lệ: '.json_last_error_msg().'. Vui lòng kiểm tra lại cú pháp (ví dụ: dấu phẩy thừa).',
+            ], 400);
+        }
+
         $validator = Validator::make($request->all(), [
             'username' => 'required|string|max:100|unique:USERS,username',
             'email' => 'nullable|email|max:255|unique:USERS,email',
-            'password' => 'required|string|min:6',
+            'password' => [
+                'required',
+                'string',
+                Password::min(8)
+                    ->letters()
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols(),
+            ],
             'address' => 'nullable|string|max:255',
         ]);
 
@@ -283,12 +306,27 @@ class AuthController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        $validator = Validator::make($request->all(), [
+            'newPassword' => [
+                'required',
+                'string',
+                Password::min(8)
+                    ->letters()
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols(),
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
         $oldPassword = $request->input('oldPassword') ?? $request->input('old_password');
         $newPassword = $request->input('newPassword') ?? $request->input('new_password');
-
-        if (! $newPassword || strlen($newPassword) < 6) {
-            return response()->json(['message' => 'New password must be at least 6 characters'], 422);
-        }
 
         // Only enforce old password check if not an Admin
         if (! $isAdmin) {

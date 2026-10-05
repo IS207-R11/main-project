@@ -1,6 +1,7 @@
 import { apiClient } from '../client';
 import { ApiResponse, MessageResponse, PaginatedResponse } from '../types/common';
 import {
+  ChangeUserRoleRequest,
   ChangeUserStatusRequest,
   ListUsersParams,
   UpdateUserRequest,
@@ -31,7 +32,7 @@ export const usersApi = {
 
   /**
    * PUT /users/{id}
-   * Update user profile (OWNER only)
+   * Update user profile (OWNER or ADMIN; cannot change role, status, created_at)
    */
   update: (id: number, data: UpdateUserRequest): Promise<ApiResponse<User>> => {
     return apiClient<ApiResponse<User>>(`/users/${id}`, {
@@ -41,12 +42,16 @@ export const usersApi = {
   },
 
   /**
-   * DELETE /users/{id}
-   * Delete user account (OWNER or ADMIN)
+   * PUT /users/{id}/change-role
+   * Change user role (ADMIN only)
    */
-  delete: (id: number): Promise<MessageResponse> => {
-    return apiClient<MessageResponse>(`/users/${id}`, {
-      method: 'DELETE',
+  changeRole: (
+    id: number,
+    data: ChangeUserRoleRequest
+  ): Promise<ApiResponse<User>> => {
+    return apiClient<ApiResponse<User>>(`/users/${id}/change-role`, {
+      method: 'PUT',
+      body: data,
     });
   },
 
@@ -61,6 +66,16 @@ export const usersApi = {
     return apiClient<ApiResponse<User>>(`/users/${id}/change-status`, {
       method: 'PUT',
       body: data,
+    });
+  },
+
+  /**
+   * DELETE /users/{id}
+   * Delete user account (OWNER or ADMIN)
+   */
+  delete: (id: number): Promise<MessageResponse> => {
+    return apiClient<MessageResponse>(`/users/${id}`, {
+      method: 'DELETE',
     });
   },
 };

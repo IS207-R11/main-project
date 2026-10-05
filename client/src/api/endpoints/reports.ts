@@ -20,19 +20,19 @@ export const reportsApi = {
   },
 
   /**
-   * POST /reports
-   * Submit a feedback or error report (USER, ADMIN or MODERATOR)
+   * PUT /reports
+   * Submit a feedback or error report (User can only PUT, default is PENDING)
    */
   create: (data: SubmitReportRequest): Promise<ApiResponse<Report>> => {
     return apiClient<ApiResponse<Report>>('/reports', {
-      method: 'POST',
+      method: 'PUT',
       body: data,
     });
   },
 
   /**
    * PUT /reports/{reportId}/change-status
-   * Change status of a report (ADMIN or MODERATOR)
+   * Change status of a report (ADMIN only)
    */
   changeStatus: (
     reportId: number,

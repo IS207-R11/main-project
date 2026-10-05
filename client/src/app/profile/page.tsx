@@ -2,8 +2,16 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { usersApi, healthProfilesApi, authApi } from '@/api';
-import { HealthProfile, CreateHealthProfileRequest } from '@/api/types';
+import { usersApi, healthProfilesApi, authApi, foodsApi } from '@/api';
+import {
+  HealthProfile,
+  CreateHealthProfileRequest,
+  MeasuringMethod,
+  LaborLevel,
+  MaternityStatus,
+  UserFoodItem,
+} from '@/api/types';
+import { validatePassword } from '@/lib/validation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,38 +24,62 @@ import {
   faUser,
   faHeartPulse,
   faLock,
+  faHeart,
+  faBan,
   faWeightScale,
   faRulerVertical,
   faCalendarDay,
   faCheck,
   faTriangleExclamation,
   faArrowRightToBracket,
+  faTrashCan,
+  faPencil,
+  faMapMarkerAlt,
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isLoading: authLoading, openAuthModal, refreshUser } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, openAuthModal, refreshUser, logout } =
+    useAuth();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'profile' | 'health' | 'security'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'health' | 'preferences' | 'security'>(
+    'profile'
+  );
 
   // Profile update form state
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [dob, setDob] = useState('');
-  const [gender, setGender] = useState<'MALE' | 'FEMALE' | ''>('');
-  const [profileMsg, setProfileMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [address, setAddress] = useState('');
+  const [profileMsg, setProfileMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(
+    null
+  );
   const [profileSaving, setProfileSaving] = useState(false);
 
   // Health Profile state
-  const [_healthProfiles, setHealthProfiles] = useState<HealthProfile[]>([]);
+  const [healthProfiles, setHealthProfiles] = useState<HealthProfile[]>([]);
   const [_healthLoading, setHealthLoading] = useState(false);
   const [weight, setWeight] = useState<number>(60);
   const [height, setHeight] = useState<number>(170);
-  const [measuringMethod, setMeasuringMethod] = useState<'STANDING' | 'LAYING'>('STANDING');
-  const [laborLevel, setLaborLevel] = useState<'LOW' | 'MID' | 'HEAVY'>('MID');
-  const [dateOfMeasuring, setDateOfMeasuring] = useState(new Date().toISOString().split('T')[0]);
-  const [healthMsg, setHealthMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [measuringMethod, setMeasuringMethod] = useState<MeasuringMethod>('STANDING');
+  const [laborLevel, setLaborLevel] = useState<LaborLevel>('MID');
+  const [maternityStatus, setMaternityStatus] = useState<MaternityStatus | ''>('');
+  const [dateOfMeasuring, setDateOfMeasuring] = useState(
+    new Date().toISOString().split('T')[0]
+  );
+  const [healthMsg, setHealthMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(
+    null
+  );
   const [healthSaving, setHealthSaving] = useState(false);
+
+  // Preferences state (Favorite & Hated)
+  const [favorites, setFavorites] = useState<UserFoodItem[]>([]);
+  const [hated, setHated] = useState<UserFoodItem[]>([]);
+  const [loadingPref, setLoadingPref] = useState(false);
+  const [editingPref, setEditingPref] = useState<{
+    type: 'favorite' | 'hated';
+    food_id: number;
+    note: string;
+  } | null>(null);
 
   // Security password state
   const [oldPassword, setOldPassword] = useState('');
@@ -59,10 +91,9 @@ export default function ProfilePage() {
   // Populate user data
   useEffect(() => {
     if (user) {
+      setUsername(user.username || '');
       setEmail(user.email || '');
-      setPhone(user.phone || '');
-      setDob(user.date_of_birth || '');
-      setGender(user.gender || '');
+      setAddress(user.address || '');
     }
   }, [user]);
 
@@ -72,14 +103,16 @@ export default function ProfilePage() {
     try {
       setHealthLoading(true);
       const res = await healthProfilesApi.listByUser(user.user_id, { pageSize: 10 });
-      if (res.data) {
+      if (res && res.data) {
         setHealthProfiles(res.data);
         if (res.data.length > 0) {
           const latest = res.data[0];
           setWeight(latest.weight);
           setHeight(latest.height);
-          setMeasuringMethod(latest.measuring_method);
+          if (latest.measuring_method) setMeasuringMethod(latest.measuring_method);
           if (latest.labor_level) setLaborLevel(latest.labor_level);
+          if (latest.maternity_status) setMaternityStatus(latest.maternity_status);
+          if (latest.date_of_measuring) setDateOfMeasuring(latest.date_of_measuring);
         }
       }
     } catch (e) {
@@ -89,11 +122,30 @@ export default function ProfilePage() {
     }
   }, [user]);
 
+  // Load preferences (Favorites & Hated)
+  const loadPreferences = useCallback(async () => {
+    if (!user?.user_id) return;
+    try {
+      setLoadingPref(true);
+      const [favRes, hatedRes] = await Promise.all([
+        foodsApi.getFavorites(user.user_id, { pageSize: 50 }),
+        foodsApi.getHated(user.user_id, { pageSize: 50 }),
+      ]);
+      if (favRes?.data) setFavorites(favRes.data);
+      if (hatedRes?.data) setHated(hatedRes.data);
+    } catch (e) {
+      console.warn('Failed to load food preferences:', e);
+    } finally {
+      setLoadingPref(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (user?.user_id) {
       loadHealthProfiles();
+      loadPreferences();
     }
-  }, [user?.user_id, loadHealthProfiles]);
+  }, [user?.user_id, loadHealthProfiles, loadPreferences]);
 
   if (authLoading) {
     return (
@@ -123,7 +175,8 @@ export default function ProfilePage() {
 
   // Calculate BMI
   const heightInMeters = height / 100;
-  const bmi = heightInMeters > 0 ? Math.round((weight / (heightInMeters * heightInMeters)) * 10) / 10 : 0;
+  const bmi =
+    heightInMeters > 0 ? Math.round((weight / (heightInMeters * heightInMeters)) * 10) / 10 : 0;
   let bmiCategory = 'Bình thường';
   let bmiColor = 'text-emerald-500';
   if (bmi < 18.5) {
@@ -138,7 +191,7 @@ export default function ProfilePage() {
   }
 
   // Estimated daily calories (BMR approx * activity factor)
-  const bmr = 10 * weight + 6.25 * height - 5 * 25 + (gender === 'FEMALE' ? -161 : 5);
+  const bmr = 10 * weight + 6.25 * height - 5 * 25 + 5;
   const activityMultiplier = laborLevel === 'LOW' ? 1.2 : laborLevel === 'MID' ? 1.55 : 1.75;
   const targetCalories = Math.round(bmr * activityMultiplier);
 
@@ -148,10 +201,9 @@ export default function ProfilePage() {
     try {
       setProfileSaving(true);
       await usersApi.update(user.user_id, {
-        email: email || undefined,
-        phone: phone || undefined,
-        date_of_birth: dob || undefined,
-        gender: (gender as 'MALE' | 'FEMALE') || undefined,
+        username: username.trim() || undefined,
+        email: email.trim() || undefined,
+        address: address.trim() || undefined,
       });
       await refreshUser();
       setProfileMsg({ text: 'Cập nhật thông tin cá nhân thành công!', type: 'success' });
@@ -173,22 +225,37 @@ export default function ProfilePage() {
         date_of_measuring: dateOfMeasuring,
         measuring_method: measuringMethod,
         labor_level: laborLevel,
+        maternity_status: (maternityStatus as MaternityStatus) || undefined,
       };
       await healthProfilesApi.create(user.user_id, payload);
       await loadHealthProfiles();
       setHealthMsg({ text: 'Đã lưu chỉ số sức khỏe mới!', type: 'success' });
     } catch (err: unknown) {
-      setHealthMsg({ text: err instanceof Error ? err.message : 'Lỗi cập nhật sức khỏe', type: 'error' });
+      setHealthMsg({
+        text: err instanceof Error ? err.message : 'Lỗi cập nhật sức khỏe',
+        type: 'error',
+      });
     } finally {
       setHealthSaving(false);
+    }
+  };
+
+  const handleDeleteHealthProfile = async (profileId: number) => {
+    if (!confirm('Bạn có chắc muốn xóa bản ghi chỉ số sức khỏe này?')) return;
+    try {
+      await healthProfilesApi.delete(profileId);
+      setHealthProfiles((prev) => prev.filter((p) => p.profile_id !== profileId));
+    } catch (err) {
+      console.error('Lỗi khi xóa health profile:', err);
     }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setSecMsg(null);
-    if (!newPassword || newPassword.length < 6) {
-      setSecMsg({ text: 'Mật khẩu mới tối thiểu 6 ký tự', type: 'error' });
+    const pwdErr = validatePassword(newPassword);
+    if (pwdErr) {
+      setSecMsg({ text: pwdErr, type: 'error' });
       return;
     }
     if (newPassword !== confirmNewPassword) {
@@ -212,23 +279,91 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmation = prompt(
+      'CẢNH BÁO: Thao tác này sẽ xóa vĩnh viễn tài khoản của bạn. Nhập tên tài khoản của bạn để xác nhận:'
+    );
+    if (confirmation !== user.username) return;
+
+    try {
+      await usersApi.delete(user.user_id);
+      alert('Tài khoản của bạn đã được xóa thành công.');
+      logout();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Không thể xóa tài khoản');
+    }
+  };
+
+  // Preference handlers
+  const handleUpdatePrefNote = async () => {
+    if (!editingPref) return;
+    try {
+      if (editingPref.type === 'favorite') {
+        await foodsApi.updateFavorite({
+          food_id: editingPref.food_id,
+          note: editingPref.note,
+        });
+      } else {
+        await foodsApi.updateHated({
+          food_id: editingPref.food_id,
+          note: editingPref.note,
+        });
+      }
+      setEditingPref(null);
+      await loadPreferences();
+    } catch (err) {
+      console.error('Lỗi cập nhật ghi chú sở thích:', err);
+    }
+  };
+
+  const handleRemoveFavorite = async (foodId: number) => {
+    try {
+      await foodsApi.removeFavorite(foodId);
+      setFavorites((prev) => prev.filter((item) => item.food_id !== foodId));
+    } catch (err) {
+      console.error('Lỗi bỏ yêu thích:', err);
+    }
+  };
+
+  const handleRemoveHated = async (foodId: number) => {
+    try {
+      await foodsApi.removeHated(foodId);
+      setHated((prev) => prev.filter((item) => item.food_id !== foodId));
+    } catch (err) {
+      console.error('Lỗi bỏ món ghét:', err);
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] py-10 px-4 sm:px-6">
       <div className="container mx-auto max-w-4xl space-y-8">
         {/* Header Profile Card */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 p-6 rounded-xl bg-card border border-border shadow-md">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 p-6 rounded-2xl bg-card border border-border shadow-md">
           <div className="flex items-center gap-4">
-            <div className="size-16 rounded-xl bg-secondary/20 text-secondary flex items-center justify-center font-extrabold text-2xl border border-secondary/30">
+            <div className="size-16 rounded-2xl bg-secondary/20 text-secondary flex items-center justify-center font-extrabold text-2xl border border-secondary/30">
               {user.username.charAt(0).toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-black text-foreground">{user.username}</h1>
                 <Badge className="text-xs font-bold px-2.5 py-0.5 rounded-full">{user.role}</Badge>
+                <Badge
+                  variant={user.status === 'ACTIVE' ? 'default' : 'destructive'}
+                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                >
+                  {user.status || 'ACTIVE'}
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {user.email || 'Chưa liên kết email'} • Tham gia: {user.created_at || 'Mới'}
+                {user.email || 'Chưa liên kết email'} • Tham gia:{' '}
+                {user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : 'Mới'}
               </p>
+              {user.address && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                  <FontAwesomeIcon icon={faMapMarkerAlt} className="text-[10px] text-primary" />
+                  <span>{user.address}</span>
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -236,7 +371,9 @@ export default function ProfilePage() {
         {/* Tab Controls */}
         <Tabs
           value={activeTab}
-          onValueChange={(val) => setActiveTab(val as 'profile' | 'health' | 'security')}
+          onValueChange={(val) =>
+            setActiveTab(val as 'profile' | 'health' | 'preferences' | 'security')
+          }
           className="space-y-6"
         >
           <UnderlineTabs
@@ -249,27 +386,34 @@ export default function ProfilePage() {
                 icon: <FontAwesomeIcon icon={faUser} />,
               },
               {
+                value: 'preferences',
+                label: 'Sở Thích',
+                icon: <FontAwesomeIcon icon={faHeart} className="text-rose-500" />,
+              },
+              {
                 value: 'health',
                 label: 'Sức Khỏe & Calo',
-                icon: <FontAwesomeIcon icon={faHeartPulse} className="text-rose-500" />,
+                icon: <FontAwesomeIcon icon={faHeartPulse} className="text-emerald-500" />,
               },
               {
                 value: 'security',
-                label: 'Mật Khẩu',
+                label: 'Bảo Mật',
                 icon: <FontAwesomeIcon icon={faLock} />,
               },
             ]}
             activeTab={activeTab}
-            onChange={(val) => setActiveTab(val as 'profile' | 'health' | 'security')}
+            onChange={(val) =>
+              setActiveTab(val as 'profile' | 'health' | 'preferences' | 'security')
+            }
           />
 
           {/* TAB 1: THÔNG TIN CÁ NHÂN */}
           <TabsContent value="profile">
-            <Card className="rounded-xl border-border bg-card w-full shadow-md">
+            <Card className="rounded-2xl border-border bg-card w-full shadow-md">
               <CardHeader>
                 <CardTitle className="text-lg font-bold">Cập Nhật Thông Tin Cá Nhân</CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
-                  Thông tin giúp hệ thống gợi ý chế độ ăn uống phù hợp hơn
+                  Thông tin hồ sơ của bạn trên hệ thống AnGi
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -282,10 +426,23 @@ export default function ProfilePage() {
                           : 'bg-destructive/15 text-destructive border border-destructive/30'
                       }`}
                     >
-                      <FontAwesomeIcon icon={profileMsg.type === 'success' ? faCheck : faTriangleExclamation} />
+                      <FontAwesomeIcon
+                        icon={profileMsg.type === 'success' ? faCheck : faTriangleExclamation}
+                      />
                       <span>{profileMsg.text}</span>
                     </div>
                   )}
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">Tên tài khoản (Username)</label>
+                    <Input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Username"
+                      required
+                    />
+                  </div>
 
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-foreground">Email</label>
@@ -298,36 +455,13 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">Số điện thoại</label>
+                    <label className="text-xs font-semibold text-foreground">Địa chỉ cư trú / giao hàng</label>
                     <Input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="0912345678"
+                      type="text"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh"
                     />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Ngày sinh</label>
-                      <Input
-                        type="date"
-                        value={dob}
-                        onChange={(e) => setDob(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Giới tính</label>
-                      <select
-                        value={gender}
-                        onChange={(e) => setGender(e.target.value as 'MALE' | 'FEMALE' | '')}
-                        className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-xs text-foreground outline-none"
-                      >
-                        <option value="">Chọn giới tính</option>
-                        <option value="MALE">Nam</option>
-                        <option value="FEMALE">Nữ</option>
-                      </select>
-                    </div>
                   </div>
 
                   <Button type="submit" disabled={profileSaving} className="font-bold">
@@ -338,11 +472,175 @@ export default function ProfilePage() {
             </Card>
           </TabsContent>
 
-          {/* TAB 2: HỒ SƠ SỨC KHỎE */}
+          {/* TAB 2: SỞ THÍCH ĂN UỐNG (FAVORITES & HATED) */}
+          <TabsContent value="preferences">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Favorites Card */}
+              <Card className="rounded-2xl border-border bg-card shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-base font-bold flex items-center gap-2 text-rose-500">
+                    <FontAwesomeIcon icon={faHeart} />
+                    <span>Món Ăn Yêu Thích ({favorites.length})</span>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground">
+                    Danh sách các món ăn bạn đánh dấu thích
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {loadingPref ? (
+                    <div className="flex justify-center py-6">
+                      <Spinner />
+                    </div>
+                  ) : favorites.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic text-center py-6">
+                      Chưa có món ăn yêu thích nào
+                    </p>
+                  ) : (
+                    favorites.map((item) => (
+                      <div
+                        key={item.food_id}
+                        className="p-3 rounded-xl border border-border bg-muted/30 flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="space-y-0.5">
+                          <span className="font-bold text-foreground block">
+                            {item.name || `Món #${item.food_id}`}
+                          </span>
+                          {item.note && (
+                            <p className="text-muted-foreground italic">&ldquo;{item.note}&rdquo;</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setEditingPref({
+                                type: 'favorite',
+                                food_id: item.food_id,
+                                note: item.note || '',
+                              })
+                            }
+                            className="h-7 w-7 p-0 rounded-full text-muted-foreground"
+                          >
+                            <FontAwesomeIcon icon={faPencil} className="text-[10px]" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveFavorite(item.food_id)}
+                            className="h-7 w-7 p-0 rounded-full text-destructive"
+                          >
+                            <FontAwesomeIcon icon={faTrashCan} className="text-[10px]" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Hated Card */}
+              <Card className="rounded-2xl border-border bg-card shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-base font-bold flex items-center gap-2 text-muted-foreground">
+                    <FontAwesomeIcon icon={faBan} className="text-destructive" />
+                    <span>Món Ăn Ghét / Dị Ứng ({hated.length})</span>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground">
+                    Các món ăn bạn không thích hoặc bị dị ứng
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {loadingPref ? (
+                    <div className="flex justify-center py-6">
+                      <Spinner />
+                    </div>
+                  ) : hated.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic text-center py-6">
+                      Chưa có món ăn ghét nào
+                    </p>
+                  ) : (
+                    hated.map((item) => (
+                      <div
+                        key={item.food_id}
+                        className="p-3 rounded-xl border border-border bg-muted/30 flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="space-y-0.5">
+                          <span className="font-bold text-foreground block">
+                            {item.name || `Món #${item.food_id}`}
+                          </span>
+                          {item.note && (
+                            <p className="text-muted-foreground italic">&ldquo;{item.note}&rdquo;</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setEditingPref({
+                                type: 'hated',
+                                food_id: item.food_id,
+                                note: item.note || '',
+                              })
+                            }
+                            className="h-7 w-7 p-0 rounded-full text-muted-foreground"
+                          >
+                            <FontAwesomeIcon icon={faPencil} className="text-[10px]" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveHated(item.food_id)}
+                            className="h-7 w-7 p-0 rounded-full text-destructive"
+                          >
+                            <FontAwesomeIcon icon={faTrashCan} className="text-[10px]" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Modal edit note */}
+            {editingPref && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <Card className="w-full max-w-sm p-5 space-y-4">
+                  <CardTitle className="text-sm font-bold">
+                    Cập Nhật Ghi Chú (Món #{editingPref.food_id})
+                  </CardTitle>
+                  <Input
+                    type="text"
+                    value={editingPref.note}
+                    onChange={(e) =>
+                      setEditingPref({ ...editingPref, note: e.target.value })
+                    }
+                    placeholder="Ghi chú sở thích hoặc lưu ý..."
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingPref(null)}
+                    >
+                      Hủy
+                    </Button>
+                    <Button size="sm" onClick={handleUpdatePrefNote}>
+                      Lưu Ghi Chú
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* TAB 3: HỒ SƠ SỨC KHỎE */}
           <TabsContent value="health">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* BMI Card */}
-              <Card className="md:col-span-5 rounded-xl border-border bg-card shadow-md">
+              <Card className="md:col-span-5 rounded-2xl border-border bg-card shadow-md">
                 <CardHeader>
                   <CardTitle className="text-base font-bold flex items-center gap-2">
                     <FontAwesomeIcon icon={faWeightScale} className="text-secondary" />
@@ -350,7 +648,7 @@ export default function ProfilePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="p-4 rounded-lg bg-muted/60 text-center space-y-1">
+                  <div className="p-4 rounded-xl bg-muted/60 text-center space-y-1">
                     <div className="text-3xl font-black text-foreground">{bmi || '--'}</div>
                     <div className={`text-xs font-bold ${bmiColor}`}>{bmiCategory}</div>
                   </div>
@@ -375,15 +673,43 @@ export default function ProfilePage() {
                       <strong className="font-black text-sm">{targetCalories} kcal</strong>
                     </div>
                   </div>
+
+                  {healthProfiles.length > 0 && (
+                    <div className="pt-2">
+                      <span className="text-[11px] font-bold text-foreground block mb-2">
+                        Lịch sử đo gần đây:
+                      </span>
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                        {healthProfiles.map((hp) => (
+                          <div
+                            key={hp.profile_id}
+                            className="flex justify-between items-center text-[11px] p-2 rounded-lg bg-muted/40"
+                          >
+                            <span>
+                              {hp.date_of_measuring}: {hp.weight}kg, {hp.height}cm ({hp.measuring_method})
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteHealthProfile(hp.profile_id)}
+                              className="h-5 w-5 p-0 text-destructive"
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Form Cập nhật chỉ số */}
-              <Card className="md:col-span-7 rounded-xl border-border bg-card shadow-md">
+              <Card className="md:col-span-7 rounded-2xl border-border bg-card shadow-md">
                 <CardHeader>
                   <CardTitle className="text-base font-bold">Cập Nhật Số Đo Sức Khỏe</CardTitle>
                   <CardDescription className="text-xs text-muted-foreground">
-                    Lưu lịch sử cân nặng và chiều cao để theo dõi tiến trình
+                    Lưu lịch sử cân nặng, chiều cao, trạng thái thai sản và mức độ vận động
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -396,7 +722,9 @@ export default function ProfilePage() {
                             : 'bg-destructive/15 text-destructive border border-destructive/30'
                         }`}
                       >
-                        <FontAwesomeIcon icon={healthMsg.type === 'success' ? faCheck : faTriangleExclamation} />
+                        <FontAwesomeIcon
+                          icon={healthMsg.type === 'success' ? faCheck : faTriangleExclamation}
+                        />
                         <span>{healthMsg.text}</span>
                       </div>
                     )}
@@ -404,8 +732,11 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-foreground flex items-center gap-1">
-                          <FontAwesomeIcon icon={faWeightScale} className="text-[10px] text-muted-foreground" />
-                          <span>Cân nặng (kg)</span>
+                          <FontAwesomeIcon
+                            icon={faWeightScale}
+                            className="text-[10px] text-muted-foreground"
+                          />
+                          <span>Cân nặng (kg) *</span>
                         </label>
                         <Input
                           type="number"
@@ -420,8 +751,11 @@ export default function ProfilePage() {
 
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-foreground flex items-center gap-1">
-                          <FontAwesomeIcon icon={faRulerVertical} className="text-[10px] text-muted-foreground" />
-                          <span>Chiều cao (cm)</span>
+                          <FontAwesomeIcon
+                            icon={faRulerVertical}
+                            className="text-[10px] text-muted-foreground"
+                          />
+                          <span>Chiều cao (cm) *</span>
                         </label>
                         <Input
                           type="number"
@@ -437,46 +771,68 @@ export default function ProfilePage() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold text-foreground">Tư thế đo</label>
+                        <label className="text-xs font-semibold text-foreground">Phương pháp đo *</label>
                         <select
                           value={measuringMethod}
-                          onChange={(e) => setMeasuringMethod(e.target.value as 'STANDING' | 'LAYING')}
+                          onChange={(e) => setMeasuringMethod(e.target.value as MeasuringMethod)}
                           className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-xs text-foreground outline-none"
                         >
-                          <option value="STANDING">Đứng</option>
-                          <option value="LAYING">Nằm</option>
+                          <option value="STANDING">Đứng (STANDING)</option>
+                          <option value="LAYING">Nằm (LAYING)</option>
                         </select>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold text-foreground">Cường độ lao động</label>
+                        <label className="text-xs font-semibold text-foreground">Mức độ lao động</label>
                         <select
                           value={laborLevel}
-                          onChange={(e) => setLaborLevel(e.target.value as 'LOW' | 'MID' | 'HEAVY')}
+                          onChange={(e) => setLaborLevel(e.target.value as LaborLevel)}
                           className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-xs text-foreground outline-none"
                         >
-                          <option value="LOW">Nhẹ (Ít vận động)</option>
-                          <option value="MID">Vừa (Thể thao thường xuyên)</option>
-                          <option value="HEAVY">Nặng (Lao động nặng)</option>
+                          <option value="LOW">Nhẹ (LOW)</option>
+                          <option value="MID">Vừa phải (MID)</option>
+                          <option value="HEAVY">Nặng (HEAVY)</option>
                         </select>
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground flex items-center gap-1">
-                        <FontAwesomeIcon icon={faCalendarDay} className="text-[10px] text-muted-foreground" />
-                        <span>Ngày đo</span>
-                      </label>
-                      <Input
-                        type="date"
-                        value={dateOfMeasuring}
-                        onChange={(e) => setDateOfMeasuring(e.target.value)}
-                        required
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-foreground">
+                          Tình trạng thai sản (tùy chọn)
+                        </label>
+                        <select
+                          value={maternityStatus}
+                          onChange={(e) => setMaternityStatus(e.target.value as MaternityStatus | '')}
+                          className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-xs text-foreground outline-none"
+                        >
+                          <option value="">Không có</option>
+                          <option value="FIRST_3_MONTHS">3 tháng đầu</option>
+                          <option value="MID_3_MONTHS">3 tháng giữa</option>
+                          <option value="FINAL_3_MONTHS">3 tháng cuối</option>
+                          <option value="BREASTFEEDING">Đang cho con bú</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+                          <FontAwesomeIcon
+                            icon={faCalendarDay}
+                            className="text-[10px] text-muted-foreground"
+                          />
+                          <span>Ngày đo *</span>
+                        </label>
+                        <Input
+                          type="date"
+                          value={dateOfMeasuring}
+                          onChange={(e) => setDateOfMeasuring(e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
 
                     <Button type="submit" disabled={healthSaving} className="font-bold">
-                      {healthSaving ? <Spinner /> : 'Lưu Chỉ Số'}
+                      {healthSaving ? <Spinner /> : 'Lưu Hồ Sơ Sức Khỏe'}
                     </Button>
                   </form>
                 </CardContent>
@@ -484,9 +840,9 @@ export default function ProfilePage() {
             </div>
           </TabsContent>
 
-          {/* TAB 3: BẢO MẬT & ĐỔI MẬT KHẨU */}
-          <TabsContent value="security">
-            <Card className="rounded-xl border-border bg-card w-full shadow-md">
+          {/* TAB 4: BẢO MẬT & ĐỔI MẬT KHẨU & XÓA TÀI KHOẢN */}
+          <TabsContent value="security" className="space-y-6">
+            <Card className="rounded-2xl border-border bg-card w-full shadow-md">
               <CardHeader>
                 <CardTitle className="text-lg font-bold">Đổi Mật Khẩu</CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
@@ -503,7 +859,9 @@ export default function ProfilePage() {
                           : 'bg-destructive/15 text-destructive border border-destructive/30'
                       }`}
                     >
-                      <FontAwesomeIcon icon={secMsg.type === 'success' ? faCheck : faTriangleExclamation} />
+                      <FontAwesomeIcon
+                        icon={secMsg.type === 'success' ? faCheck : faTriangleExclamation}
+                      />
                       <span>{secMsg.text}</span>
                     </div>
                   )}
@@ -522,11 +880,14 @@ export default function ProfilePage() {
                     <label className="text-xs font-semibold text-foreground">Mật khẩu mới</label>
                     <Input
                       type="password"
-                      placeholder="Tối thiểu 6 ký tự..."
+                      placeholder="Tối thiểu 8 ký tự..."
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
                     />
+                    <p className="text-[10px] text-muted-foreground">
+                      Ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
+                    </p>
                   </div>
 
                   <div className="space-y-1">
@@ -544,6 +905,25 @@ export default function ProfilePage() {
                     {secSaving ? <Spinner /> : 'Cập Nhật Mật Khẩu'}
                   </Button>
                 </form>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-destructive/30 bg-destructive/5 w-full shadow-md">
+              <CardHeader>
+                <CardTitle className="text-base font-bold text-destructive">Khu Vực Nguy Hiểm</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
+                  Xóa tài khoản của bạn khỏi hệ thống vĩnh viễn. Hành động này không thể hoàn tác.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  className="font-bold gap-2 text-xs"
+                >
+                  <FontAwesomeIcon icon={faTrashCan} />
+                  <span>Xóa Vĩnh Viễn Tài Khoản</span>
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

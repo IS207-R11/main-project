@@ -1,63 +1,30 @@
 import { FoodCard } from '@/api/types/foods';
-import { FoodItem, Rarity, NutritionSummary, NutritionIngredient } from '@/types/food';
+import { FoodItem, Rarity, NutritionSummary } from '@/types/food';
 
-export function calculateMacros(nutritions: FoodCard['nutritions']): NutritionSummary {
-  let calories = 0;
-  let protein = 0;
-  let carbs = 0;
-  let fat = 0;
-  let fiber = 0;
-  let sugar = 0;
-  let sodium = 0;
-
-  for (const n of nutritions) {
-    calories += n.calories || 0;
-    protein += n.protein_g || 0;
-    carbs += n.carbohydrates_total_g || 0;
-    fat += n.fat_total_g || 0;
-    fiber += n.fiber_g || 0;
-    sugar += n.sugar_g || 0;
-    sodium += n.sodium_mg || 0;
-  }
-
+export function calculateMacros(): NutritionSummary {
   return {
-    calories: Math.round(calories),
-    protein: Math.round(protein * 10) / 10,
-    carbs: Math.round(carbs * 10) / 10,
-    fat: Math.round(fat * 10) / 10,
-    fiber: Math.round(fiber * 10) / 10,
-    sugar: Math.round(sugar * 10) / 10,
-    sodium: Math.round(sodium),
+    calories: 350,
+    protein: 15,
+    carbs: 45,
+    fat: 10,
+    fiber: 3,
+    sugar: 4,
+    sodium: 400,
   };
 }
 
-export function determineRarity(price: number, calories: number): Rarity {
-  if (price >= 100 || calories >= 650) return 'SSR';
-  if (price >= 65 || calories >= 450) return 'SR';
-  if (price >= 40 || calories >= 250) return 'UC';
+export function determineRarity(favoriteCount: number, eatenCount: number): Rarity {
+  const score = (favoriteCount || 0) + (eatenCount || 0);
+  if (score >= 10) return 'SSR';
+  if (score >= 5) return 'SR';
+  if (score >= 2) return 'UC';
   return 'C';
 }
 
 export function mapFoodCardToFoodItem(card: FoodCard): FoodItem {
-  const macros = calculateMacros(card.nutritions || []);
-  const priceNum = card.price ?? 50;
-  const rarity = determineRarity(priceNum, macros.calories);
-
-  const nutritionsList: NutritionIngredient[] = (card.nutritions || []).map((n) => ({
-    name: n.nutrition_name,
-    serving_size_g: n.serving_size_g,
-    calories: n.calories,
-    protein_g: n.protein_g,
-    carbohydrates_total_g: n.carbohydrates_total_g,
-    fat_total_g: n.fat_total_g,
-    fat_saturated_g: n.fat_saturated_g,
-    fat_trans_g: n.fat_trans_g,
-    fiber_g: n.fiber_g,
-    sugar_g: n.sugar_g,
-    sodium_mg: n.sodium_mg,
-    potassium_mg: n.potassium_mg,
-    cholesterol_mg: n.cholesterol_mg,
-  }));
+  const macros = calculateMacros();
+  const priceNum = 50;
+  const rarity = determineRarity(card.favorite_count || 0, card.eaten_count || 0);
 
   let imagePath = `/data/images/${card.food_id}.webp`;
   if (card.image_url) {
@@ -70,18 +37,20 @@ export function mapFoodCardToFoodItem(card: FoodCard): FoodItem {
 
   return {
     id: card.food_id,
-    name: card.food_name,
-    sub: card.sub || '',
+    name: card.name,
+    sub: card.description || '',
     price: priceNum,
     image: card.food_id,
     imagePath,
-    quip: card.quip || '',
-    name_en: card.food_name,
-    nutritions: nutritionsList,
-    sessions: card.sessions || [],
-    veg: card.is_veg,
+    quip: card.description || '',
+    name_en: card.name,
+    nutritions: [],
+    sessions: ['Sáng sớm', 'Giữa trưa', 'Chiều', 'Tối'],
+    veg: false,
     rarity,
     macros,
-    ingredients: (card.nutritions || []).map((n) => n.nutrition_name),
+    ingredients: [],
+    favorite_count: card.favorite_count || 0,
+    eaten_count: card.eaten_count || 0,
   };
 }

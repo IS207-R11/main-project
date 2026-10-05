@@ -57,6 +57,8 @@ export interface FoodItem extends FoodRawItem {
   macros: NutritionSummary;
   ingredients: string[];
   isFavorite?: boolean;
+  favorite_count?: number;
+  eaten_count?: number;
 }
 
 export interface FilterOptions {

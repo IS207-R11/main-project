@@ -1,74 +1,79 @@
 import { PaginationParams } from './common';
-import { Nutrition } from './nutritions';
 
 export type FoodStatus = 'ACTIVE' | 'PENDING' | 'DISABLED';
 
-export type FoodSession = 'MORNING' | 'LUNCH' | 'EVENING' | 'AFTERNOON';
-
-export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
-
 export interface FoodCard {
   food_id: number;
-  food_name: string;
-  quip: string | null;
-  sub: string | null;
-  price: number | null;
+  name: string;
+  description: string | null;
   image_url: string | null;
   status: FoodStatus;
-  note: string | null;
-  is_veg: boolean;
-  sessions: FoodSession[];
-  nutritions: Nutrition[];
+  created_at: string | null;
+  contributor_id: number | null;
+  favorite_count: number;
+  eaten_count: number;
+  contributor?: {
+    user_id?: number;
+    username?: string | null;
+  } | null;
 }
 
 export interface FoodOption {
   food_id: number;
-  food_name: string;
+  name: string;
 }
 
-export interface EatenFoodItem {
-  food: FoodCard[];
-  quantity: number;
+export interface UserFoodItem {
+  food_id: number;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  status: FoodStatus;
+  note: string | null;
+  created_at: string | null;
+  contributor_id: number | null;
+  favorite_count: number;
+  eaten_count: number;
 }
 
 export interface EatenFood {
+  eaten_id: number;
   user_id: number;
-  eaten_food_id: number;
-  meal_type: MealType;
-  eaten_at: string | null;
-  address: string | null;
+  food_id: number;
   note: string | null;
-  items: EatenFoodItem[];
+  created_at: string | null;
+  food?: FoodCard;
 }
 
 export interface ListFoodsParams extends PaginationParams {
-  session?: FoodSession;
-  is_veg?: 0 | 1;
-  price_range?: number[] | string;
-  sort_by?: 'food_name' | 'price';
+  search?: string;
+  status?: FoodStatus;
+  sort_by?: 'name' | 'created_at';
   sort_order?: 'asc' | 'desc';
 }
 
-export interface GachaParams {
-  num?: number;
-  session?: string;
-  is_veg?: number;
-  price_range?: number[] | string;
+export type ExclusionType = 'newest' | 'oldest' | 'random';
+
+export interface GachaRequest {
+  numberOfExcludedEaten?: number;
+  typeOfExcludedEaten?: ExclusionType;
+  numberOfExcludedGacha?: number;
+  typeOfExcludedGacha?: ExclusionType;
+  foodSet?: number[];
 }
 
 export interface CreateFoodRequest {
-  food_name: string;
-  is_veg: boolean;
-  quip?: string;
-  sub?: string;
-  price?: number;
+  name: string;
+  description?: string;
   image_url?: string;
-  note?: string;
-  sessions?: FoodSession[];
-  nutritions?: number[];
 }
 
-export type UpdateFoodRequest = Partial<CreateFoodRequest>;
+export interface UpdateFoodRequest {
+  name?: string;
+  description?: string;
+  image_url?: string;
+  status?: FoodStatus;
+}
 
 export interface ChangeFoodStatusRequest {
   status: FoodStatus;
@@ -76,21 +81,40 @@ export interface ChangeFoodStatusRequest {
 
 export interface AddFavoriteFoodRequest {
   food_id: number;
+  note?: string;
 }
 
-export interface AddScannedFoodRequest {
+export interface UpdateFavoriteFoodRequest {
   food_id: number;
+  note?: string;
 }
 
-export interface RecordEatenItemPayload {
+export interface AddHatedFoodRequest {
   food_id: number;
-  quantity: number;
+  note?: string;
+}
+
+export interface UpdateHatedFoodRequest {
+  food_id: number;
+  note?: string;
 }
 
 export interface RecordEatenFoodRequest {
-  meal_type: MealType;
-  items: RecordEatenItemPayload[];
-  eaten_at?: string;
-  address?: string;
+  food_id: number;
   note?: string;
 }
+
+export interface UpdateEatenFoodRequest {
+  food_id?: number;
+  note?: string;
+}
+
+export interface ListUserFoodParams extends PaginationParams {
+  search?: string;
+}
+
+export interface ListEatenFoodParams extends PaginationParams {
+  search?: string;
+  sort_order?: 'asc' | 'desc';
+}
+

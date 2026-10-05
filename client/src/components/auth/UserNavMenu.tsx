@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowRightToBracket,
@@ -61,7 +61,6 @@ export const UserNavMenu: React.FC = () => {
         render={
           <button className="flex items-center gap-2 p-1 rounded-full hover:bg-muted/80 transition-colors cursor-pointer outline-none">
             <Avatar className="size-8 border border-border">
-              {user.avatar_url && <AvatarImage src={user.avatar_url} alt={user.username} />}
               <AvatarFallback className="bg-secondary/20 text-secondary font-bold text-xs">
                 {initial}
               </AvatarFallback>

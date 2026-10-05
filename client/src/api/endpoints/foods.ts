@@ -1,23 +1,30 @@
 import { apiClient } from '../client';
-import { ApiResponse, MessageResponse, PaginatedResponse, PaginationParams } from '../types/common';
+import { ApiResponse, MessageResponse, PaginatedResponse } from '../types/common';
 import {
   AddFavoriteFoodRequest,
-  AddScannedFoodRequest,
+  AddHatedFoodRequest,
   ChangeFoodStatusRequest,
   CreateFoodRequest,
   EatenFood,
   FoodCard,
   FoodOption,
-  GachaParams,
+  GachaRequest,
+  ListEatenFoodParams,
   ListFoodsParams,
+  ListUserFoodParams,
   RecordEatenFoodRequest,
+  UpdateEatenFoodRequest,
+  UpdateFavoriteFoodRequest,
   UpdateFoodRequest,
+  UpdateHatedFoodRequest,
+  UserFoodItem,
 } from '../types/foods';
+
 
 export const foodsApi = {
   /**
    * GET /foods
-   * Get list of foods with filters, pagination, and sorting
+   * Get list of foods with filters, pagination, and sorting (Public, includes favorite_count & eaten_count)
    */
   list: (params?: ListFoodsParams): Promise<PaginatedResponse<FoodCard>> => {
     return apiClient<PaginatedResponse<FoodCard>>('/foods', {
@@ -27,8 +34,18 @@ export const foodsApi = {
   },
 
   /**
+   * GET /foods/{foodId}
+   * Get detail of a food by ID (Public, includes favorite_count & eaten_count)
+   */
+  getById: (foodId: number): Promise<ApiResponse<FoodCard>> => {
+    return apiClient<ApiResponse<FoodCard>>(`/foods/${foodId}`, {
+      method: 'GET',
+    });
+  },
+
+  /**
    * GET /foods/options
-   * Search foods and return top 5 options (ID and name only)
+   * Search foods and return top 5 options (ID and name only, Public)
    */
   options: (search: string): Promise<FoodOption[]> => {
     return apiClient<FoodOption[]>('/foods/options', {
@@ -38,23 +55,23 @@ export const foodsApi = {
   },
 
   /**
-   * GET /foods/gacha
-   * Random gacha food recommendations
+   * POST /foods/gacha
+   * Smart Gacha API based on ranking formula, excluded eaten/gacha lists, or foodSet
    */
-  gacha: (params?: GachaParams): Promise<FoodCard[]> => {
-    return apiClient<FoodCard[]>('/foods/gacha', {
-      method: 'GET',
-      params: params as Record<string, string | number | (string | number)[] | undefined>,
+  gacha: (data?: GachaRequest): Promise<ApiResponse<FoodCard>> => {
+    return apiClient<ApiResponse<FoodCard>>('/foods/gacha', {
+      method: 'POST',
+      body: data || {},
     });
   },
 
   /**
-   * POST /foods
-   * Create a new food item (USER or ADMIN)
+   * PUT /foods
+   * Create a new food item (User can only PUT, default status is PENDING)
    */
   create: (data: CreateFoodRequest): Promise<ApiResponse<FoodCard>> => {
     return apiClient<ApiResponse<FoodCard>>('/foods', {
-      method: 'POST',
+      method: 'PUT',
       body: data,
     });
   },
@@ -97,15 +114,19 @@ export const foodsApi = {
     });
   },
 
+  // ==========================================
+  // FAVORITE FOODS (Only owner user has full CRUD)
+  // ==========================================
+
   /**
    * GET /foods/favorite/{userId}
-   * Get favorite foods of a user (OWNER only)
+   * Get favorite foods of the logged in user (OWNER only)
    */
   getFavorites: (
     userId: number,
-    params?: PaginationParams
-  ): Promise<PaginatedResponse<FoodCard>> => {
-    return apiClient<PaginatedResponse<FoodCard>>(`/foods/favorite/${userId}`, {
+    params?: ListUserFoodParams
+  ): Promise<PaginatedResponse<UserFoodItem>> => {
+    return apiClient<PaginatedResponse<UserFoodItem>>(`/foods/favorite/${userId}`, {
       method: 'GET',
       params: params as Record<string, string | number | undefined>,
     });
@@ -123,40 +144,79 @@ export const foodsApi = {
   },
 
   /**
-   * DELETE /foods/favorite
-   * Remove food from favorites via query param (OWNER only)
+   * PUT /foods/favorite
+   * Update favorite note (OWNER only)
    */
-  removeFavorite: (foodId: number): Promise<MessageResponse> => {
+  updateFavorite: (data: UpdateFavoriteFoodRequest): Promise<MessageResponse> => {
     return apiClient<MessageResponse>('/foods/favorite', {
-      method: 'DELETE',
-      params: { food_id: foodId },
+      method: 'PUT',
+      body: data,
     });
   },
 
   /**
-   * GET /foods/scanned/{userId}
-   * Get scanned foods history of a user (OWNER only)
+   * DELETE /foods/favorite/{foodId}
+   * Remove food from favorites (OWNER only)
    */
-  getScanned: (
+  removeFavorite: (foodId: number): Promise<MessageResponse> => {
+    return apiClient<MessageResponse>(`/foods/favorite/${foodId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // ==========================================
+  // HATED FOODS (Only owner user has full CRUD)
+  // ==========================================
+
+  /**
+   * GET /foods/hated/{userId}
+   * Get hated foods of the logged in user (OWNER only)
+   */
+  getHated: (
     userId: number,
-    params?: PaginationParams
-  ): Promise<PaginatedResponse<FoodCard>> => {
-    return apiClient<PaginatedResponse<FoodCard>>(`/foods/scanned/${userId}`, {
+    params?: ListUserFoodParams
+  ): Promise<PaginatedResponse<UserFoodItem>> => {
+    return apiClient<PaginatedResponse<UserFoodItem>>(`/foods/hated/${userId}`, {
       method: 'GET',
       params: params as Record<string, string | number | undefined>,
     });
   },
 
   /**
-   * POST /foods/scanned
-   * Add food to scanned history (OWNER only)
+   * POST /foods/hated
+   * Add food to hated list (OWNER only)
    */
-  addScanned: (data: AddScannedFoodRequest): Promise<MessageResponse> => {
-    return apiClient<MessageResponse>('/foods/scanned', {
+  addHated: (data: AddHatedFoodRequest): Promise<MessageResponse> => {
+    return apiClient<MessageResponse>('/foods/hated', {
       method: 'POST',
       body: data,
     });
   },
+
+  /**
+   * PUT /foods/hated
+   * Update hated food note (OWNER only)
+   */
+  updateHated: (data: UpdateHatedFoodRequest): Promise<MessageResponse> => {
+    return apiClient<MessageResponse>('/foods/hated', {
+      method: 'PUT',
+      body: data,
+    });
+  },
+
+  /**
+   * DELETE /foods/hated/{foodId}
+   * Remove food from hated list (OWNER only)
+   */
+  removeHated: (foodId: number): Promise<MessageResponse> => {
+    return apiClient<MessageResponse>(`/foods/hated/${foodId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // ==========================================
+  // EATEN FOODS (Only owner user has full CRUD)
+  // ==========================================
 
   /**
    * GET /foods/eaten/{userId}
@@ -164,7 +224,7 @@ export const foodsApi = {
    */
   getEaten: (
     userId: number,
-    params?: PaginationParams
+    params?: ListEatenFoodParams
   ): Promise<PaginatedResponse<EatenFood>> => {
     return apiClient<PaginatedResponse<EatenFood>>(`/foods/eaten/${userId}`, {
       method: 'GET',
@@ -174,11 +234,9 @@ export const foodsApi = {
 
   /**
    * POST /foods/eaten
-   * Record an eaten meal with food items (OWNER only)
+   * Record an eaten food item (OWNER only)
    */
-  recordEaten: (
-    data: RecordEatenFoodRequest
-  ): Promise<ApiResponse<EatenFood>> => {
+  recordEaten: (data: RecordEatenFoodRequest): Promise<ApiResponse<EatenFood>> => {
     return apiClient<ApiResponse<EatenFood>>('/foods/eaten', {
       method: 'POST',
       body: data,
@@ -186,13 +244,26 @@ export const foodsApi = {
   },
 
   /**
-   * DELETE /foods/eaten
-   * Delete eaten food entry via query param (OWNER only)
+   * PUT /foods/eaten/{eatenId}
+   * Update eaten food record (OWNER only)
    */
-  deleteEaten: (eatenFoodId: number): Promise<MessageResponse> => {
-    return apiClient<MessageResponse>('/foods/eaten', {
+  updateEaten: (
+    eatenId: number,
+    data: UpdateEatenFoodRequest
+  ): Promise<ApiResponse<EatenFood>> => {
+    return apiClient<ApiResponse<EatenFood>>(`/foods/eaten/${eatenId}`, {
+      method: 'PUT',
+      body: data,
+    });
+  },
+
+  /**
+   * DELETE /foods/eaten/{eatenId}
+   * Delete eaten food entry (OWNER only)
+   */
+  deleteEaten: (eatenId: number): Promise<MessageResponse> => {
+    return apiClient<MessageResponse>(`/foods/eaten/${eatenId}`, {
       method: 'DELETE',
-      params: { eaten_food_id: eatenFoodId },
     });
   },
 };

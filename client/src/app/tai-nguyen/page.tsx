@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUtensils } from "@fortawesome/free-solid-svg-icons";
 import { Badge } from "@/components/ui/badge";
 import { ResourcesExplorer } from "@/components/resources/ResourcesExplorer";
-import { allFoods } from "@/lib/foodData";
 
 export const metadata: Metadata = {
   title: "Kho Tàng Món Ăn | Ăn gì?",
@@ -25,14 +24,14 @@ export default function ResourcesPage() {
             Kho Tàng Món Ăn
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Tra cứu và lọc hơn {allFoods.length} món ăn truyền thống và hiện đại với dữ liệu dinh dưỡng chuẩn hóa khoa học.
+            Tra cứu và khám phá các món ăn từ hệ thống AnGi với dữ liệu dinh dưỡng, thống kê lượt ăn và yêu thích.
           </p>
         </div>
       </section>
 
       {/* ================= RESOURCES EXPLORER ISLAND ================= */}
       <div className="container mx-auto max-w-6xl px-4 sm:px-6 pt-8">
-        <ResourcesExplorer foods={allFoods} />
+        <ResourcesExplorer />
       </div>
     </div>
   );

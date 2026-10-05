@@ -22,7 +22,9 @@ import {
   faArrowRightToBracket,
   faUserPlus,
   faTriangleExclamation,
+  faMapMarkerAlt,
 } from '@fortawesome/free-solid-svg-icons';
+import { validatePassword } from '@/lib/validation';
 
 export const AuthDialog: React.FC = () => {
   const { authModalOpen, authModalTab, closeAuthModal, openAuthModal, login, register } = useAuth();
@@ -36,6 +38,7 @@ export const AuthDialog: React.FC = () => {
   // Register form state
   const [regUsername, setRegUsername] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  const [regAddress, setRegAddress] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [regError, setRegError] = useState<string | null>(null);
@@ -78,8 +81,9 @@ export const AuthDialog: React.FC = () => {
       return;
     }
 
-    if (regPassword.length < 6) {
-      setRegError('Mật khẩu phải có tối thiểu 6 ký tự');
+    const pwdError = validatePassword(regPassword);
+    if (pwdError) {
+      setRegError(pwdError);
       return;
     }
 
@@ -89,10 +93,12 @@ export const AuthDialog: React.FC = () => {
         username: regUsername.trim(),
         password: regPassword,
         email: regEmail.trim() || undefined,
+        address: regAddress.trim() || undefined,
       });
       // Reset form
       setRegUsername('');
       setRegEmail('');
+      setRegAddress('');
       setRegPassword('');
       setRegConfirmPassword('');
     } catch (err: unknown) {
@@ -247,17 +253,34 @@ export const AuthDialog: React.FC = () => {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faMapMarkerAlt} className="text-muted-foreground text-[11px]" />
+                  <span>Địa chỉ (tùy chọn)</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="123 Nguyễn Huệ, Quận 1, TP. HCM"
+                  value={regAddress}
+                  onChange={(e) => setRegAddress(e.target.value)}
+                  disabled={regLoading}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
                   <span>Mật khẩu *</span>
                 </label>
                 <Input
                   type="password"
-                  placeholder="Tối thiểu 6 ký tự..."
+                  placeholder="Tối thiểu 8 ký tự..."
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
                   disabled={regLoading}
                   required
                 />
+                <p className="text-[10px] text-muted-foreground">
+                  Ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
+                </p>
               </div>
 
               <div className="space-y-1">

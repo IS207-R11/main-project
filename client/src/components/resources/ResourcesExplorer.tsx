@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -9,6 +9,8 @@ import {
   faXmark,
   faRotateLeft,
   faUtensils,
+  faPlus,
+  faRotate,
 } from "@fortawesome/free-solid-svg-icons";
 import type {
   FoodItem,
@@ -16,9 +18,12 @@ import type {
   PriceFilter,
   Rarity,
 } from "@/types/food";
-import { allFoods as defaultFoods } from "@/lib/foodData";
+import { foodsApi } from "@/api";
+import { mapFoodCardToFoodItem } from "@/lib/foodAdapter";
 import { VirtualFoodGrid } from "@/components/food/VirtualFoodGrid";
+import { CreateFoodModal } from "@/components/food/CreateFoodModal";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 type SortOption =
   | "name"
@@ -38,19 +43,43 @@ const rarityOrder: Record<Rarity, number> = {
 
 const viCollator = new Intl.Collator("vi", { sensitivity: "base", numeric: true });
 
-interface ResourcesExplorerProps {
-  foods?: FoodItem[];
-}
+export const ResourcesExplorer: React.FC = () => {
+  // Foods state from system API
+  const [foods, setFoods] = useState<FoodItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
 
-export const ResourcesExplorer: React.FC<ResourcesExplorerProps> = ({
-  foods = defaultFoods,
-}) => {
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSession, setSelectedSession] = useState<string>("all");
   const [selectedDiet, setSelectedDiet] = useState<DietaryFilter>("all");
   const [selectedPrice, setSelectedPrice] = useState<PriceFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("name");
+
+  // Fetch foods from System API (GET /foods)
+  const fetchFoods = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await foodsApi.list({
+        pageSize: 100,
+        sort_by: "name",
+        sort_order: "asc",
+      });
+
+      if (res && res.data) {
+        const mapped = res.data.map((card) => mapFoodCardToFoodItem(card));
+        setFoods(mapped);
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải danh sách món ăn từ hệ thống API:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchFoods();
+  }, [fetchFoods]);
 
   // Filter and sort items
   const filteredFoods = useMemo(() => {
@@ -75,7 +104,7 @@ export const ResourcesExplorer: React.FC<ResourcesExplorerProps> = ({
 
         // Session match
         if (selectedSession !== "all") {
-          if (!food.sessions.includes(selectedSession)) {
+          if (!food.sessions || !food.sessions.includes(selectedSession)) {
             return false;
           }
         }
@@ -109,20 +138,20 @@ export const ResourcesExplorer: React.FC<ResourcesExplorerProps> = ({
       .sort((a, b) => {
         switch (sortBy) {
           case "price_asc":
-            return a.price - b.price;
+            return (a.price || 0) - (b.price || 0);
           case "price_desc":
-            return b.price - a.price;
+            return (b.price || 0) - (a.price || 0);
           case "calories_asc":
-            return a.macros.calories - b.macros.calories;
+            return (a.macros?.calories || 0) - (b.macros?.calories || 0);
           case "calories_desc":
-            return b.macros.calories - a.macros.calories;
+            return (b.macros?.calories || 0) - (a.macros?.calories || 0);
           case "protein_desc":
-            return b.macros.protein - a.macros.protein;
+            return (b.macros?.protein || 0) - (a.macros?.protein || 0);
           case "rarity_desc":
             return (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0);
           case "name":
           default:
-            return viCollator.compare(a.name, b.name);
+            return viCollator.compare(a.name || "", b.name || "");
         }
       });
   }, [foods, searchQuery, selectedSession, selectedDiet, selectedPrice, sortBy]);
@@ -146,27 +175,51 @@ export const ResourcesExplorer: React.FC<ResourcesExplorerProps> = ({
     <div className="space-y-6 min-h-[calc(100vh-14rem)]">
       {/* ================= SEARCH & CONTROLS BAR ================= */}
       <div className="p-5 rounded-3xl bg-card text-card-foreground border border-border shadow-md backdrop-blur-md space-y-4">
-        {/* Top Search Input */}
-        <div className="relative w-full">
-          <FontAwesomeIcon
-            icon={faMagnifyingGlass}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-sm"
-          />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm kiếm theo tên món, nguyên liệu, hương vị..."
-            className="w-full pl-11 pr-10 py-3 bg-background border border-border text-foreground text-sm rounded-2xl focus:ring-2 focus:ring-primary focus:outline-hidden transition-all shadow-xs placeholder:text-muted-foreground"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+        {/* Top Search Input & Action Button */}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative w-full">
+            <FontAwesomeIcon
+              icon={faMagnifyingGlass}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-sm"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm kiếm theo tên món ăn, hương vị, nguyên liệu..."
+              className="w-full pl-11 pr-10 py-3 bg-background border border-border text-foreground text-sm rounded-2xl focus:ring-2 focus:ring-primary focus:outline-hidden transition-all shadow-xs placeholder:text-muted-foreground"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <FontAwesomeIcon icon={faXmark} className="text-sm" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchFoods}
+              disabled={loading}
+              className="rounded-2xl h-11 px-4 text-xs font-bold gap-1.5"
+              title="Tải lại từ hệ thống"
             >
-              <FontAwesomeIcon icon={faXmark} className="text-sm" />
-            </button>
-          )}
+              <FontAwesomeIcon icon={faRotate} className={loading ? "animate-spin" : ""} />
+              <span className="hidden md:inline">Làm Mới</span>
+            </Button>
+
+            <Button
+              onClick={() => setCreateModalOpen(true)}
+              className="rounded-2xl h-11 px-5 text-xs font-bold gap-2 shadow-md cursor-pointer w-full sm:w-auto"
+            >
+              <FontAwesomeIcon icon={faPlus} />
+              <span>Đóng Góp Món Mới</span>
+            </Button>
+          </div>
         </div>
 
         {/* Filter & Sort Controls Grid */}
@@ -252,7 +305,7 @@ export const ResourcesExplorer: React.FC<ResourcesExplorerProps> = ({
         {/* Results Count & Reset Filter Badge */}
         <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
           <span className="text-muted-foreground font-semibold">
-            Hiển thị <strong>{filteredFoods.length}</strong> món ăn
+            Hiển thị <strong>{filteredFoods.length}</strong> món ăn từ hệ thống API
           </span>
           {hasActiveFilters && (
             <Button
@@ -269,7 +322,12 @@ export const ResourcesExplorer: React.FC<ResourcesExplorerProps> = ({
       </div>
 
       {/* ================= VIRTUAL FOOD FLASHCARDS GRID ================= */}
-      {filteredFoods.length > 0 ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 space-y-3">
+          <Spinner className="w-8 h-8 text-secondary" />
+          <p className="text-xs text-muted-foreground">Đang tải kho tàng món ăn từ hệ thống...</p>
+        </div>
+      ) : filteredFoods.length > 0 ? (
         <VirtualFoodGrid foods={filteredFoods} maxVisibleRows={10} />
       ) : (
         <div className="py-20 text-center space-y-4 rounded-3xl bg-card border border-dashed border-border p-8">
@@ -280,18 +338,37 @@ export const ResourcesExplorer: React.FC<ResourcesExplorerProps> = ({
             Chưa tìm thấy món ăn phù hợp
           </h3>
           <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-            Hãy thử điều chỉnh từ khóa tìm kiếm hoặc đặt lại các tiêu chí lọc để khám phá thêm món ngon.
+            Hãy thử điều chỉnh từ khóa tìm kiếm hoặc bấm nút bên dưới để đóng góp món mới đầu tiên.
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResetFilters}
-            className="rounded-full text-xs font-bold mt-2 border-border"
-          >
-            Đặt Lại Bộ Lọc
-          </Button>
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetFilters}
+              className="rounded-full text-xs font-bold border-border"
+            >
+              Đặt Lại Bộ Lọc
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setCreateModalOpen(true)}
+              className="rounded-full text-xs font-bold gap-1.5"
+            >
+              <FontAwesomeIcon icon={faPlus} className="text-xs" />
+              <span>Đóng Góp Món Mới</span>
+            </Button>
+          </div>
         </div>
       )}
+
+      {/* Modal create food with Supabase image upload */}
+      <CreateFoodModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSuccess={() => {
+          fetchFoods();
+        }}
+      />
     </div>
   );
 };
