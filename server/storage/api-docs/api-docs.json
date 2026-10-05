@@ -18,7 +18,7 @@
                     "Authentication"
                 ],
                 "summary": "User sign in",
-                "description": "Authenticate user with username and password, returns access and refresh tokens",
+                "description": "Authenticate user with username/email and password, returns access and refresh tokens",
                 "operationId": "3b511fa8d20576f762b94d044fe91438",
                 "requestBody": {
                     "required": true,
@@ -61,6 +61,9 @@
                                         "token_type": {
                                             "type": "string",
                                             "example": "Bearer"
+                                        },
+                                        "user": {
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -80,7 +83,7 @@
                     "Authentication"
                 ],
                 "summary": "User sign up",
-                "description": "Register a new user account with username, email, and password",
+                "description": "Register a new user account with username, email, password, and address",
                 "operationId": "67fd37db7cecd428148771f4e12fb15a",
                 "requestBody": {
                     "required": true,
@@ -105,6 +108,10 @@
                                         "type": "string",
                                         "format": "password",
                                         "example": "Secret123!"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "123 Nguyen Trai, Q1, HCMC"
                                     }
                                 },
                                 "type": "object"
@@ -139,6 +146,9 @@
                                     "username": {
                                         "type": "string",
                                         "example": "john_doe"
+                                    },
+                                    "refreshToken": {
+                                        "type": "string"
                                     }
                                 },
                                 "type": "object"
@@ -208,7 +218,7 @@
                     "Authentication"
                 ],
                 "summary": "Change user password",
-                "description": "Update password for a specific user (Allowed for OWNER and ADMIN)",
+                "description": "Update password for a specific user (Allowed for OWNER and ADMIN; Admin does not need old password)",
                 "operationId": "dcfa1f46d3d8df589fd1818fdcbf2369",
                 "parameters": [
                     {
@@ -266,7 +276,7 @@
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Get list of foods with filters, pagination, and sorting",
+                "summary": "Get list of foods with filters, pagination, and sorting (Public, includes favorite_count & eaten_count)",
                 "operationId": "d0bcfb89a41dea9059c953cff927c2d7",
                 "parameters": [
                     {
@@ -296,40 +306,16 @@
                         }
                     },
                     {
-                        "name": "session",
+                        "name": "status",
                         "in": "query",
                         "required": false,
                         "schema": {
                             "type": "string",
                             "enum": [
-                                "MORNING",
-                                "LUNCH",
-                                "EVENING",
-                                "AFTERNOON"
+                                "ACTIVE",
+                                "PENDING",
+                                "DISABLED"
                             ]
-                        }
-                    },
-                    {
-                        "name": "is_veg",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "enum": [
-                                0,
-                                1
-                            ]
-                        }
-                    },
-                    {
-                        "name": "price_range",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "number"
-                            }
                         }
                     },
                     {
@@ -339,8 +325,8 @@
                         "schema": {
                             "type": "string",
                             "enum": [
-                                "food_name",
-                                "price"
+                                "name",
+                                "created_at"
                             ]
                         }
                     },
@@ -364,69 +350,32 @@
                     }
                 }
             },
-            "post": {
+            "put": {
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Create a new food item (USER or ADMIN)",
-                "operationId": "1ba74cb395bebf4c325820651c43f4dc",
+                "summary": "Create a new food item (User can only PUT, default status is PENDING)",
+                "operationId": "72078f194e76eb94b4ece951e7f7dd4d",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "food_name",
-                                    "is_veg"
+                                    "name"
                                 ],
                                 "properties": {
-                                    "food_name": {
+                                    "name": {
                                         "type": "string",
                                         "example": "Pho Bo"
                                     },
-                                    "quip": {
-                                        "type": "string"
-                                    },
-                                    "sub": {
-                                        "type": "string"
-                                    },
-                                    "price": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 50000
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Vietnamese traditional beef noodle soup"
                                     },
                                     "image_url": {
-                                        "type": "string"
-                                    },
-                                    "note": {
-                                        "type": "string"
-                                    },
-                                    "is_veg": {
-                                        "type": "boolean",
-                                        "example": false
-                                    },
-                                    "sessions": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "string",
-                                            "enum": [
-                                                "MORNING",
-                                                "LUNCH",
-                                                "EVENING",
-                                                "AFTERNOON"
-                                            ]
-                                        }
-                                    },
-                                    "nutritions": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "integer"
-                                        },
-                                        "example": [
-                                            1,
-                                            2,
-                                            3
-                                        ]
+                                        "type": "string",
+                                        "example": "https://example.com/pho.jpg"
                                     }
                                 },
                                 "type": "object"
@@ -436,10 +385,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Food created successfully"
-                    },
-                    "400": {
-                        "description": "Constraint violation or invalid foreign key"
+                        "description": "Food created with PENDING status"
                     },
                     "401": {
                         "description": "Unauthorized"
@@ -455,31 +401,32 @@
                 ]
             }
         },
-        "/foods/options": {
+        "/foods/{foodId}": {
             "get": {
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Search foods and return top 5 options (ID and name only)",
-                "operationId": "98ade332d6f159894ac652a7633aecef",
+                "summary": "Get food detail by ID (Public, includes favorite_count & eaten_count)",
+                "operationId": "2006df66f517dec7e27c02b80f3c9ed0",
                 "parameters": [
                     {
-                        "name": "search",
-                        "in": "query",
+                        "name": "foodId",
+                        "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Top 5 food options"
+                        "description": "Food detail with favorite_count and eaten_count"
+                    },
+                    "404": {
+                        "description": "Food not found"
                     }
                 }
-            }
-        },
-        "/foods/{foodId}": {
+            },
             "put": {
                 "tags": [
                     "Foods"
@@ -502,39 +449,22 @@
                         "application/json": {
                             "schema": {
                                 "properties": {
-                                    "food_name": {
+                                    "name": {
                                         "type": "string"
                                     },
-                                    "quip": {
+                                    "description": {
                                         "type": "string"
-                                    },
-                                    "sub": {
-                                        "type": "string"
-                                    },
-                                    "price": {
-                                        "type": "number",
-                                        "format": "float"
                                     },
                                     "image_url": {
                                         "type": "string"
                                     },
-                                    "note": {
-                                        "type": "string"
-                                    },
-                                    "is_veg": {
-                                        "type": "boolean"
-                                    },
-                                    "sessions": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "nutritions": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "integer"
-                                        }
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "ACTIVE",
+                                            "PENDING",
+                                            "DISABLED"
+                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -545,9 +475,6 @@
                 "responses": {
                     "200": {
                         "description": "Food updated successfully"
-                    },
-                    "400": {
-                        "description": "Constraint violation"
                     },
                     "401": {
                         "description": "Unauthorized"
@@ -596,12 +523,108 @@
                 ]
             }
         },
+        "/foods/options": {
+            "get": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Search foods and return top 5 options (ID and name only, Public)",
+                "operationId": "98ade332d6f159894ac652a7633aecef",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Top 5 food options"
+                    }
+                }
+            }
+        },
+        "/foods/gacha": {
+            "post": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Smart Gacha API based on ranking formula, excluded lists, or foodSet",
+                "description": "Rank foods by (favorites + eaten - hated), selects top 10 and returns 1 random winner.",
+                "operationId": "3e3c2a6dbcb6571c75311c8710c293db",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "numberOfExcludedEaten": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "typeOfExcludedEaten": {
+                                        "type": "string",
+                                        "default": "newest",
+                                        "enum": [
+                                            "newest",
+                                            "oldest",
+                                            "random"
+                                        ]
+                                    },
+                                    "numberOfExcludedGacha": {
+                                        "type": "integer",
+                                        "example": 3
+                                    },
+                                    "typeOfExcludedGacha": {
+                                        "type": "string",
+                                        "default": "newest",
+                                        "enum": [
+                                            "newest",
+                                            "oldest",
+                                            "random"
+                                        ]
+                                    },
+                                    "foodSet": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2,
+                                            3,
+                                            4,
+                                            5
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Gacha winner food"
+                    },
+                    "404": {
+                        "description": "No eligible food found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
         "/foods/{foodId}/change-status": {
             "put": {
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Change food status (ADMIN or MODERATOR)",
+                "summary": "Approve or change food status (ADMIN or MODERATOR)",
                 "operationId": "315c4ca941c8230bd3f1cf12606478e5",
                 "parameters": [
                     {
@@ -654,74 +677,12 @@
                 ]
             }
         },
-        "/foods/gacha": {
-            "get": {
-                "tags": [
-                    "Foods"
-                ],
-                "summary": "Random gacha food recommendations",
-                "operationId": "78ccaa2ca568fc28573a33cf59fa24dc",
-                "parameters": [
-                    {
-                        "name": "num",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 1
-                        }
-                    },
-                    {
-                        "name": "session",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "MORNING",
-                                "LUNCH",
-                                "EVENING",
-                                "AFTERNOON"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "is_veg",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "enum": [
-                                0,
-                                1
-                            ]
-                        }
-                    },
-                    {
-                        "name": "price_range",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "number"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Random list of foods"
-                    }
-                }
-            }
-        },
         "/foods/favorite/{userId}": {
             "get": {
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Get favorite foods of a user (OWNER only, status ACTIVE)",
+                "summary": "Get favorite foods of the logged in user (OWNER only)",
                 "operationId": "00ffcb2ea5be9f91b1ab8c4a199d49b2",
                 "parameters": [
                     {
@@ -749,6 +710,14 @@
                             "type": "integer",
                             "default": 10
                         }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -757,6 +726,9 @@
                     },
                     "401": {
                         "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     }
                 },
                 "security": [
@@ -766,13 +738,128 @@
                 ]
             }
         },
-        "/foods/scanned/{userId}": {
+        "/foods/favorite": {
+            "put": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Update favorite food note (OWNER only)",
+                "operationId": "74c3df49f776135bc98c18b0122af850",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "food_id"
+                                ],
+                                "properties": {
+                                    "food_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "example": "Updated note"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Favorite updated successfully"
+                    },
+                    "404": {
+                        "description": "Not in favorites"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Add food to favorites (OWNER only)",
+                "operationId": "1d3bacb1fb470bfef342272b5cd99ba6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "food_id"
+                                ],
+                                "properties": {
+                                    "food_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "example": "Extra spicy please"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Added to favorites"
+                    },
+                    "404": {
+                        "description": "Food not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Remove food from favorites (OWNER only)",
+                "operationId": "eae72680c26bede74a811b8dc0c4ed0c",
+                "parameters": [
+                    {
+                        "name": "food_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removed from favorites"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/hated/{userId}": {
             "get": {
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Get scanned foods history of a user (OWNER only, status ACTIVE)",
-                "operationId": "f254247f4fc91879e3d0de4dde0364db",
+                "summary": "Get hated foods of the logged in user (OWNER only)",
+                "operationId": "714cfca57ae9b2860dbaa88feb781639",
                 "parameters": [
                     {
                         "name": "userId",
@@ -799,14 +886,140 @@
                             "type": "integer",
                             "default": 10
                         }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Scanned foods list"
+                        "description": "Hated foods list"
                     },
                     "401": {
                         "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/foods/hated": {
+            "put": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Update hated food note (OWNER only)",
+                "operationId": "225f18c8c904500ffce021225eea9f92",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "food_id"
+                                ],
+                                "properties": {
+                                    "food_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "example": "Updated note"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Hated note updated"
+                    },
+                    "404": {
+                        "description": "Not in hated list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Add food to hated list (OWNER only)",
+                "operationId": "b70a016181ddc35947012be8941dacf0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "food_id"
+                                ],
+                                "properties": {
+                                    "food_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "example": "Allergic to peanuts"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Added to hated foods"
+                    },
+                    "404": {
+                        "description": "Food not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Remove food from hated list (OWNER only)",
+                "operationId": "f677f3d0cebbb281262257edb60c41cb",
+                "parameters": [
+                    {
+                        "name": "food_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removed from hated list"
                     }
                 },
                 "security": [
@@ -821,7 +1034,7 @@
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Get eaten foods history of a user (OWNER only)",
+                "summary": "Get eaten foods history of the logged in user (OWNER only)",
                 "operationId": "8a17295835eb93ee3eca66fa089d7c6e",
                 "parameters": [
                     {
@@ -849,6 +1062,27 @@
                             "type": "integer",
                             "default": 10
                         }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
                     }
                 ],
                 "responses": {
@@ -857,124 +1091,9 @@
                     },
                     "401": {
                         "description": "Unauthorized"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/foods/favorite": {
-            "post": {
-                "tags": [
-                    "Foods"
-                ],
-                "summary": "Add food to favorites (OWNER only)",
-                "operationId": "1d3bacb1fb470bfef342272b5cd99ba6",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "food_id"
-                                ],
-                                "properties": {
-                                    "food_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Added to favorites"
                     },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "404": {
-                        "description": "Food not found"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Foods"
-                ],
-                "summary": "Remove food from favorites via query param (OWNER only)",
-                "operationId": "eae72680c26bede74a811b8dc0c4ed0c",
-                "parameters": [
-                    {
-                        "name": "food_id",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Removed from favorites"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/foods/scanned": {
-            "post": {
-                "tags": [
-                    "Foods"
-                ],
-                "summary": "Add food to scanned history (OWNER only)",
-                "operationId": "67be04092286b1b956b896beead25437",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "food_id"
-                                ],
-                                "properties": {
-                                    "food_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Added to scanned history"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "404": {
-                        "description": "Food not found"
+                    "403": {
+                        "description": "Forbidden"
                     }
                 },
                 "security": [
@@ -989,7 +1108,7 @@
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Record an eaten meal with food items (OWNER only)",
+                "summary": "Record an eaten food entry (OWNER only)",
                 "operationId": "06a90d20b07426f4a839c21350a1a3a8",
                 "requestBody": {
                     "required": true,
@@ -997,45 +1116,16 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "meal_type",
-                                    "items"
+                                    "food_id"
                                 ],
                                 "properties": {
-                                    "meal_type": {
-                                        "type": "string",
-                                        "enum": [
-                                            "BREAKFAST",
-                                            "LUNCH",
-                                            "DINNER",
-                                            "SNACK"
-                                        ]
-                                    },
-                                    "eaten_at": {
-                                        "type": "string",
-                                        "format": "date-time"
-                                    },
-                                    "address": {
-                                        "type": "string"
+                                    "food_id": {
+                                        "type": "integer",
+                                        "example": 1
                                     },
                                     "note": {
-                                        "type": "string"
-                                    },
-                                    "items": {
-                                        "type": "array",
-                                        "items": {
-                                            "properties": {
-                                                "food_id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "quantity": {
-                                                    "type": "number",
-                                                    "format": "float",
-                                                    "example": 1.5
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
+                                        "type": "string",
+                                        "example": "Ate for dinner with friends"
                                     }
                                 },
                                 "type": "object"
@@ -1046,9 +1136,6 @@
                 "responses": {
                     "201": {
                         "description": "Eaten food recorded successfully"
-                    },
-                    "400": {
-                        "description": "Foreign key error or invalid item"
                     },
                     "401": {
                         "description": "Unauthorized"
@@ -1062,18 +1149,81 @@
                         "bearerAuth": []
                     }
                 ]
+            }
+        },
+        "/foods/eaten/{eatenId}": {
+            "put": {
+                "tags": [
+                    "Foods"
+                ],
+                "summary": "Update an eaten food record (OWNER only)",
+                "operationId": "dddb48333aa0fae11aa8cb40de4de6ec",
+                "parameters": [
+                    {
+                        "name": "eatenId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "food_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "example": "Updated note"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Eaten food entry updated"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Entry not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Delete eaten food entry via query param (OWNER only)",
-                "operationId": "e65fa05cb7e4d8d76c681fa32eb8ef35",
+                "summary": "Delete eaten food entry (OWNER only)",
+                "operationId": "69a2ae11c6b91750dabb8fa6cc1befa3",
                 "parameters": [
                     {
-                        "name": "eaten_food_id",
+                        "name": "eatenId",
+                        "in": "path",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "eaten_id",
                         "in": "query",
-                        "required": true,
+                        "required": false,
                         "schema": {
                             "type": "integer"
                         }
@@ -1085,6 +1235,9 @@
                     },
                     "401": {
                         "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "404": {
                         "description": "Eaten food not found"
@@ -1733,6 +1886,30 @@
                         }
                     },
                     {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "RESOLVED",
+                                "PENDING"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "COMMENT",
+                                "ERROR"
+                            ]
+                        }
+                    },
+                    {
                         "name": "sort_by",
                         "in": "query",
                         "required": false,
@@ -1772,12 +1949,12 @@
                     }
                 ]
             },
-            "post": {
+            "put": {
                 "tags": [
                     "Reports"
                 ],
-                "summary": "Submit a feedback or error report (USER)",
-                "operationId": "39a2e936857d7fa55026c1daac0f01d0",
+                "summary": "Submit a feedback or error report (User can only PUT, default is PENDING)",
+                "operationId": "84eaf3c59d9ce7a08a6f2e5f515c6dd6",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -1797,7 +1974,7 @@
                                     },
                                     "title": {
                                         "type": "string",
-                                        "example": "App crashes on food detail"
+                                        "example": "App issue on search"
                                     },
                                     "content": {
                                         "type": "string",
@@ -1832,7 +2009,7 @@
                 "tags": [
                     "Reports"
                 ],
-                "summary": "Change status of a report (ADMIN or MODERATOR)",
+                "summary": "Change status of a report (ADMIN only)",
                 "operationId": "46d9e264066d5a558c0ffdb9949d3914",
                 "parameters": [
                     {
@@ -1873,6 +2050,9 @@
                     "401": {
                         "description": "Unauthorized"
                     },
+                    "403": {
+                        "description": "Forbidden (Admin only)"
+                    },
                     "404": {
                         "description": "Report not found"
                     }
@@ -1912,7 +2092,7 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "Get list of users with pagination and search",
+                "summary": "Get list of users with pagination and search (ADMIN or MODERATOR)",
                 "operationId": "7208c29037df2b8bb02499ba39ed8a78",
                 "parameters": [
                     {
@@ -1962,7 +2142,7 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "Get user details by ID",
+                "summary": "Get user details by ID (OWNER, ADMIN, or MODERATOR)",
                 "operationId": "6946bbab7898f59a09e3c8e529a38907",
                 "parameters": [
                     {
@@ -1995,7 +2175,7 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "Update user profile (OWNER only)",
+                "summary": "Update user profile (OWNER or ADMIN; regular user cannot change role, status, created_at)",
                 "operationId": "05028d02ea3e9a99abd6260cfe05b179",
                 "parameters": [
                     {
@@ -2020,22 +2200,8 @@
                                         "type": "string",
                                         "format": "email"
                                     },
-                                    "date_of_birth": {
-                                        "type": "string",
-                                        "format": "date"
-                                    },
-                                    "phone": {
+                                    "address": {
                                         "type": "string"
-                                    },
-                                    "avatar_url": {
-                                        "type": "string"
-                                    },
-                                    "gender": {
-                                        "type": "string",
-                                        "enum": [
-                                            "MALE",
-                                            "FEMALE"
-                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -2079,6 +2245,64 @@
                 "responses": {
                     "200": {
                         "description": "User deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/users/{id}/change-role": {
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Change user role (ADMIN only)",
+                "operationId": "a18f72bc12ceb2de23748f75fc525835",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "role"
+                                ],
+                                "properties": {
+                                    "role": {
+                                        "type": "string",
+                                        "enum": [
+                                            "ADMIN",
+                                            "MODERATOR",
+                                            "USER"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Role updated successfully"
                     },
                     "401": {
                         "description": "Unauthorized"

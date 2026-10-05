@@ -27,6 +27,8 @@ class ReportController extends Controller
             new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
             new OA\Parameter(name: 'pageSize', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10)),
             new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['RESOLVED', 'PENDING'])),
+            new OA\Parameter(name: 'type', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['COMMENT', 'ERROR'])),
             new OA\Parameter(name: 'sort_by', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['resolved_at', 'created_at'])),
             new OA\Parameter(name: 'sort_order', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'], default: 'desc')),
         ],
@@ -40,10 +42,19 @@ class ReportController extends Controller
         $page = (int) ($request->query('page') ?? 1);
         $pageSize = (int) ($request->query('pageSize') ?? $request->query('page-size') ?? $request->query('page_size') ?? 10);
         $search = (string) ($request->query('search') ?? '');
+        $status = $request->query('status');
+        $type = $request->query('type');
         $sortBy = $request->query('sort_by') ?? $request->query('sort-by');
         $sortOrder = strtolower($request->query('sort_order') ?? $request->query('sort-order') ?? 'desc');
 
         $query = Report::with(['author', 'resolvedByUser']);
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+        if ($type) {
+            $query->where('type', $type);
+        }
 
         if ($sortBy && in_array($sortBy, ['resolved_at', 'created_at'])) {
             $query->orderBy($sortBy, $sortOrder === 'asc' ? 'asc' : 'desc');
@@ -73,9 +84,9 @@ class ReportController extends Controller
         ]);
     }
 
-    #[OA\Post(
+    #[OA\Put(
         path: '/reports',
-        summary: 'Submit a feedback or error report (USER)',
+        summary: 'Submit a feedback or error report (User can only PUT, default is PENDING)',
         security: [['bearerAuth' => []]],
         tags: ['Reports'],
         requestBody: new OA\RequestBody(
@@ -84,7 +95,7 @@ class ReportController extends Controller
                 required: ['content'],
                 properties: [
                     new OA\Property(property: 'type', type: 'string', enum: ['COMMENT', 'ERROR'], default: 'ERROR'),
-                    new OA\Property(property: 'title', type: 'string', example: 'App crashes on food detail'),
+                    new OA\Property(property: 'title', type: 'string', example: 'App issue on search'),
                     new OA\Property(property: 'content', type: 'string', example: 'Steps to reproduce the crash...'),
                 ]
             )
@@ -109,6 +120,7 @@ class ReportController extends Controller
 
         $user = $request->user();
 
+        // User can only submit report, default status is PENDING
         $report = Report::create([
             'author_id' => $user->user_id,
             'type' => $request->input('type') ?? ReportType::ERROR,
@@ -120,14 +132,14 @@ class ReportController extends Controller
         $report->load(['author', 'resolvedByUser']);
 
         return response()->json([
-            'message' => 'Report created successfully',
+            'message' => 'Report submitted successfully',
             'data' => new ReportResource($report),
         ], 201);
     }
 
     #[OA\Put(
         path: '/reports/{reportId}/change-status',
-        summary: 'Change status of a report (ADMIN or MODERATOR)',
+        summary: 'Change status of a report (ADMIN only)',
         security: [['bearerAuth' => []]],
         tags: ['Reports'],
         parameters: [
@@ -145,6 +157,7 @@ class ReportController extends Controller
         responses: [
             new OA\Response(response: 200, description: 'Report status updated successfully'),
             new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Forbidden (Admin only)'),
             new OA\Response(response: 404, description: 'Report not found'),
         ]
     )]
@@ -167,7 +180,7 @@ class ReportController extends Controller
         $user = $request->user();
 
         $report->status = $newStatus;
-        if ($newStatus === 'RESOLVED') {
+        if ($newStatus === 'RESOLVED' || $newStatus === ReportStatus::RESOLVED->value) {
             $report->resolved_by = $user->user_id;
             $report->resolved_at = now();
         } else {

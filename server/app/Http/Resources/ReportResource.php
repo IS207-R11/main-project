@@ -28,8 +28,9 @@ class ReportResource extends JsonResource
             'status' => $this->status instanceof \BackedEnum ? $this->status->value : $this->status,
             'title' => $this->title,
             'content' => $this->content,
-            'resolved_at' => $this->resolved_at ? (is_string($this->resolved_at) ? $this->resolved_at : $this->resolved_at->format('Y-m-d')) : null,
-            'created_at' => $this->created_at ? (is_string($this->created_at) ? $this->created_at : $this->created_at->format('Y-m-d')) : null,
+            'resolved_at' => $this->resolved_at ? (is_string($this->resolved_at) ? $this->resolved_at : $this->resolved_at->format('Y-m-d H:i:s')) : null,
+            'created_at' => $this->created_at ? (is_string($this->created_at) ? $this->created_at : $this->created_at->format('Y-m-d H:i:s')) : null,
+            'updated_at' => $this->updated_at ? (is_string($this->updated_at) ? $this->updated_at : $this->updated_at->format('Y-m-d H:i:s')) : null,
         ];
     }
 }

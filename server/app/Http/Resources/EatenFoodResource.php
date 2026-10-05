@@ -15,18 +15,14 @@ class EatenFoodResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'eaten_id' => $this->eaten_id,
             'user_id' => $this->user_id,
-            'eaten_food_id' => $this->eaten_food_id,
-            'meal_type' => $this->meal_type instanceof \BackedEnum ? $this->meal_type->value : $this->meal_type,
-            'eaten_at' => $this->eaten_at ? (is_string($this->eaten_at) ? $this->eaten_at : $this->eaten_at->format('Y-m-d H:i:s')) : null,
-            'address' => $this->address,
+            'food_id' => $this->food_id,
+            'food' => $this->whenLoaded('food', function () {
+                return new FoodCardResource($this->food);
+            }),
             'note' => $this->note,
-            'items' => $this->items ? $this->items->map(function ($item) {
-                return [
-                    'food' => $item->food ? [new FoodCardResource($item->food)] : [],
-                    'quantity' => (float) $item->quantity,
-                ];
-            }) : [],
+            'created_at' => $this->created_at ? (is_string($this->created_at) ? $this->created_at : $this->created_at->format('Y-m-d H:i:s')) : null,
         ];
     }
 }

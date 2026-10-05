@@ -1,9 +1,11 @@
 <?php
 
+use App\Enums\FoodStatus;
+use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Food;
-use App\Models\Nutrition;
+use App\Models\Report;
 use App\Models\User;
 use App\Services\JwtService;
 use Illuminate\Support\Facades\Hash;
@@ -18,7 +20,7 @@ test('root endpoint returns server running message', function () {
     expect($response->getContent())->toBe('Server is running');
 });
 
-test('signup and signin flow', function () {
+test('signup and signin flow with hashed_password and address', function () {
     $uniqueName = 'user_'.uniqid();
     $uniqueEmail = $uniqueName.'@example.com';
 
@@ -27,9 +29,12 @@ test('signup and signin flow', function () {
         'username' => $uniqueName,
         'email' => $uniqueEmail,
         'password' => 'Password123!',
+        'address' => '123 Le Loi, Q1, HCMC',
     ]);
     $signupRes->assertStatus(201)
-        ->assertJsonStructure(['access_token', 'refresh_token']);
+        ->assertJsonStructure(['access_token', 'refresh_token', 'user'])
+        ->assertJsonPath('user.address', '123 Le Loi, Q1, HCMC')
+        ->assertJsonPath('user.role', 'USER');
 
     // Signin
     $signinRes = $this->postJson('/api/auth/signin', [
@@ -37,7 +42,7 @@ test('signup and signin flow', function () {
         'password' => 'Password123!',
     ]);
     $signinRes->assertStatus(200)
-        ->assertJsonStructure(['access_token', 'refresh_token']);
+        ->assertJsonStructure(['access_token', 'refresh_token', 'user']);
 
     // Signout
     $signoutRes = $this->postJson('/api/auth/signout', [
@@ -51,7 +56,7 @@ test('refresh token generates new access token', function () {
     $user = User::create([
         'username' => $uniqueName,
         'email' => $uniqueName.'@example.com',
-        'password_hashed' => Hash::make('Secret123!'),
+        'hashed_password' => Hash::make('Secret123!'),
         'role' => UserRole::USER,
         'status' => UserStatus::ACTIVE,
     ]);
@@ -66,210 +71,421 @@ test('refresh token generates new access token', function () {
         ->assertJsonStructure(['access_token']);
 });
 
-test('change password allows owner and admin', function () {
+test('change password allows owner with oldPassword and admin without oldPassword', function () {
+    $admin = User::create([
+        'username' => 'adm_pass_'.uniqid(),
+        'email' => 'admpass_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('AdminPass123!'),
+        'role' => UserRole::ADMIN,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $adminToken = $this->jwtService->generateAccessToken($admin);
+
     $user = User::create([
         'username' => 'passuser_'.uniqid(),
         'email' => 'pass_'.uniqid().'@example.com',
-        'password_hashed' => Hash::make('OldSecret123!'),
+        'hashed_password' => Hash::make('OldSecret123!'),
         'role' => UserRole::USER,
         'status' => UserStatus::ACTIVE,
     ]);
-
     $userToken = $this->jwtService->generateAccessToken($user);
 
-    // Change password as owner
-    $res = $this->withHeader('Authorization', 'Bearer '.$userToken)
+    // Change password as owner (requires correct old password)
+    $resFail = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->postJson('/api/auth/change-password/'.$user->user_id, [
+            'oldPassword' => 'WrongPass',
+            'newPassword' => 'NewSecret123!',
+        ]);
+    $resFail->assertStatus(401);
+
+    $resOwner = $this->withHeader('Authorization', 'Bearer '.$userToken)
         ->postJson('/api/auth/change-password/'.$user->user_id, [
             'oldPassword' => 'OldSecret123!',
             'newPassword' => 'NewSecret123!',
         ]);
+    $resOwner->assertStatus(200);
 
-    $res->assertStatus(200);
     $user->refresh();
-    expect(Hash::check('NewSecret123!', $user->password_hashed))->toBeTrue();
+    expect(Hash::check('NewSecret123!', $user->hashed_password))->toBeTrue();
+
+    // Admin changes user's password without needing old password
+    $resAdmin = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+        ->postJson('/api/auth/change-password/'.$user->user_id, [
+            'newPassword' => 'AdminReset123!',
+        ]);
+    $resAdmin->assertStatus(200);
+
+    $user->refresh();
+    expect(Hash::check('AdminReset123!', $user->hashed_password))->toBeTrue();
 });
 
-test('user management endpoints', function () {
+test('user CRUD profile: user cannot change role, status, created_at, but Admin can change role', function () {
     $admin = User::create([
-        'username' => 'adm_'.uniqid(),
-        'email' => 'adm_'.uniqid().'@example.com',
-        'password_hashed' => Hash::make('Secret123!'),
+        'username' => 'adm_mgr_'.uniqid(),
+        'email' => 'admmgr_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
         'role' => UserRole::ADMIN,
         'status' => UserStatus::ACTIVE,
     ]);
+    $adminToken = $this->jwtService->generateAccessToken($admin);
 
     $target = User::create([
         'username' => 'target_'.uniqid(),
         'email' => 'target_'.uniqid().'@example.com',
-        'password_hashed' => Hash::make('Secret123!'),
+        'address' => 'Old Address',
+        'hashed_password' => Hash::make('Secret123!'),
         'role' => UserRole::USER,
         'status' => UserStatus::ACTIVE,
     ]);
-
-    $adminToken = $this->jwtService->generateAccessToken($admin);
     $targetToken = $this->jwtService->generateAccessToken($target);
 
-    // List users (Admin)
-    $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->getJson('/api/users')
-        ->assertStatus(200)
-        ->assertJsonStructure(['data', 'total_records']);
-
-    // Show user details
-    $this->withHeader('Authorization', 'Bearer '.$targetToken)
-        ->getJson('/api/users/'.$target->user_id)
-        ->assertStatus(200)
-        ->assertJsonPath('data.user_id', $target->user_id);
-
-    // Update user profile (Owner)
-    $this->withHeader('Authorization', 'Bearer '.$targetToken)
+    // Target updates their own profile (cannot change role or status)
+    $updateRes = $this->withHeader('Authorization', 'Bearer '.$targetToken)
         ->putJson('/api/users/'.$target->user_id, [
-            'phone' => '0987654321',
-            'gender' => 'MALE',
-        ])
-        ->assertStatus(200);
+            'address' => 'New Address 456',
+            'role' => 'ADMIN', // Should be ignored
+            'status' => 'BANNED', // Should be ignored
+        ]);
+    $updateRes->assertStatus(200);
 
-    // Change status (Admin)
-    $this->withHeader('Authorization', 'Bearer '.$adminToken)
+    $target->refresh();
+    expect($target->address)->toBe('New Address 456');
+    expect($target->role->value)->toBe('USER');
+    expect($target->status->value)->toBe('ACTIVE');
+
+    // Admin changes role
+    $changeRoleRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+        ->putJson('/api/users/'.$target->user_id.'/change-role', [
+            'role' => 'MODERATOR',
+        ]);
+    $changeRoleRes->assertStatus(200);
+
+    $target->refresh();
+    expect($target->role->value)->toBe('MODERATOR');
+
+    // Admin changes status
+    $changeStatusRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
         ->putJson('/api/users/'.$target->user_id.'/change-status', [
             'status' => 'DISABLED',
-        ])
-        ->assertStatus(200);
+        ]);
+    $changeStatusRes->assertStatus(200);
 
     $target->refresh();
     expect($target->status->value)->toBe('DISABLED');
 });
 
-test('health profiles CRUD', function () {
-    $user = User::create([
-        'username' => 'health_'.uniqid(),
-        'email' => 'health_'.uniqid().'@example.com',
-        'password_hashed' => Hash::make('Secret123!'),
-        'role' => UserRole::USER,
-        'status' => UserStatus::ACTIVE,
-    ]);
-    $userToken = $this->jwtService->generateAccessToken($user);
-
-    // Create health profile
-    $createRes = $this->withHeader('Authorization', 'Bearer '.$userToken)
-        ->postJson('/api/health-profiles/'.$user->user_id, [
-            'weight' => 70.5,
-            'height' => 175.0,
-            'date_of_measuring' => '2026-09-20',
-            'measuring_method' => 'STANDING',
-            'labor_level' => 'MID',
-            'maternity_status' => null,
-        ]);
-    $createRes->assertStatus(201);
-    $profileId = $createRes->json('data.profile_id');
-
-    // List health profiles
-    $this->withHeader('Authorization', 'Bearer '.$userToken)
-        ->getJson('/api/health-profiles/'.$user->user_id)
-        ->assertStatus(200)
-        ->assertJsonStructure(['data', 'total_records']);
-
-    // Update health profile
-    $this->withHeader('Authorization', 'Bearer '.$userToken)
-        ->putJson('/api/health-profiles/'.$user->user_id.'/'.$profileId, [
-            'weight' => 69.5,
-        ])
-        ->assertStatus(200)
-        ->assertJsonPath('data.weight', 69.5);
-
-    // Delete health profile
-    $this->withHeader('Authorization', 'Bearer '.$userToken)
-        ->deleteJson('/api/health-profiles/'.$profileId)
-        ->assertStatus(200);
-});
-
-test('nutrition and food lifecycle with relations and rollback', function () {
+test('public foods listing, user PUT pending food, mod approval, and admin delete', function () {
     $admin = User::create([
-        'username' => 'foodadm_'.uniqid(),
-        'email' => 'foodadm_'.uniqid().'@example.com',
-        'password_hashed' => Hash::make('Secret123!'),
+        'username' => 'adm_food_'.uniqid(),
+        'email' => 'admfood_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
         'role' => UserRole::ADMIN,
         'status' => UserStatus::ACTIVE,
     ]);
     $adminToken = $this->jwtService->generateAccessToken($admin);
 
-    // Create nutrition
-    $nutRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->postJson('/api/nutritions', [
-            'nutrition_name' => 'Protein Hydrolyzed '.uniqid(),
-            'calories' => 4.0,
-            'protein_g' => 25.0,
+    $moderator = User::create([
+        'username' => 'mod_food_'.uniqid(),
+        'email' => 'modfood_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::MODERATOR,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $modToken = $this->jwtService->generateAccessToken($moderator);
+
+    $user = User::create([
+        'username' => 'user_food_'.uniqid(),
+        'email' => 'userfood_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::USER,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $userToken = $this->jwtService->generateAccessToken($user);
+
+    // Public list foods (No auth required)
+    $publicRes = $this->getJson('/api/foods');
+    $publicRes->assertStatus(200);
+
+    // User PUTs new food (default is PENDING)
+    $foodPutRes = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->putJson('/api/foods', [
+            'name' => 'Pho Ga '.uniqid(),
+            'description' => 'Delicious chicken noodle soup',
+            'image_url' => 'https://example.com/phoga.jpg',
         ]);
-    $nutRes->assertStatus(201);
-    $nutritionId = $nutRes->json('data.nutrition_id');
+    $foodPutRes->assertStatus(201)
+        ->assertJsonPath('data.status', 'PENDING');
+    $foodId = $foodPutRes->json('data.food_id');
 
-    // Create food with nutrition
-    $foodRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->postJson('/api/foods', [
-            'food_name' => 'Healthy Salad '.uniqid(),
-            'quip' => 'Fresh organic salad',
-            'sub' => 'With high protein',
-            'price' => 45000.0,
-            'is_veg' => true,
-            'sessions' => ['MORNING', 'LUNCH'],
-            'nutritions' => [$nutritionId],
+    // Moderator approves food (change status to ACTIVE)
+    $approveRes = $this->withHeader('Authorization', 'Bearer '.$modToken)
+        ->putJson('/api/foods/'.$foodId.'/change-status', [
+            'status' => 'ACTIVE',
         ]);
-    $foodRes->assertStatus(201)
-        ->assertJsonPath('data.is_veg', true);
-    $foodId = $foodRes->json('data.food_id');
+    $approveRes->assertStatus(200)
+        ->assertJsonPath('data.status', 'ACTIVE');
 
-    // Test rollback with invalid nutrition ID
-    $invalidFoodRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->postJson('/api/foods', [
-            'food_name' => 'Invalid Food',
-            'is_veg' => false,
-            'nutritions' => [9999999], // non-existent
-        ]);
-    $invalidFoodRes->assertStatus(400);
+    // Public options test
+    $optionsRes = $this->getJson('/api/foods/options');
+    $optionsRes->assertStatus(200);
 
-    // Favorite foods
-    $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->postJson('/api/foods/favorite', ['food_id' => $foodId])
-        ->assertStatus(200);
+    // Detail check includes favorite_count and eaten_count
+    $detailRes = $this->getJson('/api/foods/'.$foodId);
+    $detailRes->assertStatus(200)
+        ->assertJsonStructure(['data' => ['food_id', 'name', 'favorite_count', 'eaten_count']]);
 
-    $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->getJson('/api/foods/favorite/'.$admin->user_id)
-        ->assertStatus(200);
+    // List check includes favorite_count and eaten_count
+    $listRes = $this->getJson('/api/foods');
+    $listRes->assertStatus(200)
+        ->assertJsonStructure(['data' => [['food_id', 'favorite_count', 'eaten_count']]]);
 
-    $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->deleteJson('/api/foods/favorite?food_id='.$foodId)
-        ->assertStatus(200);
+    // Regular user cannot delete food (only Admin)
+    $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->deleteJson('/api/foods/'.$foodId)
+        ->assertStatus(401);
 
-    // Scanned foods
-    $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->postJson('/api/foods/scanned', ['food_id' => $foodId])
-        ->assertStatus(200);
-
-    // Eaten food recording
-    $eatenRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->postJson('/api/foods/eaten', [
-            'meal_type' => 'LUNCH',
-            'eaten_at' => '2026-09-20 12:00:00',
-            'address' => 'District 1, HCMC',
-            'note' => 'Very delicious',
-            'items' => [
-                ['food_id' => $foodId, 'quantity' => 2.0],
-            ],
-        ]);
-    $eatenRes->assertStatus(201);
-    $eatenFoodId = $eatenRes->json('data.eaten_food_id');
-
-    $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->deleteJson('/api/foods/eaten?eaten_food_id='.$eatenFoodId)
-        ->assertStatus(200);
-
-    // Clean up food
+    // Admin deletes food
     $this->withHeader('Authorization', 'Bearer '.$adminToken)
         ->deleteJson('/api/foods/'.$foodId)
         ->assertStatus(200);
+});
 
-    // Clean up nutrition
-    $this->withHeader('Authorization', 'Bearer '.$adminToken)
-        ->deleteJson('/api/nutritions/'.$nutritionId)
+test('smart gacha ranking with foodSet and excluded eaten/gacha logic', function () {
+    $user = User::create([
+        'username' => 'gacha_user_'.uniqid(),
+        'email' => 'gacha_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::USER,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $userToken = $this->jwtService->generateAccessToken($user);
+
+    // Create 3 active foods
+    $foodA = Food::create(['name' => 'Food A '.uniqid(), 'status' => FoodStatus::ACTIVE]);
+    $foodB = Food::create(['name' => 'Food B '.uniqid(), 'status' => FoodStatus::ACTIVE]);
+    $foodC = Food::create(['name' => 'Food C '.uniqid(), 'status' => FoodStatus::ACTIVE]);
+
+    // Give Food A high rank: 2 favorites, 1 eaten
+    $user->favoriteFoods()->syncWithoutDetaching([$foodA->food_id]);
+    $user->eatenFoods()->create(['food_id' => $foodA->food_id, 'created_at' => now()]);
+
+    // Give Food B 1 hated
+    $user->hatedFoods()->syncWithoutDetaching([$foodB->food_id]);
+
+    // 1. Gacha with foodSet = [Food A, Food B]
+    $gachaFoodSetRes = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->postJson('/api/foods/gacha', [
+            'foodSet' => [$foodA->food_id, $foodB->food_id],
+        ]);
+    $gachaFoodSetRes->assertStatus(200)
+        ->assertJsonStructure(['data' => ['food_id', 'name', 'favorite_count', 'eaten_count']]);
+    expect(in_array($gachaFoodSetRes->json('data.food_id'), [$foodA->food_id, $foodB->food_id]))->toBeTrue();
+
+    // 2. Gacha with numberOfExcludedEaten = 1, typeOfExcludedEaten = newest
+    // Since Food A is in eaten, Food A must be excluded!
+    $gachaExcludeRes = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->postJson('/api/foods/gacha', [
+            'numberOfExcludedEaten' => 1,
+            'typeOfExcludedEaten' => 'newest',
+            'foodSet' => [$foodA->food_id, $foodC->food_id],
+        ]);
+    // Note: If foodSet is provided, foodSet is used. Let's test without foodSet:
+    $gachaExcludeAllRes = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->postJson('/api/foods/gacha', [
+            'numberOfExcludedEaten' => 1,
+            'typeOfExcludedEaten' => 'newest',
+        ]);
+    $gachaExcludeAllRes->assertStatus(200);
+    // Food A was excluded, so winner should not be Food A (it's either Food B, Food C, or others)
+    expect($gachaExcludeAllRes->json('data.food_id'))->not->toBe($foodA->food_id);
+
+    // Clean up
+    $foodA->delete();
+    $foodB->delete();
+    $foodC->delete();
+});
+
+test('user has full CRUD on EATEN, FAVORITE, HATED of their own, forbidden for other users', function () {
+    $user1 = User::create([
+        'username' => 'user1_'.uniqid(),
+        'email' => 'user1_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::USER,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $userToken1 = $this->jwtService->generateAccessToken($user1);
+
+    $user2 = User::create([
+        'username' => 'user2_'.uniqid(),
+        'email' => 'user2_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::USER,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $userToken2 = $this->jwtService->generateAccessToken($user2);
+
+    $food = Food::create([
+        'name' => 'Banh Mi '.uniqid(),
+        'description' => 'Crispy bread',
+        'status' => FoodStatus::ACTIVE,
+    ]);
+
+    // 1. FAVORITE CRUD
+    // Add favorite
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->postJson('/api/foods/favorite', [
+            'food_id' => $food->food_id,
+            'note' => 'Favorite breakfast',
+        ])
         ->assertStatus(200);
+
+    // Read favorite (user1 can read, user2 cannot read user1's favorites)
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->getJson('/api/foods/favorite/'.$user1->user_id)
+        ->assertStatus(200);
+
+    $this->withHeader('Authorization', 'Bearer '.$userToken2)
+        ->getJson('/api/foods/favorite/'.$user1->user_id)
+        ->assertStatus(401);
+
+    // Update favorite note
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->putJson('/api/foods/favorite', [
+            'food_id' => $food->food_id,
+            'note' => 'Updated favorite note',
+        ])
+        ->assertStatus(200);
+
+    // Delete favorite
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->deleteJson('/api/foods/favorite/'.$food->food_id)
+        ->assertStatus(200);
+
+    // 2. HATED CRUD
+    // Add hated
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->postJson('/api/foods/hated', [
+            'food_id' => $food->food_id,
+            'note' => 'Do not like herbs',
+        ])
+        ->assertStatus(200);
+
+    // Read hated
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->getJson('/api/foods/hated/'.$user1->user_id)
+        ->assertStatus(200);
+
+    $this->withHeader('Authorization', 'Bearer '.$userToken2)
+        ->getJson('/api/foods/hated/'.$user1->user_id)
+        ->assertStatus(401);
+
+    // Update hated note
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->putJson('/api/foods/hated', [
+            'food_id' => $food->food_id,
+            'note' => 'Severe allergy',
+        ])
+        ->assertStatus(200);
+
+    // Delete hated
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->deleteJson('/api/foods/hated/'.$food->food_id)
+        ->assertStatus(200);
+
+    // 3. EATEN CRUD
+    // Create eaten
+    $eatenRes = $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->postJson('/api/foods/eaten', [
+            'food_id' => $food->food_id,
+            'note' => 'Ate 1 portion at 8am',
+        ]);
+    $eatenRes->assertStatus(201);
+    $eatenId = $eatenRes->json('data.eaten_id');
+
+    // Read eaten
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->getJson('/api/foods/eaten/'.$user1->user_id)
+        ->assertStatus(200);
+
+    $this->withHeader('Authorization', 'Bearer '.$userToken2)
+        ->getJson('/api/foods/eaten/'.$user1->user_id)
+        ->assertStatus(401);
+
+    // Update eaten
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->putJson('/api/foods/eaten/'.$eatenId, [
+            'note' => 'Updated note: ate 2 portions',
+        ])
+        ->assertStatus(200);
+
+    // User2 cannot update User1's eaten record
+    $this->withHeader('Authorization', 'Bearer '.$userToken2)
+        ->putJson('/api/foods/eaten/'.$eatenId, [
+            'note' => 'Hacked note',
+        ])
+        ->assertStatus(403);
+
+    // Delete eaten
+    $this->withHeader('Authorization', 'Bearer '.$userToken1)
+        ->deleteJson('/api/foods/eaten/'.$eatenId)
+        ->assertStatus(200);
+
+    // Clean up
+    $food->delete();
+});
+
+test('user PUT report and only Admin can change report status', function () {
+    $admin = User::create([
+        'username' => 'adm_rep_'.uniqid(),
+        'email' => 'admrep_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::ADMIN,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $adminToken = $this->jwtService->generateAccessToken($admin);
+
+    $moderator = User::create([
+        'username' => 'mod_rep_'.uniqid(),
+        'email' => 'modrep_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::MODERATOR,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $modToken = $this->jwtService->generateAccessToken($moderator);
+
+    $user = User::create([
+        'username' => 'usr_rep_'.uniqid(),
+        'email' => 'usrrep_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::USER,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $userToken = $this->jwtService->generateAccessToken($user);
+
+    // User PUTs new report (default is PENDING)
+    $reportRes = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->putJson('/api/reports', [
+            'type' => 'ERROR',
+            'title' => 'Cannot search food',
+            'content' => 'Search input returns empty',
+        ]);
+    $reportRes->assertStatus(201)
+        ->assertJsonPath('data.status', 'PENDING');
+    $reportId = $reportRes->json('data.report_id');
+
+    // Moderator CANNOT change report status (401 or 403)
+    $this->withHeader('Authorization', 'Bearer '.$modToken)
+        ->putJson('/api/reports/'.$reportId.'/change-status', [
+            'status' => 'RESOLVED',
+        ])
+        ->assertStatus(401);
+
+    // Admin can change report status to RESOLVED
+    $resolveRes = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+        ->putJson('/api/reports/'.$reportId.'/change-status', [
+            'status' => 'RESOLVED',
+        ]);
+    $resolveRes->assertStatus(200)
+        ->assertJsonPath('data.status', 'RESOLVED')
+        ->assertJsonPath('data.resolved_by.user_id', $admin->user_id);
 });

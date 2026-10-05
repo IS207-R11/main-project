@@ -16,7 +16,7 @@ class FoodOptionResource extends JsonResource
     {
         return [
             'food_id' => $this->food_id,
-            'food_name' => $this->food_name,
+            'name' => $this->name,
         ];
     }
 }

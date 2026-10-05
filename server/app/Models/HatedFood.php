@@ -6,29 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class EatenFood extends Model
+class HatedFood extends Model
 {
     use HasFactory;
 
-    protected $table = 'EATEN_FOODS';
+    protected $table = 'HATED_FOODS';
 
-    protected $primaryKey = 'eaten_id';
+    public $incrementing = false;
 
     public $timestamps = false;
+
+    protected $primaryKey = null;
 
     protected $fillable = [
         'user_id',
         'food_id',
         'note',
-        'created_at',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'created_at' => 'datetime',
-        ];
-    }
 
     public function user(): BelongsTo
     {

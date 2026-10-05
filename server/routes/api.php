@@ -2,8 +2,6 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FoodController;
-use App\Http\Controllers\Api\HealthProfileController;
-use App\Http\Controllers\Api\NutritionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RootController;
 use App\Http\Controllers\Api\UserController;
@@ -25,7 +23,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/signout', [AuthController::class, 'signout']);
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
 
-    Route::middleware(['jwt.auth', 'owner:ADMIN'])->group(function () {
+    Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/change-password/{userID}', [AuthController::class, 'changePassword']);
     });
 });
@@ -34,74 +32,69 @@ Route::prefix('auth')->group(function () {
 Route::prefix('users')->group(function () {
     Route::middleware(['jwt.auth'])->group(function () {
         Route::get('/', [UserController::class, 'index'])->middleware('role:ADMIN,MODERATOR');
-        Route::get('/{id}', [UserController::class, 'show'])->middleware('owner:ADMIN,MODERATOR')->whereNumber('id'); // whereNumber --> cast to number
-        Route::put('/{id}', [UserController::class, 'update'])->middleware('owner')->whereNumber('id');
+        Route::get('/{id}', [UserController::class, 'show'])->middleware('owner:ADMIN,MODERATOR')->whereNumber('id');
+        Route::put('/{id}', [UserController::class, 'update'])->middleware('owner:ADMIN')->whereNumber('id');
+        Route::put('/{id}/change-role', [UserController::class, 'changeRole'])->middleware('role:ADMIN')->whereNumber('id');
         Route::put('/{id}/change-status', [UserController::class, 'changeStatus'])->middleware('role:ADMIN,MODERATOR')->whereNumber('id');
         Route::delete('/{id}', [UserController::class, 'destroy'])->middleware('owner:ADMIN')->whereNumber('id');
     });
 });
-
-// Health Profiles Routes
-Route::prefix('health-profiles')->group(function () {
-    Route::middleware(['jwt.auth'])->group(function () {
-        Route::get('/{userId}', [HealthProfileController::class, 'index'])->middleware('owner:ADMIN')->whereNumber('userId');
-        Route::post('/{userId}', [HealthProfileController::class, 'store'])->middleware('owner')->whereNumber('userId');
-        Route::put('/{userId}/{profileId}', [HealthProfileController::class, 'update'])->middleware('owner')->whereNumber('userId')->whereNumber('profileId');
-        Route::delete('/{profileId}', [HealthProfileController::class, 'destroy'])->middleware('owner:ADMIN')->whereNumber('profileId');
-    });
-});
-// Legacy alias for typo compatibility if requested
-Route::delete('/heal-profiles/{profileId}', [HealthProfileController::class, 'destroy'])->middleware(['jwt.auth', 'owner:ADMIN'])->whereNumber('profileId');
 
 // Foods Routes
 Route::prefix('foods')->group(function () {
     // Public routes
     Route::get('/', [FoodController::class, 'index']);
     Route::get('/options', [FoodController::class, 'options']);
-    Route::get('/gacha', [FoodController::class, 'gacha']);
+    Route::match(['get', 'post'], '/gacha', [FoodController::class, 'gacha']);
+    Route::get('/{foodId}', [FoodController::class, 'show'])->whereNumber('foodId');
 
     // Authenticated routes
     Route::middleware(['jwt.auth'])->group(function () {
-        // User collections routes (placed before {foodId})
-        Route::get('/favorite/{userId}', [FoodController::class, 'getFavorites'])->middleware('owner:ADMIN')->whereNumber('userId');
-        Route::get('/scanned/{userId}', [FoodController::class, 'getScanned'])->middleware('owner:ADMIN')->whereNumber('userId');
-        Route::get('/eaten/{userId}', [FoodController::class, 'getEaten'])->middleware('owner:ADMIN')->whereNumber('userId');
+        // User collections routes (FAVORITE - only owner has full CRUD)
+        Route::get('/favorite/{userId}', [FoodController::class, 'getFavorites'])->middleware('owner')->whereNumber('userId');
+        Route::post('/favorite', [FoodController::class, 'addFavorite']);
+        Route::put('/favorite', [FoodController::class, 'updateFavorite']);
+        Route::delete('/favorite/{foodId}', [FoodController::class, 'removeFavorite'])->whereNumber('foodId');
+        Route::delete('/favorite', [FoodController::class, 'removeFavorite']);
 
-        Route::post('/favorite', [FoodController::class, 'addFavorite'])->middleware('owner');
-        Route::post('/scanned', [FoodController::class, 'addScanned'])->middleware('owner');
-        Route::post('/eaten', [FoodController::class, 'addEaten'])->middleware('owner');
+        // User collections routes (HATED - only owner has full CRUD)
+        Route::get('/hated/{userId}', [FoodController::class, 'getHated'])->middleware('owner')->whereNumber('userId');
+        Route::post('/hated', [FoodController::class, 'addHated']);
+        Route::put('/hated', [FoodController::class, 'updateHated']);
+        Route::delete('/hated/{foodId}', [FoodController::class, 'removeHated'])->whereNumber('foodId');
+        Route::delete('/hated', [FoodController::class, 'removeHated']);
 
-        Route::delete('/favorite', [FoodController::class, 'removeFavorite'])->middleware('owner');
-        Route::delete('/eaten', [FoodController::class, 'removeEaten'])->middleware('owner');
+        // User collections routes (EATEN - only owner has full CRUD)
+        Route::get('/eaten/{userId}', [FoodController::class, 'getEaten'])->middleware('owner')->whereNumber('userId');
+        Route::post('/eaten', [FoodController::class, 'addEaten']);
+        Route::put('/eaten/{eatenId}', [FoodController::class, 'updateEaten'])->whereNumber('eatenId');
+        Route::delete('/eaten/{eatenId}', [FoodController::class, 'removeEaten'])->whereNumber('eatenId');
+        Route::delete('/eaten', [FoodController::class, 'removeEaten']);
 
-        // Food item specific routes
-        Route::post('/', [FoodController::class, 'store'])->middleware('role:USER,ADMIN');
+        // Food item creation: User can only PUT new food, default status is PENDING
+        Route::put('/', [FoodController::class, 'store']);
+        Route::post('/', [FoodController::class, 'store']); // Alias for backward compatibility
+
+        // Moderator / Admin food moderation
+        Route::put('/{foodId}/change-status', [FoodController::class, 'changeStatus'])->middleware('role:ADMIN,MODERATOR')->whereNumber('foodId');
+
+        // Admin-only food management
         Route::put('/{foodId}', [FoodController::class, 'update'])->middleware('role:ADMIN')->whereNumber('foodId');
         Route::delete('/{foodId}', [FoodController::class, 'destroy'])->middleware('role:ADMIN')->whereNumber('foodId');
-        Route::put('/{foodId}/change-status', [FoodController::class, 'changeStatus'])->middleware('role:ADMIN,MODERATOR')->whereNumber('foodId');
-    });
-});
-
-// Nutrition Routes
-Route::prefix('nutritions')->group(function () {
-    // Public routes
-    Route::get('/', [NutritionController::class, 'index']);
-    Route::get('/options', [NutritionController::class, 'options']);
-    Route::get('/{nutritionId}', [NutritionController::class, 'show'])->whereNumber('nutritionId');
-
-    // Authenticated routes
-    Route::middleware(['jwt.auth'])->group(function () {
-        Route::post('/', [NutritionController::class, 'store'])->middleware('role:USER,ADMIN');
-        Route::put('/{nutritionId}', [NutritionController::class, 'update'])->middleware('role:ADMIN')->whereNumber('nutritionId');
-        Route::delete('/{nutritionId}', [NutritionController::class, 'destroy'])->middleware('role:ADMIN')->whereNumber('nutritionId');
     });
 });
 
 // Reports Routes
 Route::prefix('reports')->group(function () {
     Route::middleware(['jwt.auth'])->group(function () {
+        // Admin and Moderator can view reports
         Route::get('/', [ReportController::class, 'index'])->middleware('role:ADMIN,MODERATOR');
-        Route::post('/', [ReportController::class, 'store'])->middleware('role:USER,ADMIN,MODERATOR');
-        Route::put('/{reportId}/change-status', [ReportController::class, 'changeStatus'])->middleware('role:ADMIN,MODERATOR')->whereNumber('reportId');
+
+        // User can only PUT report (default status is PENDING)
+        Route::put('/', [ReportController::class, 'store']);
+        Route::post('/', [ReportController::class, 'store']); // Alias for backward compatibility
+
+        // Only Admin can change report status
+        Route::put('/{reportId}/change-status', [ReportController::class, 'changeStatus'])->middleware('role:ADMIN')->whereNumber('reportId');
     });
 });

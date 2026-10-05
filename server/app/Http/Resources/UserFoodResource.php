@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
 
-class FoodCardResource extends JsonResource
+class UserFoodResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -21,6 +21,7 @@ class FoodCardResource extends JsonResource
             'description' => $this->description,
             'image_url' => $this->image_url,
             'status' => $this->status instanceof \BackedEnum ? $this->status->value : $this->status,
+            'note' => $this->pivot?->note ?? $this->note ?? null,
             'created_at' => $this->created_at ? (is_string($this->created_at) ? $this->created_at : $this->created_at->format('Y-m-d H:i:s')) : null,
             'contributor_id' => $this->contributor_id,
             'favorite_count' => isset($this->favorite_count)
@@ -29,12 +30,6 @@ class FoodCardResource extends JsonResource
             'eaten_count' => isset($this->eaten_count)
                 ? (int) $this->eaten_count
                 : (int) DB::table('EATEN_FOODS')->where('food_id', $this->food_id)->distinct()->count('user_id'),
-            'contributor' => $this->whenLoaded('contributor', function () {
-                return [
-                    'user_id' => $this->contributor?->user_id,
-                    'username' => $this->contributor?->username,
-                ];
-            }),
         ];
     }
 }

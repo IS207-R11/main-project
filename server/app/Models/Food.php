@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Food extends Model
 {
@@ -19,45 +20,45 @@ class Food extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'food_name',
-        'quip',
-        'sub',
-        'price',
+        'name',
+        'description',
         'image_url',
         'status',
-        'submitted_by',
-        'note',
-        'is_veg',
-        'sessions',
+        'contributor_id',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => FoodStatus::class,
-            'is_veg' => 'boolean',
-            'sessions' => 'array',
-            'price' => 'decimal:2',
+            'created_at' => 'datetime',
         ];
     }
 
-    public function nutritions(): BelongsToMany
+    public function contributor(): BelongsTo
     {
-        return $this->belongsToMany(Nutrition::class, 'FOOD_NUTRITIONS', 'food_id', 'nutrition_id');
-    }
-
-    public function submittedByUser(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'submitted_by', 'user_id');
+        return $this->belongsTo(User::class, 'contributor_id', 'user_id');
     }
 
     public function favoriteUsers(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'FAVORITE_FOODS', 'food_id', 'user_id');
+        return $this->belongsToMany(User::class, 'FAVORITE_FOODS', 'food_id', 'user_id')
+            ->withPivot('note');
     }
 
-    public function scannedUsers(): BelongsToMany
+    public function hatedUsers(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'SCANNED_FOODS', 'food_id', 'user_id');
+        return $this->belongsToMany(User::class, 'HATED_FOODS', 'food_id', 'user_id')
+            ->withPivot('note');
+    }
+
+    public function eatenFoods(): HasMany
+    {
+        return $this->hasMany(EatenFood::class, 'food_id', 'food_id');
+    }
+
+    public function gachaFoods(): HasMany
+    {
+        return $this->hasMany(GachaFood::class, 'food_id', 'food_id');
     }
 }

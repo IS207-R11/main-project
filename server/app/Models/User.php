@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Gender;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,19 +21,16 @@ class User extends Authenticatable
     public $timestamps = false;
 
     protected $fillable = [
-        'role',
         'email',
         'username',
-        'password_hashed',
+        'address',
+        'role',
         'status',
-        'date_of_birth',
-        'phone',
-        'avatar_url',
-        'gender',
+        'hashed_password',
     ];
 
     protected $hidden = [
-        'password_hashed',
+        'hashed_password',
     ];
 
     /**
@@ -42,7 +38,7 @@ class User extends Authenticatable
      */
     public function getAuthPassword(): string
     {
-        return $this->password_hashed;
+        return $this->hashed_password;
     }
 
     /**
@@ -55,25 +51,20 @@ class User extends Authenticatable
         return [
             'role' => UserRole::class,
             'status' => UserStatus::class,
-            'gender' => Gender::class,
-            'date_of_birth' => 'date:Y-m-d',
-            'created_at' => 'date:Y-m-d',
+            'created_at' => 'datetime',
         ];
-    }
-
-    public function healthProfiles(): HasMany
-    {
-        return $this->hasMany(HealthProfile::class, 'user_id', 'user_id');
     }
 
     public function favoriteFoods(): BelongsToMany
     {
-        return $this->belongsToMany(Food::class, 'FAVORITE_FOODS', 'user_id', 'food_id');
+        return $this->belongsToMany(Food::class, 'FAVORITE_FOODS', 'user_id', 'food_id')
+            ->withPivot('note');
     }
 
-    public function scannedFoods(): BelongsToMany
+    public function hatedFoods(): BelongsToMany
     {
-        return $this->belongsToMany(Food::class, 'SCANNED_FOODS', 'user_id', 'food_id');
+        return $this->belongsToMany(Food::class, 'HATED_FOODS', 'user_id', 'food_id')
+            ->withPivot('note');
     }
 
     public function eatenFoods(): HasMany
@@ -81,8 +72,18 @@ class User extends Authenticatable
         return $this->hasMany(EatenFood::class, 'user_id', 'user_id');
     }
 
+    public function gachaFoods(): HasMany
+    {
+        return $this->hasMany(GachaFood::class, 'user_id', 'user_id');
+    }
+
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class, 'author_id', 'user_id');
+    }
+
+    public function contributedFoods(): HasMany
+    {
+        return $this->hasMany(Food::class, 'contributor_id', 'user_id');
     }
 }

@@ -6,20 +6,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class EatenFood extends Model
+class GachaFood extends Model
 {
     use HasFactory;
 
-    protected $table = 'EATEN_FOODS';
+    protected $table = 'GACHA_FOODS';
 
-    protected $primaryKey = 'eaten_id';
+    protected $primaryKey = 'gacha_id';
 
     public $timestamps = false;
 
     protected $fillable = [
         'user_id',
         'food_id',
-        'note',
         'created_at',
     ];
 

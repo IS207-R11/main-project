@@ -33,8 +33,9 @@ class Report extends Model
         return [
             'type' => ReportType::class,
             'status' => ReportStatus::class,
-            'resolved_at' => 'date:Y-m-d',
-            'created_at' => 'date:Y-m-d',
+            'resolved_at' => 'datetime',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

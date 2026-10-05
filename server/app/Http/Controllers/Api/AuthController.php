@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\JwtService;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ class AuthController extends Controller
     #[OA\Post(
         path: '/auth/signin',
         summary: 'User sign in',
-        description: 'Authenticate user with username and password, returns access and refresh tokens',
+        description: 'Authenticate user with username/email and password, returns access and refresh tokens',
         tags: ['Authentication'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -42,6 +43,7 @@ class AuthController extends Controller
                         new OA\Property(property: 'access_token', type: 'string'),
                         new OA\Property(property: 'refresh_token', type: 'string'),
                         new OA\Property(property: 'token_type', type: 'string', example: 'Bearer'),
+                        new OA\Property(property: 'user', type: 'object'),
                     ]
                 )
             ),
@@ -59,11 +61,12 @@ class AuthController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $user = User::where('username', $request->input('username'))
-            ->orWhere('email', $request->input('username'))
+        $login = $request->input('username');
+        $user = User::where('username', $login)
+            ->orWhere('email', $login)
             ->first();
 
-        if (! $user || ! Hash::check($request->input('password'), $user->password_hashed)) {
+        if (! $user || ! Hash::check($request->input('password'), $user->hashed_password)) {
             return response()->json(['message' => 'Invalid username or password'], 401);
         }
 
@@ -81,13 +84,14 @@ class AuthController extends Controller
             'access_token' => $accessToken,
             'refresh_token' => $refreshToken,
             'token_type' => 'Bearer',
+            'user' => new UserResource($user),
         ])->withCookie($cookie);
     }
 
     #[OA\Post(
         path: '/auth/signup',
         summary: 'User sign up',
-        description: 'Register a new user account with username, email, and password',
+        description: 'Register a new user account with username, email, password, and address',
         tags: ['Authentication'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -97,6 +101,7 @@ class AuthController extends Controller
                     new OA\Property(property: 'username', type: 'string', example: 'new_user'),
                     new OA\Property(property: 'email', type: 'string', format: 'email', example: 'new_user@example.com'),
                     new OA\Property(property: 'password', type: 'string', format: 'password', example: 'Secret123!'),
+                    new OA\Property(property: 'address', type: 'string', example: '123 Nguyen Trai, Q1, HCMC'),
                 ]
             )
         ),
@@ -111,6 +116,7 @@ class AuthController extends Controller
             'username' => 'required|string|max:100|unique:USERS,username',
             'email' => 'nullable|email|max:255|unique:USERS,email',
             'password' => 'required|string|min:6',
+            'address' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -128,7 +134,8 @@ class AuthController extends Controller
         $user = User::create([
             'username' => $username,
             'email' => $email,
-            'password_hashed' => Hash::make($request->input('password')),
+            'address' => $request->input('address'),
+            'hashed_password' => Hash::make($request->input('password')),
             'role' => UserRole::USER,
             'status' => UserStatus::ACTIVE,
         ]);
@@ -142,6 +149,7 @@ class AuthController extends Controller
             'access_token' => $accessToken,
             'refresh_token' => $refreshToken,
             'token_type' => 'Bearer',
+            'user' => new UserResource($user),
         ], 201)->withCookie($cookie);
     }
 
@@ -155,6 +163,7 @@ class AuthController extends Controller
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'username', type: 'string', example: 'john_doe'),
+                    new OA\Property(property: 'refreshToken', type: 'string'),
                 ]
             )
         ),
@@ -232,7 +241,7 @@ class AuthController extends Controller
     #[OA\Post(
         path: '/auth/change-password/{userID}',
         summary: 'Change user password',
-        description: 'Update password for a specific user (Allowed for OWNER and ADMIN)',
+        description: 'Update password for a specific user (Allowed for OWNER and ADMIN; Admin does not need old password)',
         security: [['bearerAuth' => []]],
         tags: ['Authentication'],
         parameters: [
@@ -262,8 +271,17 @@ class AuthController extends Controller
         }
 
         $authUser = $request->user();
-        $isOwner = $authUser && (int) $authUser->user_id === (int) $targetUser->user_id;
-        $isAdmin = $authUser && ($authUser->role instanceof \BackedEnum ? $authUser->role->value === 'ADMIN' : $authUser->role === 'ADMIN');
+        if (! $authUser) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $isOwner = (int) $authUser->user_id === (int) $targetUser->user_id;
+        $userRole = $authUser->role instanceof \BackedEnum ? $authUser->role->value : (string) $authUser->role;
+        $isAdmin = ($userRole === 'ADMIN');
+
+        if (! $isOwner && ! $isAdmin) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
         $oldPassword = $request->input('oldPassword') ?? $request->input('old_password');
         $newPassword = $request->input('newPassword') ?? $request->input('new_password');
@@ -272,13 +290,14 @@ class AuthController extends Controller
             return response()->json(['message' => 'New password must be at least 6 characters'], 422);
         }
 
-        if ($isOwner && ! $isAdmin) {
-            if (! $oldPassword || ! Hash::check($oldPassword, $targetUser->password_hashed)) {
+        // Only enforce old password check if not an Admin
+        if (! $isAdmin) {
+            if (! $oldPassword || ! Hash::check($oldPassword, $targetUser->hashed_password)) {
                 return response()->json(['message' => 'Old password is incorrect'], 401);
             }
         }
 
-        $targetUser->password_hashed = Hash::make($newPassword);
+        $targetUser->hashed_password = Hash::make($newPassword);
         $targetUser->save();
 
         return response()->json(['message' => 'Password changed successfully']);

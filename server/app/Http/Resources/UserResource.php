@@ -19,12 +19,9 @@ class UserResource extends JsonResource
             'role' => $this->role instanceof \BackedEnum ? $this->role->value : $this->role,
             'email' => $this->email,
             'username' => $this->username,
+            'address' => $this->address,
             'status' => $this->status instanceof \BackedEnum ? $this->status->value : $this->status,
-            'date_of_birth' => $this->date_of_birth ? (is_string($this->date_of_birth) ? $this->date_of_birth : $this->date_of_birth->format('Y-m-d')) : null,
-            'phone' => $this->phone,
-            'avatar_url' => $this->avatar_url,
-            'gender' => $this->gender instanceof \BackedEnum ? $this->gender->value : $this->gender,
-            'created_at' => $this->created_at ? (is_string($this->created_at) ? $this->created_at : $this->created_at->format('Y-m-d')) : null,
+            'created_at' => $this->created_at ? (is_string($this->created_at) ? $this->created_at : $this->created_at->format('Y-m-d H:i:s')) : null,
         ];
     }
 }
