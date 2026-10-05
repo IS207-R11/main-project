@@ -1,0 +1,308 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faUser,
+  faLock,
+  faEnvelope,
+  faArrowRightToBracket,
+  faUserPlus,
+  faTriangleExclamation,
+} from '@fortawesome/free-solid-svg-icons';
+
+export const AuthDialog: React.FC = () => {
+  const { authModalOpen, authModalTab, closeAuthModal, openAuthModal, login, register } = useAuth();
+
+  // Login form state
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Register form state
+  const [regUsername, setRegUsername] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regError, setRegError] = useState<string | null>(null);
+  const [regLoading, setRegLoading] = useState(false);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+
+    if (!loginUsername.trim() || !loginPassword.trim()) {
+      setLoginError('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
+      return;
+    }
+
+    try {
+      setLoginLoading(true);
+      await login({ username: loginUsername.trim(), password: loginPassword });
+      // Reset form
+      setLoginUsername('');
+      setLoginPassword('');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Đăng nhập không thành công';
+      setLoginError(errorMsg);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegError(null);
+
+    if (!regUsername.trim() || !regPassword.trim()) {
+      setRegError('Vui lòng điền tên đăng nhập và mật khẩu');
+      return;
+    }
+
+    if (regPassword !== regConfirmPassword) {
+      setRegError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    if (regPassword.length < 6) {
+      setRegError('Mật khẩu phải có tối thiểu 6 ký tự');
+      return;
+    }
+
+    try {
+      setRegLoading(true);
+      await register({
+        username: regUsername.trim(),
+        password: regPassword,
+        email: regEmail.trim() || undefined,
+      });
+      // Reset form
+      setRegUsername('');
+      setRegEmail('');
+      setRegPassword('');
+      setRegConfirmPassword('');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Đăng ký không thành công';
+      setRegError(errorMsg);
+    } finally {
+      setRegLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={authModalOpen} onOpenChange={(open) => !open && closeAuthModal()}>
+      <DialogContent className="sm:max-w-md p-6 bg-popover text-popover-foreground border border-border shadow-2xl">
+        <DialogHeader className="text-center space-y-1">
+          <DialogTitle className="text-2xl font-extrabold tracking-tight text-foreground">
+            Tài Khoản Ăn Gì?
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Đăng nhập để đồng bộ lịch sử ăn uống, quản lý món yêu thích và theo dõi hồ sơ sức khỏe
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs
+          value={authModalTab}
+          onValueChange={(val) => openAuthModal(val as 'login' | 'register')}
+          className="w-full mt-4 space-y-5"
+        >
+          <UnderlineTabs
+            layoutId="auth-dialog-tab-indicator"
+            align="full"
+            tabs={[
+              {
+                value: 'login',
+                label: 'Đăng Nhập',
+                icon: <FontAwesomeIcon icon={faArrowRightToBracket} />,
+              },
+              {
+                value: 'register',
+                label: 'Tạo Tài Khoản',
+                icon: <FontAwesomeIcon icon={faUserPlus} />,
+              },
+            ]}
+            activeTab={authModalTab}
+            onChange={(val) => openAuthModal(val as 'login' | 'register')}
+          />
+
+          {/* SIGN IN TAB */}
+          <TabsContent value="login">
+            <form onSubmit={handleLoginSubmit} className="flex flex-col gap-3.5">
+              {loginError && (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="shrink-0" />
+                  <span>{loginError}</span>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faUser} className="text-muted-foreground text-[11px]" />
+                  <span>Tên đăng nhập</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Nhập username của bạn..."
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  disabled={loginLoading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
+                  <span>Mật khẩu</span>
+                </label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  disabled={loginLoading}
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full mt-2 font-bold cursor-pointer"
+              >
+                {loginLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner />
+                    <span>Đang đăng nhập...</span>
+                  </span>
+                ) : (
+                  <span>Đăng Nhập Ngay</span>
+                )}
+              </Button>
+
+              <div className="text-center mt-2">
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('register')}
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  Chưa có tài khoản? <span className="font-bold underline text-secondary">Đăng ký mới</span>
+                </button>
+              </div>
+            </form>
+          </TabsContent>
+
+          {/* SIGN UP TAB */}
+          <TabsContent value="register">
+            <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-3.5">
+              {regError && (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="shrink-0" />
+                  <span>{regError}</span>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faUser} className="text-muted-foreground text-[11px]" />
+                  <span>Tên đăng nhập *</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Chọn username độc nhất..."
+                  value={regUsername}
+                  onChange={(e) => setRegUsername(e.target.value)}
+                  disabled={regLoading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faEnvelope} className="text-muted-foreground text-[11px]" />
+                  <span>Email (tùy chọn)</span>
+                </label>
+                <Input
+                  type="email"
+                  placeholder="example@gmail.com"
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  disabled={regLoading}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
+                  <span>Mật khẩu *</span>
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Tối thiểu 6 ký tự..."
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  disabled={regLoading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
+                  <span>Xác nhận mật khẩu *</span>
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Nhập lại mật khẩu..."
+                  value={regConfirmPassword}
+                  onChange={(e) => setRegConfirmPassword(e.target.value)}
+                  disabled={regLoading}
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={regLoading}
+                className="w-full mt-2 font-bold cursor-pointer"
+              >
+                {regLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner />
+                    <span>Đang tạo tài khoản...</span>
+                  </span>
+                ) : (
+                  <span>Tạo Tài Khoản</span>
+                )}
+              </Button>
+
+              <div className="text-center mt-2">
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login')}
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  Đã có tài khoản? <span className="font-bold underline text-secondary">Đăng nhập</span>
+                </button>
+              </div>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+};

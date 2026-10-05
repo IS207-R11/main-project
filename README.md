@@ -1,6 +1,6 @@
-# FoodLife
+# AnGi
 
-Hệ thống quản lý dinh dưỡng và gợi ý món ăn thông minh FoodLife (Backend RESTful API xây dựng trên nền tảng PHP Laravel).
+Hệ thống quản lý dinh dưỡng và gợi ý món ăn thông minh AnGi (Backend RESTful API xây dựng trên nền tảng PHP Laravel).
 
 ---
 

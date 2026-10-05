@@ -1,0 +1,51 @@
+name: CI on release PR
+
+on:
+  pull_request:
+    branches:
+      - "release/**" # khớp release/123, release/abc, ...
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      # continue-on-error: true để step sau vẫn chạy dù step này fail
+      - name: Install dependencies (npm ci)
+        id: install
+        continue-on-error: true
+        run: npm ci
+
+      - name: Run lint
+        id: lint
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Run build
+        id: build
+        continue-on-error: true
+        run: npm run build
+
+      # Tổng hợp kết quả 3 step ở trên, fail job nếu có bất kỳ step nào fail
+      - name: Check results
+        if: always()
+        run: |
+          echo "install: ${{ steps.install.outcome }}"
+          echo "lint:    ${{ steps.lint.outcome }}"
+          echo "build:   ${{ steps.build.outcome }}"
+
+          if [ "${{ steps.install.outcome }}" != "success" ] || \
+             [ "${{ steps.lint.outcome }}" != "success" ] || \
+             [ "${{ steps.build.outcome }}" != "success" ]; then
+            echo "❌ Có ít nhất 1 step fail, đánh dấu job fail."
+            exit 1
+          fi
+
+          echo "✅ Cả 3 step đều pass."

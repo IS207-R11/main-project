@@ -1,0 +1,307 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@theme inline {
+  --font-sans: var(--font-sans), 'Montserrat', system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-heading), 'Montserrat', system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* =========================================================================
+   TIME-BASED COLOR SYSTEM (4 THEMES)
+   1. Buổi sáng (05:00 - 10:59): #fff3d6 -> #ffe9b0 | text #4a2c1a | sec #f4a261 | CTA #2e7d32 (text #ffffff)
+   2. Buổi trưa (11:00 - 13:59): #ffe9b0 -> #ff9f45 | text #e76f51 | sec #f4a261 | CTA #d62828 (text #ffffff)
+   3. Buổi chiều (14:00 - 17:59): #ff9f45 -> #5c2a1e | text #fff7ed | sec #f4a261 | CTA #ffc300 (text #3d1f0f)
+   4. Buổi tối (18:00 - 04:59): #5c2a1e -> #2e0f0c | text #fff7ed | sec #f4a261 | CTA #ff9f1c (text #2e0f0c)
+   ========================================================================= */
+
+:root,
+[data-time-theme="morning"] {
+  --theme-bg-start: #fff3d6;
+  --theme-bg-end: #ffe9b0;
+  --theme-text: #4a2c1a;
+  --theme-secondary: #f4a261;
+  --theme-cta: #2e7d32;
+  --theme-cta-text: #ffffff;
+  --theme-nav: rgba(255, 243, 214, 0.88);
+  --theme-border: rgba(74, 44, 26, 0.12);
+
+  --background: #fff3d6;
+  --foreground: #4a2c1a;
+  --card: rgba(255, 255, 255, 0.88);
+  --card-foreground: #4a2c1a;
+  --popover: #ffffff;
+  --popover-foreground: #4a2c1a;
+  --primary: #2e7d32;
+  --primary-foreground: #ffffff;
+  --secondary: #f4a261;
+  --secondary-foreground: #4a2c1a;
+  --muted: rgba(74, 44, 26, 0.08);
+  --muted-foreground: rgba(74, 44, 26, 0.72);
+  --accent: rgba(244, 162, 97, 0.18);
+  --accent-foreground: #4a2c1a;
+  --destructive: #d62828;
+  --destructive-foreground: #ffffff;
+  --border: rgba(74, 44, 26, 0.14);
+  --input: rgba(74, 44, 26, 0.16);
+  --ring: #2e7d32;
+  --radius: 0.875rem;
+
+  --badge-glow: rgba(46, 125, 50, 0.25);
+  --card-shadow: 0 10px 25px -5px rgba(74, 44, 26, 0.08), 0 8px 10px -6px rgba(74, 44, 26, 0.04);
+}
+
+[data-time-theme="midday"] {
+  --theme-bg-start: #ffe9b0;
+  --theme-bg-end: #ff9f45;
+  --theme-text: #e76f51;
+  --theme-secondary: #f4a261;
+  --theme-cta: #d62828;
+  --theme-cta-text: #ffffff;
+  --theme-nav: rgba(255, 233, 176, 0.88);
+  --theme-border: rgba(231, 111, 81, 0.22);
+
+  --background: #ffe9b0;
+  --foreground: #e76f51;
+  --card: rgba(255, 255, 255, 0.92);
+  --card-foreground: #4a2c1a;
+  --popover: #ffffff;
+  --popover-foreground: #4a2c1a;
+  --primary: #d62828;
+  --primary-foreground: #ffffff;
+  --secondary: #f4a261;
+  --secondary-foreground: #ffffff;
+  --muted: rgba(231, 111, 81, 0.10);
+  --muted-foreground: rgba(100, 35, 18, 0.75);
+  --accent: rgba(244, 162, 97, 0.20);
+  --accent-foreground: #4a2c1a;
+  --destructive: #b71c1c;
+  --destructive-foreground: #ffffff;
+  --border: rgba(231, 111, 81, 0.20);
+  --input: rgba(231, 111, 81, 0.20);
+  --ring: #d62828;
+  --radius: 0.875rem;
+
+  --badge-glow: rgba(214, 40, 40, 0.25);
+  --card-shadow: 0 10px 25px -5px rgba(231, 111, 81, 0.12), 0 8px 10px -6px rgba(231, 111, 81, 0.06);
+}
+
+[data-time-theme="afternoon"] {
+  --theme-bg-start: #ff9f45;
+  --theme-bg-end: #5c2a1e;
+  --theme-text: #fff7ed;
+  --theme-secondary: #f4a261;
+  --theme-cta: #ffc300;
+  --theme-cta-text: #3d1f0f;
+  --theme-nav: rgba(92, 42, 30, 0.88);
+  --theme-border: rgba(255, 247, 237, 0.16);
+
+  --background: #5c2a1e;
+  --foreground: #fff7ed;
+  --card: rgba(92, 42, 30, 0.82);
+  --card-foreground: #fff7ed;
+  --popover: #5c2a1e;
+  --popover-foreground: #fff7ed;
+  --primary: #ffc300;
+  --primary-foreground: #3d1f0f;
+  --secondary: #f4a261;
+  --secondary-foreground: #3d1f0f;
+  --muted: rgba(255, 247, 237, 0.12);
+  --muted-foreground: rgba(255, 247, 237, 0.78);
+  --accent: rgba(244, 162, 97, 0.25);
+  --accent-foreground: #fff7ed;
+  --destructive: #ff5252;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 247, 237, 0.18);
+  --input: rgba(255, 247, 237, 0.18);
+  --ring: #ffc300;
+  --radius: 0.875rem;
+
+  --badge-glow: rgba(255, 195, 0, 0.3);
+  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
+}
+
+[data-time-theme="night"] {
+  --theme-bg-start: #5c2a1e;
+  --theme-bg-end: #2e0f0c;
+  --theme-text: #fff7ed;
+  --theme-secondary: #f4a261;
+  --theme-cta: #ff9f1c;
+  --theme-cta-text: #2e0f0c;
+  --theme-nav: rgba(46, 15, 12, 0.88);
+  --theme-border: rgba(244, 162, 97, 0.18);
+
+  --background: #2e0f0c;
+  --foreground: #fff7ed;
+  --card: rgba(46, 15, 12, 0.82);
+  --card-foreground: #fff7ed;
+  --popover: #2e0f0c;
+  --popover-foreground: #fff7ed;
+  --primary: #ff9f1c;
+  --primary-foreground: #2e0f0c;
+  --secondary: #f4a261;
+  --secondary-foreground: #2e0f0c;
+  --muted: rgba(255, 247, 237, 0.10);
+  --muted-foreground: rgba(255, 247, 237, 0.72);
+  --accent: rgba(244, 162, 97, 0.22);
+  --accent-foreground: #fff7ed;
+  --destructive: #e63946;
+  --destructive-foreground: #ffffff;
+  --border: rgba(244, 162, 97, 0.18);
+  --input: rgba(244, 162, 97, 0.18);
+  --ring: #ff9f1c;
+  --radius: 0.875rem;
+
+  --badge-glow: rgba(255, 159, 28, 0.3);
+  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.35);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans scroll-smooth;
+  }
+  body {
+    background: linear-gradient(180deg, var(--theme-bg-start) 0%, var(--theme-bg-end) 100%);
+    color: var(--foreground);
+    min-height: 100vh;
+    transition: background 0.6s ease-in-out, color 0.4s ease-in-out;
+  }
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: var(--font-heading), 'Montserrat', sans-serif;
+  }
+  h1 {
+    font-weight: 800;
+  }
+  h2 {
+    font-weight: 700;
+  }
+  h3 {
+    font-weight: 700;
+  }
+  h4 {
+    font-weight: 600;
+  }
+  h5 {
+    font-weight: 600;
+  }
+  h6 {
+    font-weight: 600;
+  }
+  button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"] {
+    cursor: pointer;
+  }
+  img, image {
+    -webkit-user-drag: none;
+    user-drag: none;
+    user-select: none;
+  }
+}
+
+/* =========================================================================
+   3D FLIP CARD & PACK UTILITIES
+   ========================================================================= */
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Pack Foil Zigzag Edges */
+.foil-zigzag-top {
+  mask-image: linear-gradient(to right, transparent, black),
+    radial-gradient(circle 4px at 4px bottom, black 98%, transparent 100%);
+  mask-size: 100% 100%, 8px 6px;
+  mask-repeat: no-repeat, repeat-x;
+  mask-position: 0 0, 0 0;
+}
+
+/* Hologram Shimmer Animation */
+@keyframes holo-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-holo {
+  background-size: 200% 200%;
+  animation: holo-shimmer 6s ease infinite;
+}
+
+/* Radiant Rotating Light Beams for Gacha Reveal */
+@keyframes radiant-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-radiant-spin {
+  animation: radiant-spin 20s linear infinite;
+}
+
+@keyframes gentle-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-gentle-float {
+  animation: gentle-float 4s ease-in-out infinite;
+}
+
+/* Theme page wrapper */
+.ambient-theme-bg {
+  background: linear-gradient(180deg, var(--theme-bg-start) 0%, var(--theme-bg-end) 100%);
+  transition: background 0.6s ease-in-out;
+}
