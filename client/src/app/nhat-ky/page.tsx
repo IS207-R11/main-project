@@ -1,13 +1,22 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
 import { useAuth } from '@/context/AuthContext';
 import { foodsApi } from '@/api';
 import { EatenFood, FoodOption } from '@/api/types';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Image } from '@/components/ui/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBookOpen,
@@ -19,8 +28,6 @@ import {
   faSearch,
   faArrowDownShortWide,
   faArrowUpWideShort,
-  faCheck,
-  faTriangleExclamation,
   faArrowRightToBracket,
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -29,6 +36,7 @@ export default function DiaryPage() {
 
   const [eatenList, setEatenList] = useState<EatenFood[]>([]);
   const [loading, setLoading] = useState(false);
+  const [actionEatenId, setActionEatenId] = useState<number | null>(null);
   const [recordModalOpen, setRecordModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<EatenFood | null>(null);
 
@@ -45,7 +53,6 @@ export default function DiaryPage() {
   const [selectedFood, setSelectedFood] = useState<FoodOption | null>(null);
   const [note, setNote] = useState('');
   const [formSaving, setFormSaving] = useState(false);
-  const [formMsg, setFormMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const loadEatenHistory = useCallback(async () => {
     if (!user?.user_id) return;
@@ -82,8 +89,8 @@ export default function DiaryPage() {
     }
     const timeout = setTimeout(async () => {
       try {
-        const options = await foodsApi.options(searchQuery.trim());
-        setFoodOptions(options);
+        const res = await foodsApi.list({ search: searchQuery.trim(), pageSize: 8 });
+        setFoodOptions(res.data.map((f) => ({ food_id: f.food_id, name: f.name })));
       } catch {
         setFoodOptions([]);
       }
@@ -96,7 +103,6 @@ export default function DiaryPage() {
     setSelectedFood(null);
     setSearchQuery('');
     setNote('');
-    setFormMsg(null);
     setRecordModalOpen(true);
   };
 
@@ -108,16 +114,14 @@ export default function DiaryPage() {
     });
     setSearchQuery('');
     setNote(item.note || '');
-    setFormMsg(null);
     setRecordModalOpen(true);
   };
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormMsg(null);
 
     if (!selectedFood && !editItem) {
-      setFormMsg({ text: 'Vui lòng chọn một món ăn từ danh sách tìm kiếm', type: 'error' });
+      toast.error('Vui lòng chọn một món ăn từ danh sách tìm kiếm');
       return;
     }
 
@@ -139,11 +143,9 @@ export default function DiaryPage() {
 
       await loadEatenHistory();
       setRecordModalOpen(false);
+      toast.success(editItem ? 'Cập nhật nhật ký bữa ăn thành công!' : 'Đã thêm món vào nhật ký ăn uống!');
     } catch (err: unknown) {
-      setFormMsg({
-        text: err instanceof Error ? err.message : 'Lỗi khi lưu thông tin món ăn',
-        type: 'error',
-      });
+      toast.error(err instanceof Error ? err.message : 'Lỗi khi lưu thông tin món ăn');
     } finally {
       setFormSaving(false);
     }
@@ -151,19 +153,43 @@ export default function DiaryPage() {
 
   const handleDeleteEaten = async (eatenId: number) => {
     if (!confirm('Bạn có chắc chắn muốn xóa bản ghi này?')) return;
+    setActionEatenId(eatenId);
     try {
       await foodsApi.deleteEaten(eatenId);
       setEatenList((prev) => prev.filter((item) => item.eaten_id !== eatenId));
       setTotalCount((prev) => Math.max(0, prev - 1));
+      toast.success('Đã xóa món ăn khỏi nhật ký!');
     } catch (err) {
       console.error('Failed to delete meal record:', err);
+      toast.error('Lỗi khi xóa bản ghi nhật ký');
+    } finally {
+      setActionEatenId(null);
     }
   };
 
   if (authLoading) {
     return (
-      <div className="container mx-auto max-w-4xl py-20 px-4 flex justify-center">
-        <Spinner />
+      <div className="min-h-[calc(100vh-4rem)] py-10 px-4 sm:px-6">
+        <div className="container mx-auto max-w-4xl space-y-8">
+          <div className="p-6 rounded-3xl bg-card border border-border shadow-md space-y-3">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+          <div className="p-4 rounded-2xl bg-card border border-border">
+            <Skeleton className="h-9 w-full max-w-sm rounded-xl" />
+          </div>
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-5 rounded-2xl bg-card border border-border flex items-center gap-4">
+                <Skeleton className="w-14 h-14 rounded-xl shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -248,122 +274,114 @@ export default function DiaryPage() {
         </div>
 
         {/* Create / Edit Record Modal */}
-        {recordModalOpen && (
-          <Card className="rounded-3xl border-primary/40 bg-card p-6 shadow-xl animate-in slide-in-from-top-3">
-            <CardHeader className="p-0 mb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-bold">
-                  {editItem ? 'Chỉnh Sửa Ghi Chú Món Ăn' : 'Ghi Nhận Món Vừa Ăn'}
-                </CardTitle>
+        <Dialog open={recordModalOpen} onOpenChange={setRecordModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold">
+                {editItem ? 'Chỉnh Sửa Ghi Chú Món Ăn' : 'Ghi Nhận Món Vừa Ăn'}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                {editItem
+                  ? 'Cập nhật lại thông tin hoặc cảm nhận về bữa ăn này.'
+                  : 'Lưu lại món ăn bạn vừa thưởng thức vào nhật ký ăn uống.'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmitForm} className="space-y-4 mt-2">
+              {/* Food search autocomplete */}
+              <div className="space-y-1 relative">
+                <label className="text-xs font-semibold text-foreground">
+                  Chọn món ăn *
+                </label>
+                {selectedFood ? (
+                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-secondary bg-secondary/10">
+                    <span className="text-xs font-bold text-foreground">
+                      {selectedFood.name} (Mã: #{selectedFood.food_id})
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedFood(null)}
+                      className="text-xs h-6 px-2 text-destructive"
+                    >
+                      Đổi món
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      type="text"
+                      placeholder="Gõ tên món ăn để tìm (Phở, Cơm sườn, Bún bò...)"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    {foodOptions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-popover border border-border rounded-xl shadow-lg p-1 max-h-48 overflow-y-auto">
+                        {foodOptions.map((opt) => (
+                          <button
+                            key={opt.food_id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedFood(opt);
+                              setFoodOptions([]);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-muted font-medium cursor-pointer transition-colors"
+                          >
+                            {opt.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">
+                  Ghi chú món ăn (tùy chọn)
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Ví dụ: Ăn trưa cùng bạn tại quán vỉa hè, rất vừa miệng..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  type="button"
+                  variant="outline"
                   onClick={() => setRecordModalOpen(false)}
-                  className="rounded-full"
                 >
-                  ✕
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={formSaving} className="font-bold">
+                  {formSaving ? <Spinner /> : editItem ? 'Cập Nhật' : 'Lưu Ghi Nhận'}
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <form onSubmit={handleSubmitForm} className="space-y-4">
-                {formMsg && (
-                  <div
-                    className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
-                      formMsg.type === 'success'
-                        ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/30'
-                        : 'bg-destructive/15 text-destructive border border-destructive/30'
-                    }`}
-                  >
-                    <FontAwesomeIcon
-                      icon={formMsg.type === 'success' ? faCheck : faTriangleExclamation}
-                    />
-                    <span>{formMsg.text}</span>
-                  </div>
-                )}
-
-                {/* Food search autocomplete */}
-                <div className="space-y-1 relative">
-                  <label className="text-xs font-semibold text-foreground">
-                    Chọn món ăn *
-                  </label>
-                  {selectedFood ? (
-                    <div className="flex items-center justify-between p-2.5 rounded-xl border border-secondary bg-secondary/10">
-                      <span className="text-xs font-bold text-foreground">
-                        {selectedFood.name} (Mã: #{selectedFood.food_id})
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedFood(null)}
-                        className="text-xs h-6 px-2 text-destructive"
-                      >
-                        Đổi món
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <Input
-                        type="text"
-                        placeholder="Gõ tên món ăn để tìm (Phở, Cơm sườn, Bún bò...)"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                      {foodOptions.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-popover border border-border rounded-xl shadow-lg p-1 max-h-48 overflow-y-auto">
-                          {foodOptions.map((opt) => (
-                            <button
-                              key={opt.food_id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedFood(opt);
-                                setFoodOptions([]);
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-muted font-medium cursor-pointer transition-colors"
-                            >
-                              {opt.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">
-                    Ghi chú món ăn (tùy chọn)
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="Ví dụ: Ăn trưa cùng bạn tại quán vỉa hè, rất vừa miệng..."
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setRecordModalOpen(false)}
-                  >
-                    Hủy
-                  </Button>
-                  <Button type="submit" disabled={formSaving} className="font-bold">
-                    {formSaving ? <Spinner /> : editItem ? 'Cập Nhật' : 'Lưu Ghi Nhận'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Timeline of Meals */}
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Spinner />
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="p-4 sm:p-5 rounded-2xl bg-card border border-border shadow-xs flex items-center gap-4"
+              >
+                <Skeleton className="w-14 h-14 rounded-xl shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <Skeleton className="h-3 w-48" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : eatenList.length === 0 ? (
           <div className="text-center py-16 p-8 rounded-3xl bg-card border border-border space-y-3">
@@ -382,6 +400,24 @@ export default function DiaryPage() {
         ) : (
           <div className="space-y-3">
             {eatenList.map((item) => {
+              if (actionEatenId === item.eaten_id) {
+                return (
+                  <div
+                    key={item.eaten_id}
+                    className="p-4 sm:p-5 rounded-2xl bg-card border border-border shadow-xs flex items-center gap-4 bg-muted/20"
+                  >
+                    <Skeleton className="w-14 h-14 rounded-xl shrink-0" />
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-36" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                  </div>
+                );
+              }
+
               const dateStr = item.created_at
                 ? new Date(item.created_at).toLocaleString('vi-VN')
                 : 'Vừa xong';
@@ -393,17 +429,11 @@ export default function DiaryPage() {
                   className="p-4 sm:p-5 rounded-2xl bg-card border border-border shadow-xs hover:border-secondary/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                 >
                   <div className="flex items-start gap-4">
-                    {item.food?.image_url ? (
-                      <img
-                        src={item.food.image_url}
-                        alt={foodName}
-                        className="w-14 h-14 rounded-xl object-cover border border-border"
-                      />
-                    ) : (
-                      <div className="size-14 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center text-lg font-bold">
-                        <FontAwesomeIcon icon={faUtensils} />
-                      </div>
-                    )}
+                    <Image
+                      src={item.food?.image_url}
+                      alt={foodName}
+                      className="w-14 h-14 rounded-xl object-cover border border-border shrink-0"
+                    />
 
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">

@@ -9,15 +9,17 @@ export interface FoodCard {
   description: string | null;
   image_url: string | null;
   status: FoodStatus;
-  rank?: FoodRank;
+  food_rank?: FoodRank;
   created_at: string | null;
   contributor_id: number | null;
-  favorite_count: number;
-  eaten_count: number;
-  contributor?: {
-    user_id?: number;
-    username?: string | null;
-  } | null;
+  rating_score?: number | null;
+  cd?: number | null;
+  is_favorited?: boolean;
+  is_hated?: boolean;
+  is_eaten?: boolean;
+  favorites_count?: number;
+  hated_count?: number;
+  eaten_count?: number;
 }
 
 export interface FoodOption {
@@ -31,12 +33,9 @@ export interface UserFoodItem {
   description: string | null;
   image_url: string | null;
   status: FoodStatus;
-  rank?: FoodRank;
   note: string | null;
   created_at: string | null;
   contributor_id: number | null;
-  favorite_count: number;
-  eaten_count: number;
 }
 
 export interface EatenFood {
@@ -51,7 +50,8 @@ export interface EatenFood {
 export interface ListFoodsParams extends PaginationParams {
   search?: string;
   status?: FoodStatus;
-  sort_by?: 'name' | 'created_at';
+  food_rank?: FoodRank;
+  sort_by?: 'name' | 'created_at' | 'rating_score' | 'cd' | 'food_rank';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -60,15 +60,22 @@ export type ExclusionType = 'newest' | 'oldest' | 'random';
 export interface GachaRequest {
   numberOfExcludedEaten?: number;
   typeOfExcludedEaten?: ExclusionType;
-  numberOfExcludedGacha?: number;
-  typeOfExcludedGacha?: ExclusionType;
+  excludedGachaSet?: boolean;
+  foodSet?: number[];
+}
+
+export interface TinderRequest {
+  numberOfExcludedEaten?: number;
+  typeOfExcludedEaten?: ExclusionType;
+  excludedGachaSet?: boolean;
+  numberOfResult?: number;
   foodSet?: number[];
 }
 
 export interface CreateFoodRequest {
   name: string;
-  description?: string;
-  image_url?: string;
+  description: string;
+  image_url: string;
 }
 
 export interface UpdateFoodRequest {

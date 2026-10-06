@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { Image } from "@/components/ui/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHeart, faStar, faCompass, faBook, faCommentDots } from "@fortawesome/free-solid-svg-icons";
 import { ReportModal } from "@/components/reports/ReportModal";

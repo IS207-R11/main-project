@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -37,6 +38,7 @@
     "react-dom": "^19.2.6",
     "react-layout-masonry": "^2.0.0",
     "react-resizable-panels": "^4.12.4",
+    "react-toastify": "^11.1.0",
     "react-window": "^2.3.1",
     "recharts": "^3.8.0",
     "shadcn": "^4.21.0",
@@ -45,16 +47,27 @@
   },
   "devDependencies": {
     "@eslint/js": "^10",
+    "@fortawesome/fontawesome-svg-core": "^7.3.1",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.2",
+    "@vitest/coverage-v8": "^5.0.3",
+    "@vitest/ui": "^5.0.3",
     "eslint": "^10",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17",
+    "jsdom": "^29.1.1",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "typescript": "~5.7.0",
-    "typescript-eslint": "^8"
+    "typescript-eslint": "^8",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
   }
 }

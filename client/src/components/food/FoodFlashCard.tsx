@@ -1,20 +1,19 @@
 "use client";
 
-import React, { useState, memo } from "react";
-import Image from "next/image";
+import React, { useState, useEffect, memo } from "react";
+import { toast } from "react-toastify";
+import { Image } from "@/components/ui/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBookmark,
-  faRotate,
-  faCheck,
-  faHeart,
-  faUtensils,
   faCircleCheck,
+  faHeart,
+  faThumbsDown,
+  faUtensils,
 } from "@fortawesome/free-solid-svg-icons";
 import type { FoodItem, Rarity } from "@/types/food";
-import { useSavedFoods } from "@/context/SavedFoodsContext";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { foodsApi } from "@/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface FoodFlashCardProps {
   food: FoodItem;
@@ -55,313 +54,343 @@ const rarityColors: Record<
 const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
   food,
   className = "",
-  autoFlipped = false,
 }) => {
-  const { isSaved, toggleSaveFood } = useSavedFoods();
-  const [isFlipped, setIsFlipped] = useState(autoFlipped);
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [imgError, setImgError] = useState(false);
 
-  const saved = isSaved(food.id);
+  // States for the 3 actions and their counts
+  const [isFavorited, setIsFavorited] = useState<boolean>(!!food.is_favorited);
+  const [isHated, setIsHated] = useState<boolean>(!!food.is_hated);
+  const [isEaten, setIsEaten] = useState<boolean>(!!food.is_eaten);
+
+  const [favoritesCount, setFavoritesCount] = useState<number>(food.favorites_count ?? 0);
+  const [hatedCount, setHatedCount] = useState<number>(food.hated_count ?? 0);
+  const [eatenCount, setEatenCount] = useState<number>(food.eaten_count ?? 0);
+
+  const foodId = food.food_id || food.id;
+
+  useEffect(() => {
+    setIsFavorited(!!food.is_favorited);
+    setFavoritesCount(food.favorites_count ?? 0);
+  }, [food.is_favorited, food.favorites_count]);
+
+  useEffect(() => {
+    setIsHated(!!food.is_hated);
+    setHatedCount(food.hated_count ?? 0);
+  }, [food.is_hated, food.hated_count]);
+
+  useEffect(() => {
+    setIsEaten(!!food.is_eaten);
+    setEatenCount(food.eaten_count ?? 0);
+  }, [food.is_eaten, food.eaten_count]);
+
   const rarityStyle = rarityColors[food.rarity] || rarityColors.C;
 
-  const handleFlip = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsFlipped(!isFlipped);
-  };
-
-  const handleSave = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleSaveFood(food);
-  };
-
   // Image src path fallback
-  const imageSrc = imgError || !food.imagePath
-    ? "/logos/main-logo.png"
-    : food.imagePath;
+  const imageSrc =
+    imgError || !food.imagePath ? "/logos/main-logo.png" : food.imagePath;
+
+  // 1. Handle Favorite Toggle
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      openAuthModal("login");
+      return;
+    }
+
+    const prevFavorited = isFavorited;
+    const prevHated = isHated;
+    const prevFavCount = favoritesCount;
+    const prevHatedCount = hatedCount;
+
+    // Optimistic update: favorite toggles, and turning favorite ON automatically turns hated OFF
+    const nextFavorited = !prevFavorited;
+    setIsFavorited(nextFavorited);
+    setFavoritesCount((prev) => Math.max(0, prev + (nextFavorited ? 1 : -1)));
+
+    if (nextFavorited && prevHated) {
+      setIsHated(false);
+      setHatedCount((prev) => Math.max(0, prev - 1));
+    }
+
+    try {
+      if (nextFavorited) {
+        await foodsApi.addFavorite({ food_id: foodId });
+        if (prevHated) {
+          await foodsApi.removeHated(foodId).catch(() => {});
+        }
+      } else {
+        await foodsApi.removeFavorite(foodId);
+      }
+    } catch (err: unknown) {
+      // Rollback on failure
+      setIsFavorited(prevFavorited);
+      setIsHated(prevHated);
+      setFavoritesCount(prevFavCount);
+      setHatedCount(prevHatedCount);
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "Không thể cập nhật danh sách yêu thích";
+      toast.error(message);
+    }
+  };
+
+  // 2. Handle Hated Toggle
+  const handleToggleHated = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      openAuthModal("login");
+      return;
+    }
+
+    const prevFavorited = isFavorited;
+    const prevHated = isHated;
+    const prevFavCount = favoritesCount;
+    const prevHatedCount = hatedCount;
+
+    // Optimistic update: hated toggles, and turning hated ON automatically turns favorite OFF
+    const nextHated = !prevHated;
+    setIsHated(nextHated);
+    setHatedCount((prev) => Math.max(0, prev + (nextHated ? 1 : -1)));
+
+    if (nextHated && prevFavorited) {
+      setIsFavorited(false);
+      setFavoritesCount((prev) => Math.max(0, prev - 1));
+    }
+
+    try {
+      if (nextHated) {
+        await foodsApi.addHated({ food_id: foodId });
+        if (prevFavorited) {
+          await foodsApi.removeFavorite(foodId).catch(() => {});
+        }
+      } else {
+        await foodsApi.removeHated(foodId);
+      }
+    } catch (err: unknown) {
+      // Rollback on failure
+      setIsFavorited(prevFavorited);
+      setIsHated(prevHated);
+      setFavoritesCount(prevFavCount);
+      setHatedCount(prevHatedCount);
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "Không thể cập nhật danh sách không thích";
+      toast.error(message);
+    }
+  };
+
+  // 3. Handle Eaten Action
+  const handleRecordEaten = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      openAuthModal("login");
+      return;
+    }
+
+    const prevEaten = isEaten;
+    const prevEatenCount = eatenCount;
+
+    // Optimistic update
+    setIsEaten(true);
+    if (!prevEaten) {
+      setEatenCount((prev) => prev + 1);
+    }
+
+    try {
+      await foodsApi.recordEaten({ food_id: foodId });
+    } catch (err: unknown) {
+      // Rollback on failure
+      setIsEaten(prevEaten);
+      setEatenCount(prevEatenCount);
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "Không thể ghi nhận món đã ăn";
+      toast.error(message);
+    }
+  };
 
   return (
     <div
-      className={`perspective-1000 w-[210px] sm:w-[225px] h-[305px] sm:h-[320px] select-none cursor-pointer group shrink-0 ${className}`}
-      onClick={() => setIsFlipped(!isFlipped)}
+      className={`w-[210px] sm:w-[225px] h-[305px] sm:h-[315px] select-none group shrink-0 rounded-2xl border ${rarityStyle.border} ${rarityStyle.glow} bg-card text-card-foreground flex flex-col overflow-hidden shadow-md transition-all duration-300 hover:-translate-y-1 ${className}`}
     >
-      <div
-        className={`relative w-full h-full duration-500 preserve-3d transition-transform ease-out rounded-2xl transform-gpu will-change-transform ${
-          isFlipped ? "rotate-y-180" : ""
-        }`}
-      >
-        {/* ================= FRONT SIDE ================= */}
-        <div
-          className={`absolute inset-0 w-full h-full backface-hidden rounded-2xl border ${
-            rarityStyle.border
-          } ${rarityStyle.glow} bg-card text-card-foreground flex flex-col overflow-hidden shadow-md transition-all duration-300 hover:-translate-y-1 ${
-            isFlipped ? "pointer-events-none" : "pointer-events-auto"
-          }`}
-        >
-          {/* Dish Image Container with Badges Overlaid */}
-          <div className="relative h-[120px] sm:h-[130px] w-full overflow-hidden bg-muted/80 shrink-0">
-            <Image
-              src={imageSrc}
-              alt={food.name}
-              fill
-              unoptimized
-              draggable={false}
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-              onError={() => setImgError(true)}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-108 select-none"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40" />
+      {/* Dish Image Container */}
+      <div className="relative h-[125px] sm:h-[135px] w-full overflow-hidden bg-muted/80 shrink-0">
+        <Image
+          src={imageSrc}
+          alt={food.name}
+          fill
+          unoptimized
+          draggable={false}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          onError={() => setImgError(true)}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-108 select-none"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40" />
 
-            {/* Top Badges Over Image */}
-            <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
-              <div className="flex items-center gap-1.5">
-                <Badge
-                  className={`px-2 py-0.5 text-[9px] font-black rounded-full uppercase tracking-wider shadow-sm ${rarityStyle.badge}`}
-                >
-                  {food.rarity}
-                </Badge>
-                {food.status === "PENDING" && (
-                  <Badge className="bg-amber-500/90 text-white text-[9px] px-1.5 py-0.5 rounded-full shadow-sm">
-                    Chờ duyệt
-                  </Badge>
-                )}
-              </div>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSave}
-                className={`h-6 w-6 rounded-full backdrop-blur-md transition-all shrink-0 ${
-                  saved
-                    ? "text-white bg-primary shadow-sm"
-                    : "text-white/90 bg-black/50 hover:text-white hover:bg-black/75"
-                }`}
-                title={saved ? "Đã lưu" : "Lưu món"}
-              >
-                <FontAwesomeIcon
-                  icon={saved ? faCheck : faBookmark}
-                  className="text-[11px]"
-                />
-              </Button>
-            </div>
-
-            {/* Bottom Real Stats Over Image */}
-            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] text-white font-semibold drop-shadow-xs">
-              <div className="flex items-center gap-1 bg-black/65 backdrop-blur-md px-2 py-0.5 rounded-full border border-rose-500/30 text-rose-300">
-                <FontAwesomeIcon icon={faHeart} className="text-[9px]" />
-                <span>{food.favorite_count || 0}</span>
-              </div>
-
-              <div className="flex items-center gap-1 bg-black/65 backdrop-blur-md px-2 py-0.5 rounded-full border border-amber-400/30 text-amber-300">
-                <FontAwesomeIcon icon={faUtensils} className="text-[9px]" />
-                <span>{food.eaten_count || 0} đã ăn</span>
-              </div>
-            </div>
+        {/* Top Badges Over Image */}
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
+          <div className="flex items-center gap-1.5">
+            <Badge
+              className={`px-2 py-0.5 text-[9px] font-black rounded-full uppercase tracking-wider shadow-sm ${rarityStyle.badge}`}
+            >
+              {food.rarity}
+            </Badge>
+            {food.status === "PENDING" && (
+              <Badge className="bg-amber-500/90 text-white text-[9px] px-1.5 py-0.5 rounded-full shadow-sm">
+                Chờ duyệt
+              </Badge>
+            )}
           </div>
 
-          {/* Card Body */}
-          <div className="p-3 flex-1 flex flex-col justify-between overflow-hidden gap-1.5">
-            <div className="space-y-0.5">
-              <h3 className="text-[13.5px] sm:text-[14px] font-bold text-foreground leading-tight truncate group-hover:text-secondary transition-colors">
-                {food.name}
-              </h3>
-
-              <p className="text-[11px] text-muted-foreground line-clamp-1 leading-relaxed">
-                {food.description || "Món ngon hấp dẫn từ cộng đồng ẩm thực AnGi."}
-              </p>
-            </div>
-
-            {/* Real Status / Engagement Row */}
-            <div className="flex items-center justify-between text-[9.5px] py-1 px-2 bg-muted/60 rounded-xl border border-border/50 font-medium">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <FontAwesomeIcon icon={faCircleCheck} className="text-secondary text-[8.5px]" />
-                <span>{food.status === "ACTIVE" ? "Đã kiểm duyệt" : "Đang chờ duyệt"}</span>
+          {/* Status pill on image if marked */}
+          <div className="flex items-center gap-1">
+            {isFavorited && (
+              <span className="h-5 w-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px] shadow-sm animate-in fade-in zoom-in duration-200">
+                <FontAwesomeIcon icon={faHeart} />
               </span>
-              <span className="text-foreground font-bold">
-                #Món {food.food_id || food.id}
+            )}
+            {isHated && (
+              <span className="h-5 w-5 rounded-full bg-slate-700 text-white flex items-center justify-center text-[10px] shadow-sm animate-in fade-in zoom-in duration-200">
+                <FontAwesomeIcon icon={faThumbsDown} />
               </span>
-            </div>
+            )}
+            {isEaten && (
+              <span className="h-5 w-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] shadow-sm animate-in fade-in zoom-in duration-200">
+                <FontAwesomeIcon icon={faUtensils} />
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
 
-            {/* Quick Action Links: Maps & Công thức */}
-            <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-              <a
-                href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${food.name}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="h-6.5 px-2 rounded-xl bg-background hover:bg-muted border border-border hover:border-emerald-500/50 flex items-center justify-center gap-1.5 text-[10px] font-bold text-foreground hover:text-emerald-500 transition-all shadow-2xs group/btn cursor-pointer"
-                title={`Tìm quán ${food.name} trên Google Maps`}
-              >
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
-                  referrerPolicy="no-referrer"
-                  alt="Maps"
-                  className="w-3.5 h-3.5 object-contain shrink-0"
-                />
-                <span className="truncate">Maps</span>
-              </a>
+      {/* Card Body */}
+      <div className="p-2.5 sm:p-3 flex-1 flex flex-col justify-between overflow-hidden gap-1.5">
+        <div className="space-y-0.5">
+          <h3 className="text-[13.5px] sm:text-[14px] font-bold text-foreground leading-tight truncate group-hover:text-secondary transition-colors">
+            {food.name}
+          </h3>
 
-              <a
-                href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`Công thức làm ${food.name}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="h-6.5 px-2 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-1.5 text-[10px] font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
-                title={`Xem công thức làm ${food.name} trên YouTube`}
-              >
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
-                  referrerPolicy="no-referrer"
-                  alt="Công thức"
-                  className="w-3.5 h-3.5 object-contain shrink-0"
-                />
-                <span className="truncate">Công thức</span>
-              </a>
-            </div>
+          <p className="text-[11px] text-muted-foreground line-clamp-1 leading-relaxed">
+            {food.description || "Món ngon hấp dẫn từ cộng đồng ẩm thực AnGi."}
+          </p>
+        </div>
 
-            {/* Compact Flip Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleFlip}
-              className="w-full h-6 text-[10px] font-bold rounded-xl border-border bg-muted/30 text-foreground hover:bg-muted hover:border-secondary/40 gap-1.5 px-2 transition-all cursor-pointer"
+        {/* Real Status / Engagement Row with mini Maps & YouTube shortcuts */}
+        <div className="flex items-center justify-between text-[9.5px] py-1 px-2 bg-muted/60 rounded-xl border border-border/50 font-medium">
+          <span className="text-muted-foreground flex items-center gap-1">
+            <FontAwesomeIcon
+              icon={faCircleCheck}
+              className="text-secondary text-[8.5px]"
+            />
+            <span>{food.status === "ACTIVE" ? "Đã duyệt" : "Chờ duyệt"}</span>
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            {/* Compact Google Maps shortcut */}
+            <a
+              href={`https://www.google.com/maps/search/${encodeURIComponent(
+                `Quán ${food.name}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="size-5 rounded-md bg-background hover:bg-muted border border-border/70 hover:border-emerald-500/60 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
+              title={`Tìm quán ${food.name} trên Google Maps`}
             >
-              <FontAwesomeIcon icon={faRotate} className="text-[9px] text-secondary" />
-              <span>Chi Tiết Món Ăn</span>
-            </Button>
+              <Image
+                src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
+                alt="Maps"
+                className="size-3 object-contain"
+              />
+            </a>
+
+            {/* Compact YouTube recipe shortcut */}
+            <a
+              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                `Công thức làm ${food.name}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="size-5 rounded-md bg-background hover:bg-muted border border-border/70 hover:border-red-500/60 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
+              title={`Xem công thức nấu ${food.name} trên YouTube`}
+            >
+              <Image
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
+                alt="YouTube"
+                className="size-3 object-contain"
+              />
+            </a>
+
+            <span className="text-foreground font-bold text-[9px]">#{foodId}</span>
           </div>
         </div>
 
-        {/* ================= BACK SIDE (DETAILS FLASHCARD) ================= */}
-        <div
-          className={`absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-2xl border ${
-            rarityStyle.border
-          } ${rarityStyle.glow} bg-card text-card-foreground flex flex-col p-3 overflow-hidden shadow-md ${
-            !isFlipped ? "pointer-events-none" : "pointer-events-auto"
-          }`}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between pb-1.5 border-b border-border/60">
-            <div className="overflow-hidden">
-              <span className="text-[8px] uppercase font-bold tracking-wider text-secondary block">
-                Thông Tin Món Ăn
-              </span>
-              <h4 className="text-[12px] font-bold text-foreground truncate">{food.name}</h4>
-            </div>
-            <Badge className={`px-1.5 py-0.5 text-[9px] font-black rounded-lg uppercase ${rarityStyle.badge}`}>
-              {food.rarity}
-            </Badge>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-1.5 py-1.5 text-[9px]">
-            <div className="flex justify-between bg-muted/50 p-1 px-1.5 rounded-lg">
-              <span className="text-muted-foreground">Yêu thích:</span>
-              <span className="font-bold text-rose-500">
-                {food.favorite_count || 0} lượt
-              </span>
-            </div>
-            <div className="flex justify-between bg-muted/50 p-1 px-1.5 rounded-lg">
-              <span className="text-muted-foreground">Đã ăn:</span>
-              <span className="font-bold text-amber-500">
-                {food.eaten_count || 0} lượt
-              </span>
-            </div>
-            <div className="flex justify-between bg-muted/50 p-1 px-1.5 rounded-lg">
-              <span className="text-muted-foreground">Trạng thái:</span>
-              <span className="font-bold text-foreground">
-                {food.status === "ACTIVE" ? "Khả dụng" : food.status}
-              </span>
-            </div>
-            <div className="flex justify-between bg-muted/50 p-1 px-1.5 rounded-lg">
-              <span className="text-muted-foreground">Độ hiếm:</span>
-              <span className="font-bold text-foreground">
-                {food.rarity}
-              </span>
-            </div>
-          </div>
-
-          {/* Detailed Description */}
-          <div className="flex-1 overflow-hidden flex flex-col min-h-0 border-t border-border/50 pt-1">
-            <span className="text-[8px] font-bold text-muted-foreground block mb-0.5">
-              Mô tả món ăn:
-            </span>
-            <div className="flex-1 overflow-y-auto space-y-1 pr-0.5 text-[8.5px]">
-              <div className="p-1.5 rounded-md bg-muted/40 text-foreground leading-relaxed">
-                {food.description && food.description.trim() !== ""
-                  ? food.description
-                  : "Chưa có mô tả chi tiết cho món ăn này. Món ăn đã được thêm vào hệ thống Ăn Gì."}
-              </div>
-
-              {food.contributor?.username && (
-                <div className="text-[8px] text-muted-foreground pt-0.5">
-                  Đóng góp bởi: <span className="font-bold text-foreground">{food.contributor.username}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Action Links on Back */}
-          <div className="grid grid-cols-2 gap-1.5 pt-1.5">
-            <a
-              href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${food.name}`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="h-6.5 px-2 rounded-xl bg-background hover:bg-muted border border-border hover:border-emerald-500/50 flex items-center justify-center gap-1.5 text-[9.5px] font-bold text-foreground hover:text-emerald-500 transition-all shadow-2xs group/btn cursor-pointer"
-              title={`Tìm quán ${food.name} trên Google Maps`}
-            >
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
-                referrerPolicy="no-referrer"
-                alt="Maps"
-                className="w-3 h-3 object-contain shrink-0"
-              />
-              <span className="truncate">Maps</span>
-            </a>
-
-            <a
-              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`Công thức làm ${food.name}`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="h-6.5 px-2 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-1.5 text-[9.5px] font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
-              title={`Xem công thức làm ${food.name} trên YouTube`}
-            >
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
-                referrerPolicy="no-referrer"
-                alt="Công thức"
-                className="w-3 h-3 object-contain shrink-0"
-              />
-              <span className="truncate">Công thức</span>
-            </a>
-          </div>
-
-          {/* Back button */}
-          <div className="pt-1.5 border-t border-border/60 flex gap-1.5 mt-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleFlip}
-              className="flex-1 h-6 text-[9.5px] font-bold rounded-xl border-border text-foreground hover:bg-muted gap-1 px-2 cursor-pointer"
-            >
-              <FontAwesomeIcon icon={faRotate} className="text-[8.5px]" />
-              <span>Quay Lại</span>
-            </Button>
-            <Button
-              variant={saved ? "default" : "secondary"}
-              size="sm"
-              onClick={handleSave}
-              className={`h-6 rounded-xl px-2.5 text-[9.5px] font-bold cursor-pointer ${
-                saved ? "bg-primary text-primary-foreground" : ""
+        {/* 3 Action Buttons: Yêu thích, Ghét, Đã ăn - only icon & count */}
+        <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+          {/* 1. Yêu thích */}
+          <button
+            type="button"
+            onClick={handleToggleFavorite}
+            className={`h-7 px-1.5 rounded-xl border flex items-center justify-center gap-1.5 text-[10px] font-bold transition-all cursor-pointer shadow-2xs ${
+              isFavorited
+                ? "bg-rose-500 text-white border-rose-500 shadow-rose-500/20 shadow-xs"
+                : "bg-background hover:bg-muted text-muted-foreground hover:text-rose-500 border-border"
+            }`}
+            title={isFavorited ? "Bỏ yêu thích" : "Yêu thích món này"}
+          >
+            <FontAwesomeIcon
+              icon={faHeart}
+              className={`text-[10px] ${
+                isFavorited ? "text-white" : "text-rose-500"
               }`}
-            >
-              <FontAwesomeIcon
-                icon={saved ? faCheck : faBookmark}
-                className="text-[9px]"
-              />
-            </Button>
-          </div>
+            />
+            <span className="font-bold tabular-nums">{favoritesCount}</span>
+          </button>
+
+          {/* 2. Ghét */}
+          <button
+            type="button"
+            onClick={handleToggleHated}
+            className={`h-7 px-1.5 rounded-xl border flex items-center justify-center gap-1.5 text-[10px] font-bold transition-all cursor-pointer shadow-2xs ${
+              isHated
+                ? "bg-slate-700 dark:bg-slate-600 text-white border-slate-700 shadow-slate-700/20 shadow-xs"
+                : "bg-background hover:bg-muted text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300 border-border"
+            }`}
+            title={isHated ? "Bỏ ghét" : "Ghét món này"}
+          >
+            <FontAwesomeIcon
+              icon={faThumbsDown}
+              className={`text-[10px] ${
+                isHated ? "text-white" : "text-muted-foreground"
+              }`}
+            />
+            <span className="font-bold tabular-nums">{hatedCount}</span>
+          </button>
+
+          {/* 3. Đã ăn */}
+          <button
+            type="button"
+            onClick={handleRecordEaten}
+            className={`h-7 px-1.5 rounded-xl border flex items-center justify-center gap-1.5 text-[10px] font-bold transition-all cursor-pointer shadow-2xs ${
+              isEaten
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/20 shadow-xs"
+                : "bg-background hover:bg-muted text-muted-foreground hover:text-emerald-600 border-border"
+            }`}
+            title="Đánh dấu đã ăn"
+          >
+            <FontAwesomeIcon
+              icon={faUtensils}
+              className={`text-[10px] ${
+                isEaten ? "text-white" : "text-emerald-600"
+              }`}
+            />
+            <span className="font-bold tabular-nums">{eatenCount}</span>
+          </button>
         </div>
       </div>
     </div>

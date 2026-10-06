@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
 import { RoleGuard } from '@/components/guards/RoleGuard';
 import { useAuth } from '@/context/AuthContext';
-import { foodsApi, usersApi, reportsApi, nutritionsApi, authApi } from '@/api';
+import { foodsApi, usersApi, reportsApi, authApi } from '@/api';
 import {
   FoodCard,
   User,
   Report,
-  Nutrition,
   FoodStatus,
   UserRole,
   UserStatus,
@@ -21,14 +21,22 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { Spinner } from '@/components/ui/spinner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Image } from '@/components/ui/image';
+import { DataPagination } from '@/components/ui/data-pagination';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faShieldHalved,
   faUtensils,
   faUsers,
   faFlag,
-  faAppleWhole,
   faCheck,
   faBan,
   faTrashCan,
@@ -37,18 +45,21 @@ import {
   faPlus,
   faPencil,
   faKey,
-  faHeart,
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function AdminPage() {
   const { user, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'foods' | 'users' | 'reports' | 'nutritions'>('foods');
+  const [activeTab, setActiveTab] = useState<'foods' | 'users' | 'reports'>('foods');
 
   // =================== FOODS STATE ===================
   const [foods, setFoods] = useState<FoodCard[]>([]);
   const [foodsLoading, setFoodsLoading] = useState(false);
+  const [actionFoodId, setActionFoodId] = useState<number | null>(null);
   const [foodsSearch, setFoodsSearch] = useState('');
   const [foodsStatus, setFoodsStatus] = useState<string>('all');
+  const [foodsPage, setFoodsPage] = useState(1);
+  const [foodsPageSize] = useState(15);
+  const [foodsTotal, setFoodsTotal] = useState(0);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [editingFood, setEditingFood] = useState<FoodCard | null>(null);
   const [foodForm, setFoodForm] = useState({ name: '', description: '', image_url: '' });
@@ -57,7 +68,11 @@ export default function AdminPage() {
   // =================== USERS STATE ===================
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [actionUserId, setActionUserId] = useState<number | null>(null);
   const [usersSearch, setUsersSearch] = useState('');
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize] = useState(15);
+  const [usersTotal, setUsersTotal] = useState(0);
   const [passwordModalUser, setPasswordModalUser] = useState<User | null>(null);
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -65,124 +80,107 @@ export default function AdminPage() {
   // =================== REPORTS STATE ===================
   const [reports, setReports] = useState<Report[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
-
-  // =================== NUTRITIONS STATE ===================
-  const [nutritions, setNutritions] = useState<Nutrition[]>([]);
-  const [nutritionsLoading, setNutritionsLoading] = useState(false);
-  const [nutritionSearch, setNutritionSearch] = useState('');
-  const [nutritionModalOpen, setNutritionModalOpen] = useState(false);
-  const [editingNutrition, setEditingNutrition] = useState<Nutrition | null>(null);
-  const [nutritionForm, setNutritionForm] = useState({
-    nutrition_name: '',
-    calories: 0,
-    serving_size_g: 100,
-    protein_g: 0,
-    carbohydrates_total_g: 0,
-    fat_total_g: 0,
-    fiber_g: 0,
-    sugar_g: 0,
-    sodium_mg: 0,
-  });
+  const [actionReportId, setActionReportId] = useState<number | null>(null);
+  const [reportsPage, setReportsPage] = useState(1);
+  const [reportsPageSize] = useState(10);
+  const [reportsTotal, setReportsTotal] = useState(0);
 
   // LOAD FOODS
   const loadFoods = useCallback(async () => {
     try {
       setFoodsLoading(true);
       const res = await foodsApi.list({
-        pageSize: 50,
-        search: foodsSearch || undefined,
+        page: foodsPage,
+        pageSize: foodsPageSize,
+        search: foodsSearch.trim() || undefined,
         status: foodsStatus === 'all' ? undefined : (foodsStatus as FoodStatus),
         sort_by: 'name',
       });
       if (res && res.data) {
         setFoods(res.data);
+        setFoodsTotal(res.total_records ?? res.data.length);
       }
     } catch (e) {
       console.error('Failed to load foods for admin:', e);
     } finally {
       setFoodsLoading(false);
     }
-  }, [foodsSearch, foodsStatus]);
+  }, [foodsPage, foodsPageSize, foodsSearch, foodsStatus]);
 
   // LOAD USERS
   const loadUsers = useCallback(async () => {
     try {
       setUsersLoading(true);
       const res = await usersApi.list({
-        pageSize: 50,
-        search: usersSearch || undefined,
+        page: usersPage,
+        pageSize: usersPageSize,
+        search: usersSearch.trim() || undefined,
       });
       if (res && res.data) {
         setUsers(res.data);
+        setUsersTotal(res.total_records ?? res.data.length);
       }
     } catch (e) {
       console.error('Failed to load users for admin:', e);
     } finally {
       setUsersLoading(false);
     }
-  }, [usersSearch]);
+  }, [usersPage, usersPageSize, usersSearch]);
 
   // LOAD REPORTS
   const loadReports = useCallback(async () => {
     try {
       setReportsLoading(true);
       const res = await reportsApi.list({
-        pageSize: 50,
+        page: reportsPage,
+        pageSize: reportsPageSize,
       });
       if (res && res.data) {
         setReports(res.data);
+        setReportsTotal(res.total_records ?? res.data.length);
       }
     } catch (e) {
       console.error('Failed to load reports for admin:', e);
     } finally {
       setReportsLoading(false);
     }
-  }, []);
-
-  // LOAD NUTRITIONS
-  const loadNutritions = useCallback(async () => {
-    try {
-      setNutritionsLoading(true);
-      const res = await nutritionsApi.list({
-        pageSize: 50,
-        search: nutritionSearch || undefined,
-      });
-      if (res && res.data) {
-        setNutritions(res.data);
-      }
-    } catch (e) {
-      console.error('Failed to load nutritions:', e);
-    } finally {
-      setNutritionsLoading(false);
-    }
-  }, [nutritionSearch]);
+  }, [reportsPage, reportsPageSize]);
 
   useEffect(() => {
     if (activeTab === 'foods') loadFoods();
     else if (activeTab === 'users') loadUsers();
     else if (activeTab === 'reports') loadReports();
-    else if (activeTab === 'nutritions') loadNutritions();
-  }, [activeTab, loadFoods, loadUsers, loadReports, loadNutritions]);
+  }, [activeTab, loadFoods, loadUsers, loadReports]);
 
   // Food handlers
   const handleFoodStatusChange = async (foodId: number, newStatus: FoodStatus) => {
+    setActionFoodId(foodId);
     try {
       await foodsApi.changeStatus(foodId, { status: newStatus });
       setFoods((prev) =>
         prev.map((f) => (f.food_id === foodId ? { ...f, status: newStatus } : f))
       );
+      toast.success(`Đã cập nhật trạng thái món ăn thành ${newStatus}!`);
     } catch (err) {
       console.error('Failed to change food status:', err);
+      toast.error('Lỗi khi đổi trạng thái món ăn');
+    } finally {
+      setActionFoodId(null);
     }
   };
 
   const handleFoodDelete = async (foodId: number) => {
     if (!confirm('Bạn có chắc chắn muốn xóa món ăn này khỏi hệ thống?')) return;
+    setActionFoodId(foodId);
     try {
       await foodsApi.delete(foodId);
       setFoods((prev) => prev.filter((f) => f.food_id !== foodId));
+      toast.success('Đã xóa món ăn khỏi hệ thống!');
     } catch (err) {
       console.error('Failed to delete food:', err);
+      toast.error('Lỗi khi xóa món ăn');
+    } finally {
+      setActionFoodId(null);
     }
   };
 
@@ -204,51 +202,71 @@ export default function AdminPage() {
   const handleSaveFood = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!foodForm.name.trim()) return;
+    if (!foodForm.description.trim()) {
+      toast.error('Vui lòng nhập mô tả món ăn');
+      return;
+    }
+    if (!foodForm.image_url.trim()) {
+      toast.error('Vui lòng nhập URL hình ảnh món ăn');
+      return;
+    }
     try {
       setFoodFormSaving(true);
       if (editingFood) {
+        setActionFoodId(editingFood.food_id);
         await foodsApi.update(editingFood.food_id, {
           name: foodForm.name.trim(),
-          description: foodForm.description.trim() || undefined,
-          image_url: foodForm.image_url.trim() || undefined,
+          description: foodForm.description.trim(),
+          image_url: foodForm.image_url.trim(),
         });
       } else {
         await foodsApi.create({
           name: foodForm.name.trim(),
-          description: foodForm.description.trim() || undefined,
-          image_url: foodForm.image_url.trim() || undefined,
+          description: foodForm.description.trim(),
+          image_url: foodForm.image_url.trim(),
         });
       }
       setFoodModalOpen(false);
       await loadFoods();
+      toast.success(editingFood ? 'Cập nhật món ăn thành công!' : 'Tạo món ăn mới thành công!');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi lưu món ăn');
+      toast.error(err instanceof Error ? err.message : 'Lỗi khi lưu món ăn');
     } finally {
       setFoodFormSaving(false);
+      setActionFoodId(null);
     }
   };
 
   // User handlers
   const handleUserRoleChange = async (userId: number, newRole: UserRole) => {
     if (!confirm(`Xác nhận đổi vai trò của người dùng này thành ${newRole}?`)) return;
+    setActionUserId(userId);
     try {
       await usersApi.changeRole(userId, { role: newRole });
       setUsers((prev) =>
         prev.map((u) => (u.user_id === userId ? { ...u, role: newRole } : u))
       );
+      toast.success(`Đã đổi vai trò người dùng thành ${newRole}!`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi đổi quyền người dùng');
+      toast.error(err instanceof Error ? err.message : 'Lỗi khi đổi quyền người dùng');
+    } finally {
+      setActionUserId(null);
     }
   };
 
   const handleUserStatusChange = async (userId: number, newStatus: UserStatus) => {
+    setActionUserId(userId);
     try {
       await usersApi.changeStatus(userId, { status: newStatus });
       setUsers((prev) =>
         prev.map((u) => (u.user_id === userId ? { ...u, status: newStatus } : u))
       );
+      toast.success(`Đã cập nhật trạng thái người dùng thành ${newStatus}!`);
     } catch (err) {
       console.error('Failed to change user status:', err);
+      toast.error('Lỗi khi đổi trạng thái người dùng');
+    } finally {
+      setActionUserId(null);
     }
   };
 
@@ -257,101 +275,54 @@ export default function AdminPage() {
     if (!passwordModalUser || !newPasswordInput.trim()) return;
     const pwdErr = validatePassword(newPasswordInput.trim());
     if (pwdErr) {
-      alert(pwdErr);
+      toast.error(pwdErr);
       return;
     }
+    const targetUserId = passwordModalUser.user_id;
+    setActionUserId(targetUserId);
     try {
       setPasswordSaving(true);
-      await authApi.changePassword(passwordModalUser.user_id, {
+      await authApi.changePassword(targetUserId, {
         newPassword: newPasswordInput.trim(),
       });
-      alert(`Đã đặt lại mật khẩu thành công cho ${passwordModalUser.username}!`);
+      toast.success(`Đã đặt lại mật khẩu thành công cho ${passwordModalUser.username}!`);
       setPasswordModalUser(null);
       setNewPasswordInput('');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi đổi mật khẩu');
+      toast.error(err instanceof Error ? err.message : 'Lỗi khi đổi mật khẩu');
     } finally {
       setPasswordSaving(false);
+      setActionUserId(null);
     }
   };
 
   const handleUserDelete = async (userId: number) => {
     if (!confirm('Bạn có chắc chắn muốn xóa tài khoản này? Hành động không thể hoàn tác!')) return;
+    setActionUserId(userId);
     try {
       await usersApi.delete(userId);
       setUsers((prev) => prev.filter((u) => u.user_id !== userId));
+      toast.success('Đã xóa người dùng thành công!');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Không thể xóa người dùng');
+      toast.error(err instanceof Error ? err.message : 'Không thể xóa người dùng');
+    } finally {
+      setActionUserId(null);
     }
   };
 
   // Report handlers
   const handleReportStatusChange = async (reportId: number, newStatus: ReportStatus) => {
+    setActionReportId(reportId);
     try {
       await reportsApi.changeStatus(reportId, { status: newStatus });
       setReports((prev) =>
         prev.map((r) => (r.report_id === reportId ? { ...r, status: newStatus } : r))
       );
+      toast.success('Đã cập nhật trạng thái báo cáo!');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lỗi cập nhật báo cáo');
-    }
-  };
-
-  // Nutrition handlers
-  const handleOpenNutritionModal = (item?: Nutrition) => {
-    if (item) {
-      setEditingNutrition(item);
-      setNutritionForm({
-        nutrition_name: item.nutrition_name || '',
-        calories: item.calories || 0,
-        serving_size_g: item.serving_size_g || 100,
-        protein_g: item.protein_g || 0,
-        carbohydrates_total_g: item.carbohydrates_total_g || 0,
-        fat_total_g: item.fat_total_g || 0,
-        fiber_g: item.fiber_g || 0,
-        sugar_g: item.sugar_g || 0,
-        sodium_mg: item.sodium_mg || 0,
-      });
-    } else {
-      setEditingNutrition(null);
-      setNutritionForm({
-        nutrition_name: '',
-        calories: 0,
-        serving_size_g: 100,
-        protein_g: 0,
-        carbohydrates_total_g: 0,
-        fat_total_g: 0,
-        fiber_g: 0,
-        sugar_g: 0,
-        sodium_mg: 0,
-      });
-    }
-    setNutritionModalOpen(true);
-  };
-
-  const handleSaveNutrition = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nutritionForm.nutrition_name.trim()) return;
-    try {
-      if (editingNutrition) {
-        await nutritionsApi.update(editingNutrition.nutrition_id, nutritionForm);
-      } else {
-        await nutritionsApi.create(nutritionForm);
-      }
-      setNutritionModalOpen(false);
-      await loadNutritions();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi lưu bảng dinh dưỡng');
-    }
-  };
-
-  const handleDeleteNutrition = async (nutritionId: number) => {
-    if (!confirm('Bạn có chắc muốn xóa bản ghi dinh dưỡng này?')) return;
-    try {
-      await nutritionsApi.delete(nutritionId);
-      setNutritions((prev) => prev.filter((n) => n.nutrition_id !== nutritionId));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi xóa bảng dinh dưỡng');
+      toast.error(err instanceof Error ? err.message : 'Lỗi cập nhật báo cáo');
+    } finally {
+      setActionReportId(null);
     }
   };
 
@@ -367,7 +338,7 @@ export default function AdminPage() {
                 <h1 className="text-2xl font-black text-foreground">Cổng Quản Trị Hệ Thống</h1>
               </div>
               <p className="text-xs text-muted-foreground">
-                Quản lý món ăn, phân quyền người dùng, dinh dưỡng và xử lý phản ánh • Vai trò:{' '}
+                Quản lý món ăn, phân quyền người dùng và xử lý phản ánh • Vai trò:{' '}
                 <strong>{user?.role}</strong>
               </p>
             </div>
@@ -377,7 +348,7 @@ export default function AdminPage() {
           <Tabs
             value={activeTab}
             onValueChange={(val) =>
-              setActiveTab(val as 'foods' | 'users' | 'reports' | 'nutritions')
+              setActiveTab(val as 'foods' | 'users' | 'reports')
             }
             className="space-y-6"
           >
@@ -404,16 +375,10 @@ export default function AdminPage() {
                   icon: <FontAwesomeIcon icon={faFlag} />,
                   count: reports.length,
                 },
-                {
-                  value: 'nutritions',
-                  label: 'Dinh Dưỡng',
-                  icon: <FontAwesomeIcon icon={faAppleWhole} />,
-                  count: nutritions.length,
-                },
               ]}
               activeTab={activeTab}
               onChange={(val) =>
-                setActiveTab(val as 'foods' | 'users' | 'reports' | 'nutritions')
+                setActiveTab(val as 'foods' | 'users' | 'reports')
               }
             />
 
@@ -430,7 +395,10 @@ export default function AdminPage() {
                       type="text"
                       placeholder="Tìm theo tên món..."
                       value={foodsSearch}
-                      onChange={(e) => setFoodsSearch(e.target.value)}
+                      onChange={(e) => {
+                        setFoodsSearch(e.target.value);
+                        setFoodsPage(1);
+                      }}
                       className="pl-8"
                     />
                   </div>
@@ -438,7 +406,10 @@ export default function AdminPage() {
                   {/* Status Filter for Admin/Moderator */}
                   <select
                     value={foodsStatus}
-                    onChange={(e) => setFoodsStatus(e.target.value)}
+                    onChange={(e) => {
+                      setFoodsStatus(e.target.value);
+                      setFoodsPage(1);
+                    }}
                     className="w-full sm:w-auto h-9 px-3 bg-background border border-border text-foreground text-xs font-semibold rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden shadow-2xs cursor-pointer"
                   >
                     <option value="all">Tất cả trạng thái</option>
@@ -464,8 +435,38 @@ export default function AdminPage() {
               </div>
 
               {foodsLoading ? (
-                <div className="flex justify-center py-16">
-                  <Spinner />
+                <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-muted/60 text-muted-foreground font-bold border-b border-border">
+                        <tr>
+                          <th className="p-3">ID</th>
+                          <th className="p-3">Hình ảnh</th>
+                          <th className="p-3">Tên món & Mô tả</th>
+                          <th className="p-3">Ngày tạo</th>
+                          <th className="p-3">Độ hiếm</th>
+                          <th className="p-3">Trạng thái</th>
+                          <th className="p-3 text-right">Hành động</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {Array.from({ length: 6 }).map((_, idx) => (
+                          <tr key={idx}>
+                            <td className="p-3"><Skeleton className="h-4 w-8" /></td>
+                            <td className="p-3"><Skeleton className="h-10 w-10 rounded-lg" /></td>
+                            <td className="p-3 space-y-1.5">
+                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="h-3 w-48" />
+                            </td>
+                            <td className="p-3"><Skeleton className="h-4 w-20" /></td>
+                            <td className="p-3"><Skeleton className="h-5 w-8 rounded-full" /></td>
+                            <td className="p-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                            <td className="p-3 text-right"><Skeleton className="h-7 w-24 ml-auto rounded-lg" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ) : (
                 <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-xs">
@@ -476,7 +477,7 @@ export default function AdminPage() {
                           <th className="p-3">ID</th>
                           <th className="p-3">Hình ảnh</th>
                           <th className="p-3">Tên món & Mô tả</th>
-                          <th className="p-3">Thống kê</th>
+                          <th className="p-3">Ngày tạo</th>
                           <th className="p-3">Độ hiếm</th>
                           <th className="p-3">Trạng thái</th>
                           <th className="p-3 text-right">Hành động</th>
@@ -484,6 +485,23 @@ export default function AdminPage() {
                       </thead>
                       <tbody className="divide-y divide-border">
                         {foods.map((food) => {
+                          if (actionFoodId === food.food_id) {
+                            return (
+                              <tr key={food.food_id} className="bg-muted/20">
+                                <td className="p-3"><Skeleton className="h-4 w-8" /></td>
+                                <td className="p-3"><Skeleton className="h-10 w-10 rounded-lg" /></td>
+                                <td className="p-3 space-y-1.5">
+                                  <Skeleton className="h-4 w-32" />
+                                  <Skeleton className="h-3 w-48" />
+                                </td>
+                                <td className="p-3"><Skeleton className="h-4 w-20" /></td>
+                                <td className="p-3"><Skeleton className="h-5 w-8 rounded-full" /></td>
+                                <td className="p-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                                <td className="p-3 text-right"><Skeleton className="h-7 w-24 ml-auto rounded-lg" /></td>
+                              </tr>
+                            );
+                          }
+
                           const statusColor =
                             food.status === 'ACTIVE'
                               ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
@@ -495,17 +513,11 @@ export default function AdminPage() {
                             <tr key={food.food_id} className="hover:bg-muted/40 transition-colors">
                               <td className="p-3 font-mono text-muted-foreground">#{food.food_id}</td>
                               <td className="p-3">
-                                {food.image_url ? (
-                                  <img
-                                    src={food.image_url}
-                                    alt={food.name}
-                                    className="w-10 h-10 object-cover rounded-lg border border-border"
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary font-bold">
-                                    <FontAwesomeIcon icon={faUtensils} />
-                                  </div>
-                                )}
+                                <Image
+                                  src={food.image_url}
+                                  alt={food.name}
+                                  className="w-10 h-10 object-cover rounded-lg border border-border shrink-0"
+                                />
                               </td>
                               <td className="p-3">
                                 <span className="font-bold text-foreground block">{food.name}</span>
@@ -513,19 +525,14 @@ export default function AdminPage() {
                                   {food.description || 'Chưa có mô tả'}
                                 </span>
                               </td>
-                              <td className="p-3 space-y-0.5">
-                                <div className="text-[11px] text-rose-500 flex items-center gap-1 font-semibold">
-                                  <FontAwesomeIcon icon={faHeart} className="text-[10px]" />
-                                  <span>{food.favorite_count ?? 0} thích</span>
-                                </div>
-                                <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                  <FontAwesomeIcon icon={faUtensils} className="text-[10px]" />
-                                  <span>{food.eaten_count ?? 0} đã ăn</span>
-                                </div>
+                              <td className="p-3 text-[11px] text-muted-foreground font-medium">
+                                {food.created_at
+                                  ? new Date(food.created_at).toLocaleDateString('vi-VN')
+                                  : '—'}
                               </td>
                               <td className="p-3">
                                 <Badge className="text-[10px] font-black px-2 py-0.5 rounded-full border bg-secondary/15 text-foreground border-secondary/30">
-                                  {food.rank || 'C'}
+                                  {food.food_rank || 'C'}
                                 </Badge>
                               </td>
                               <td className="p-3">
@@ -591,6 +598,14 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+
+              <DataPagination
+                currentPage={foodsPage}
+                totalRecords={foodsTotal}
+                pageSize={foodsPageSize}
+                onPageChange={setFoodsPage}
+                isLoading={foodsLoading}
+              />
             </TabsContent>
 
             {/* TAB 2: USER MANAGEMENT */}
@@ -605,7 +620,10 @@ export default function AdminPage() {
                     type="text"
                     placeholder="Tìm theo username, email..."
                     value={usersSearch}
-                    onChange={(e) => setUsersSearch(e.target.value)}
+                    onChange={(e) => {
+                      setUsersSearch(e.target.value);
+                      setUsersPage(1);
+                    }}
                     className="pl-8"
                   />
                 </div>
@@ -615,8 +633,36 @@ export default function AdminPage() {
               </div>
 
               {usersLoading ? (
-                <div className="flex justify-center py-16">
-                  <Spinner />
+                <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-muted/60 text-muted-foreground font-bold border-b border-border">
+                        <tr>
+                          <th className="p-3">ID</th>
+                          <th className="p-3">Tài khoản</th>
+                          <th className="p-3">Email & Địa chỉ</th>
+                          <th className="p-3">Vai trò</th>
+                          <th className="p-3">Trạng thái</th>
+                          <th className="p-3 text-right">Hành động</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y border-border">
+                        {Array.from({ length: 6 }).map((_, idx) => (
+                          <tr key={idx}>
+                            <td className="p-3"><Skeleton className="h-4 w-8" /></td>
+                            <td className="p-3"><Skeleton className="h-4 w-28" /></td>
+                            <td className="p-3 space-y-1.5">
+                              <Skeleton className="h-4 w-36" />
+                              <Skeleton className="h-3 w-44" />
+                            </td>
+                            <td className="p-3"><Skeleton className="h-7 w-20 rounded" /></td>
+                            <td className="p-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                            <td className="p-3 text-right"><Skeleton className="h-7 w-28 ml-auto rounded-lg" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ) : (
                 <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-xs">
@@ -634,6 +680,22 @@ export default function AdminPage() {
                       </thead>
                       <tbody className="divide-y divide-border">
                         {users.map((u) => {
+                          if (actionUserId === u.user_id) {
+                            return (
+                              <tr key={u.user_id} className="bg-muted/20">
+                                <td className="p-3"><Skeleton className="h-4 w-8" /></td>
+                                <td className="p-3"><Skeleton className="h-4 w-28" /></td>
+                                <td className="p-3 space-y-1.5">
+                                  <Skeleton className="h-4 w-36" />
+                                  <Skeleton className="h-3 w-44" />
+                                </td>
+                                <td className="p-3"><Skeleton className="h-7 w-20 rounded" /></td>
+                                <td className="p-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                                <td className="p-3 text-right"><Skeleton className="h-7 w-28 ml-auto rounded-lg" /></td>
+                              </tr>
+                            );
+                          }
+
                           const statusColor =
                             u.status === 'ACTIVE'
                               ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
@@ -733,6 +795,14 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+
+              <DataPagination
+                currentPage={usersPage}
+                totalRecords={usersTotal}
+                pageSize={usersPageSize}
+                onPageChange={setUsersPage}
+                isLoading={usersLoading}
+              />
             </TabsContent>
 
             {/* TAB 3: REPORT MANAGEMENT */}
@@ -744,8 +814,22 @@ export default function AdminPage() {
               </div>
 
               {reportsLoading ? (
-                <div className="flex justify-center py-16">
-                  <Spinner />
+                <div className="space-y-3">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl bg-card border border-border shadow-xs space-y-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                        <Skeleton className="h-4 w-40" />
+                      </div>
+                      <Skeleton className="h-5 w-1/3" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+                  ))}
                 </div>
               ) : reports.length === 0 ? (
                 <div className="text-center py-16 p-8 rounded-2xl bg-card border border-border text-muted-foreground text-xs">
@@ -753,43 +837,61 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {reports.map((report) => (
-                    <div
-                      key={report.report_id}
-                      className="p-4 rounded-2xl bg-card border border-border shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-                    >
-                      <div className="space-y-1.5 max-w-2xl">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                              report.type === 'ERROR'
-                                ? 'bg-destructive/15 text-destructive border-destructive/30'
-                                : 'bg-secondary/15 text-secondary border-secondary/30'
-                            }`}
-                          >
-                            {report.type === 'ERROR' ? 'Báo Lỗi' : 'Góp Ý'}
-                          </Badge>
-                          <Badge
-                            className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                              report.status === 'RESOLVED'
-                                ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
-                                : 'bg-amber-500/15 text-amber-600 border-amber-500/30'
-                            }`}
-                          >
-                            {report.status}
-                          </Badge>
-                          <span className="text-[11px] text-muted-foreground">
-                            Gửi bởi: <strong>{report.author?.username || 'Ẩn danh'}</strong> •{' '}
-                            {report.created_at || 'Mới đây'}
-                          </span>
+                  {reports.map((report) => {
+                    if (actionReportId === report.report_id) {
+                      return (
+                        <div
+                          key={report.report_id}
+                          className="p-4 rounded-2xl bg-card border border-border shadow-xs space-y-3 bg-muted/20"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-5 w-16 rounded-full" />
+                            <Skeleton className="h-5 w-20 rounded-full" />
+                            <Skeleton className="h-4 w-40" />
+                          </div>
+                          <Skeleton className="h-5 w-1/3" />
+                          <Skeleton className="h-4 w-full" />
                         </div>
-                        {report.title && (
-                          <h4 className="font-bold text-sm text-foreground">{report.title}</h4>
-                        )}
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {report.content}
-                        </p>
-                      </div>
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={report.report_id}
+                        className="p-4 rounded-2xl bg-card border border-border shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                      >
+                        <div className="space-y-1.5 max-w-2xl">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                                report.type === 'ERROR'
+                                  ? 'bg-destructive/15 text-destructive border-destructive/30'
+                                  : 'bg-secondary/15 text-secondary border-secondary/30'
+                              }`}
+                            >
+                              {report.type === 'ERROR' ? 'Báo Lỗi' : 'Góp Ý'}
+                            </Badge>
+                            <Badge
+                              className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                                report.status === 'RESOLVED'
+                                  ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
+                                  : 'bg-amber-500/15 text-amber-600 border-amber-500/30'
+                              }`}
+                            >
+                              {report.status}
+                            </Badge>
+                            <span className="text-[11px] text-muted-foreground">
+                              Gửi bởi: <strong>{report.author?.username || 'Ẩn danh'}</strong> •{' '}
+                              {report.created_at || 'Mới đây'}
+                            </span>
+                          </div>
+                          {report.title && (
+                            <h4 className="font-bold text-sm text-foreground">{report.title}</h4>
+                          )}
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {report.content}
+                          </p>
+                        </div>
 
                       {isAdmin && (
                         <div className="shrink-0 self-end sm:self-center">
@@ -815,317 +917,127 @@ export default function AdminPage() {
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* TAB 4: NUTRITIONS MANAGEMENT */}
-            <TabsContent value="nutritions" className="space-y-4">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="relative w-full sm:w-80">
-                  <FontAwesomeIcon
-                    icon={faMagnifyingGlass}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Tìm theo tên thành phần..."
-                    value={nutritionSearch}
-                    onChange={(e) => setNutritionSearch(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={loadNutritions}
-                    variant="outline"
-                    size="sm"
-                    className="font-bold"
-                  >
-                    Làm mới
-                  </Button>
-                  <Button
-                    onClick={() => handleOpenNutritionModal()}
-                    size="sm"
-                    className="font-bold gap-1.5"
-                  >
-                    <FontAwesomeIcon icon={faPlus} className="text-xs" />
-                    <span>Thêm Dinh Dưỡng</span>
-                  </Button>
-                </div>
+                  );
+                })}
               </div>
+            )}
 
-              {nutritionsLoading ? (
-                <div className="flex justify-center py-16">
-                  <Spinner />
-                </div>
-              ) : (
-                <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-xs">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-muted/60 text-muted-foreground font-bold border-b border-border">
-                        <tr>
-                          <th className="p-3">ID</th>
-                          <th className="p-3">Tên dinh dưỡng</th>
-                          <th className="p-3">Khẩu phần</th>
-                          <th className="p-3">Năng lượng</th>
-                          <th className="p-3">Đạm (Protein)</th>
-                          <th className="p-3">Đường bột (Carb)</th>
-                          <th className="p-3">Chất béo (Fat)</th>
-                          <th className="p-3 text-right">Hành động</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {nutritions.map((n) => (
-                          <tr key={n.nutrition_id} className="hover:bg-muted/40 transition-colors">
-                            <td className="p-3 font-mono text-muted-foreground">#{n.nutrition_id}</td>
-                            <td className="p-3 font-bold text-foreground">{n.nutrition_name}</td>
-                            <td className="p-3">{n.serving_size_g ?? 100}g</td>
-                            <td className="p-3 font-semibold text-primary">{n.calories ?? 0} kcal</td>
-                            <td className="p-3">{n.protein_g ?? 0}g</td>
-                            <td className="p-3">{n.carbohydrates_total_g ?? 0}g</td>
-                            <td className="p-3">{n.fat_total_g ?? 0}g</td>
-                            <td className="p-3 text-right space-x-1">
-                              {isAdmin && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleOpenNutritionModal(n)}
-                                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                                  >
-                                    <FontAwesomeIcon icon={faPencil} />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleDeleteNutrition(n.nutrition_id)}
-                                    className="h-7 px-2 text-destructive hover:bg-destructive/10"
-                                  >
-                                    <FontAwesomeIcon icon={faTrashCan} />
-                                  </Button>
-                                </>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+            <DataPagination
+              currentPage={reportsPage}
+              totalRecords={reportsTotal}
+              pageSize={reportsPageSize}
+              onPageChange={setReportsPage}
+              isLoading={reportsLoading}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
 
         {/* FOOD MODAL */}
-        {foodModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <Card className="w-full max-w-lg p-6 space-y-4">
-              <CardHeader className="p-0">
-                <CardTitle className="text-base font-bold">
-                  {editingFood ? 'Chỉnh Sửa Món Ăn' : 'Thêm Món Ăn Mới'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <form onSubmit={handleSaveFood} className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">Tên món ăn *</label>
-                    <Input
-                      type="text"
-                      placeholder="Phở bò, Cơm tấm sườn bì..."
-                      value={foodForm.name}
-                      onChange={(e) => setFoodForm({ ...foodForm, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">Mô tả món ăn</label>
-                    <Input
-                      type="text"
-                      placeholder="Món ăn truyền thống đậm đà hương vị..."
-                      value={foodForm.description}
-                      onChange={(e) => setFoodForm({ ...foodForm, description: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">URL hình ảnh</label>
-                    <Input
-                      type="url"
-                      placeholder="https://images.unsplash.com/..."
-                      value={foodForm.image_url}
-                      onChange={(e) => setFoodForm({ ...foodForm, image_url: e.target.value })}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setFoodModalOpen(false)}
-                    >
-                      Hủy
-                    </Button>
-                    <Button type="submit" size="sm" disabled={foodFormSaving} className="font-bold">
-                      {foodFormSaving ? <Spinner /> : 'Lưu Món'}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <Dialog open={foodModalOpen} onOpenChange={setFoodModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold">
+                {editingFood ? 'Chỉnh Sửa Món Ăn' : 'Thêm Món Ăn Mới'}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                {editingFood
+                  ? 'Cập nhật thông tin chi tiết của món ăn trong hệ thống.'
+                  : 'Nhập thông tin món ăn mới để thêm vào hệ thống AnGi.'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSaveFood} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">Tên món ăn *</label>
+                <Input
+                  type="text"
+                  placeholder="Phở bò, Cơm tấm sườn bì..."
+                  value={foodForm.name}
+                  onChange={(e) => setFoodForm({ ...foodForm, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">Mô tả món ăn *</label>
+                <Input
+                  type="text"
+                  placeholder="Món ăn truyền thống đậm đà hương vị..."
+                  value={foodForm.description}
+                  onChange={(e) => setFoodForm({ ...foodForm, description: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">URL hình ảnh *</label>
+                <Input
+                  type="url"
+                  placeholder="https://images.unsplash.com/..."
+                  value={foodForm.image_url}
+                  onChange={(e) => setFoodForm({ ...foodForm, image_url: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFoodModalOpen(false)}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" size="sm" disabled={foodFormSaving} className="font-bold">
+                  {foodFormSaving ? <Spinner /> : 'Lưu Món'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* ADMIN RESET PASSWORD MODAL */}
-        {passwordModalUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <Card className="w-full max-w-sm p-6 space-y-4">
-              <CardHeader className="p-0">
-                <CardTitle className="text-base font-bold">
-                  Đặt Lại Mật Khẩu ({passwordModalUser.username})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <form onSubmit={handleAdminResetPassword} className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">Mật khẩu mới *</label>
-                    <Input
-                      type="password"
-                      placeholder="Tối thiểu 8 ký tự..."
-                      value={newPasswordInput}
-                      onChange={(e) => setNewPasswordInput(e.target.value)}
-                      required
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
-                    </p>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPasswordModalUser(null)}
-                    >
-                      Hủy
-                    </Button>
-                    <Button type="submit" size="sm" disabled={passwordSaving} className="font-bold">
-                      {passwordSaving ? <Spinner /> : 'Xác Nhận Đổi'}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* NUTRITION MODAL */}
-        {nutritionModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <Card className="w-full max-w-lg p-6 space-y-4">
-              <CardHeader className="p-0">
-                <CardTitle className="text-base font-bold">
-                  {editingNutrition ? 'Chỉnh Sửa Bảng Dinh Dưỡng' : 'Thêm Bảng Dinh Dưỡng'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <form onSubmit={handleSaveNutrition} className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-foreground">Tên thành phần *</label>
-                    <Input
-                      type="text"
-                      placeholder="Thịt bò xào, Gạo tẻ..."
-                      value={nutritionForm.nutrition_name}
-                      onChange={(e) =>
-                        setNutritionForm({ ...nutritionForm, nutrition_name: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Năng lượng (kcal)</label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={nutritionForm.calories}
-                        onChange={(e) =>
-                          setNutritionForm({ ...nutritionForm, calories: parseFloat(e.target.value) || 0 })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Khẩu phần (g)</label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={nutritionForm.serving_size_g}
-                        onChange={(e) =>
-                          setNutritionForm({
-                            ...nutritionForm,
-                            serving_size_g: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Đạm (g)</label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={nutritionForm.protein_g}
-                        onChange={(e) =>
-                          setNutritionForm({ ...nutritionForm, protein_g: parseFloat(e.target.value) || 0 })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Đường bột (g)</label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={nutritionForm.carbohydrates_total_g}
-                        onChange={(e) =>
-                          setNutritionForm({
-                            ...nutritionForm,
-                            carbohydrates_total_g: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">Chất béo (g)</label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={nutritionForm.fat_total_g}
-                        onChange={(e) =>
-                          setNutritionForm({ ...nutritionForm, fat_total_g: parseFloat(e.target.value) || 0 })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setNutritionModalOpen(false)}
-                    >
-                      Hủy
-                    </Button>
-                    <Button type="submit" size="sm" className="font-bold">
-                      Lưu Dinh Dưỡng
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <Dialog
+          open={Boolean(passwordModalUser)}
+          onOpenChange={(open) => !open && setPasswordModalUser(null)}
+        >
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold">
+                Đặt Lại Mật Khẩu ({passwordModalUser?.username})
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Nhập mật khẩu mới cho tài khoản người dùng này.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleAdminResetPassword} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">Mật khẩu mới *</label>
+                <Input
+                  type="password"
+                  placeholder="Tối thiểu 8 ký tự..."
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  required
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPasswordModalUser(null)}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" size="sm" disabled={passwordSaving} className="font-bold">
+                  {passwordSaving ? <Spinner /> : 'Xác Nhận Đổi'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </RoleGuard>
   );
