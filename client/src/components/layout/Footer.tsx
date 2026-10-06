@@ -65,11 +65,11 @@ export const Footer: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    href="/tai-lieu"
+                    href="/huong-dan/quy-dinh-dong-gop"
                     className="hover:text-primary transition-colors flex items-center gap-1.5"
                   >
                     <FontAwesomeIcon icon={faStar} className="text-[10px] text-secondary" />
-                    <span>Tài Liệu Dự Án</span>
+                    <span>Quy Định Đóng Góp</span>
                   </Link>
                 </li>
                 <li>

@@ -17,9 +17,6 @@ import {
 } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faFire,
-  faTag,
-  faLeaf,
   faRotate,
   faCheck,
   faBookmark,
@@ -29,7 +26,6 @@ import {
   faUtensils,
 } from "@fortawesome/free-solid-svg-icons";
 import type { FoodItem, Rarity } from "@/types/food";
-import { formatPrice } from "@/lib/foodData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { tinderSounds } from "@/lib/tinderSound";
@@ -112,13 +108,9 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
     const superLikeOpacity = useTransform(y, [-20, -90], [0, 1]);
 
     const rarity = rarityStyles[food.rarity] || rarityStyles.C;
-    const imageSrc = imgError
+    const imageSrc = imgError || !food.imagePath
       ? "/logos/main-logo.png"
-      : food.imagePath || `/data/images/${food.id}.webp`;
-
-    const hasCalories = food.macros?.calories > 0;
-    const hasPrice = food.price && food.price > 0;
-    const formattedPrice = hasPrice ? formatPrice(food.price) : "";
+      : food.imagePath;
 
     // Stack styling (depth & scale)
     const stackScale = Math.max(0.88, 1 - stackIndex * 0.05);
@@ -335,15 +327,9 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                     >
                       {food.rarity}
                     </Badge>
-                    {food.veg && (
-                      <Badge className="bg-emerald-600/95 text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
-                        <FontAwesomeIcon icon={faLeaf} className="text-[9px]" />
-                        <span>Ăn Chay</span>
-                      </Badge>
-                    )}
-                    {food.sessions && food.sessions.length > 0 && (
-                      <Badge className="bg-black/60 backdrop-blur-md text-white/90 border border-white/15 text-[10px] px-2 py-0.5 rounded-full">
-                        {food.sessions[0]}
+                    {food.status === "PENDING" && (
+                      <Badge className="bg-amber-500/90 text-white text-[10px] px-2 py-0.5 rounded-full shadow-md">
+                        Chờ duyệt
                       </Badge>
                     )}
                   </div>
@@ -368,23 +354,17 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                   </Button>
                 </div>
 
-                {/* Price and Calories Pill at Image Bottom */}
+                {/* Real Stats Pill at Image Bottom */}
                 <div className="absolute bottom-3 left-3.5 right-3.5 flex items-center justify-between text-xs text-white font-bold drop-shadow-md">
-                  {hasPrice ? (
-                    <span className="bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-amber-400/40 text-amber-300 font-extrabold flex items-center gap-1.5 shadow-md">
-                      <FontAwesomeIcon icon={faTag} className="text-[10px]" />
-                      {formattedPrice}
-                    </span>
-                  ) : (
-                    <span />
-                  )}
+                  <span className="bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-rose-500/40 text-rose-300 font-extrabold flex items-center gap-1.5 shadow-md">
+                    <FontAwesomeIcon icon={faHeart} className="text-[10px]" />
+                    <span>{food.favorite_count || 0} yêu thích</span>
+                  </span>
 
-                  {hasCalories && (
-                    <span className="bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 text-white font-extrabold flex items-center gap-1.5 shadow-md">
-                      <FontAwesomeIcon icon={faFire} className="text-secondary text-[11px]" />
-                      <span>{food.macros.calories} kcal</span>
-                    </span>
-                  )}
+                  <span className="bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-amber-400/40 text-amber-300 font-extrabold flex items-center gap-1.5 shadow-md">
+                    <FontAwesomeIcon icon={faUtensils} className="text-[10px]" />
+                    <span>{food.eaten_count || 0} đã ăn</span>
+                  </span>
                 </div>
               </div>
 
@@ -400,45 +380,78 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                       variant="ghost"
                       size="sm"
                       onClick={toggleFlip}
-                      className="h-7 px-2 rounded-full text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-border/60 gap-1 shrink-0 cursor-pointer"
-                      title="Lật thẻ xem dinh dưỡng & nguyên liệu"
+                      className="h-7 px-2.5 rounded-full text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-border/60 gap-1 shrink-0 cursor-pointer"
+                      title="Lật thẻ xem chi tiết món ăn"
                     >
                       <FontAwesomeIcon icon={faRotate} className="text-[10px] text-secondary" />
-                      <span>Dinh dưỡng</span>
+                      <span>Chi tiết</span>
                     </Button>
                   </div>
 
-                  {food.sub && food.sub.trim() !== "" ? (
-                    <p className="text-xs text-secondary font-semibold line-clamp-1 mt-0.5">
-                      {food.sub}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                      {food.name_en || "Món ngon dinh dưỡng truyền thống"}
-                    </p>
-                  )}
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mt-1">
+                    {food.description || "Món ăn ngon và hấp dẫn từ cộng đồng ẩm thực AnGi."}
+                  </p>
                 </div>
 
-                {/* Macro Pills Row */}
+                {/* Real Attributes Row */}
                 <div className="grid grid-cols-3 gap-1.5 py-1.5 px-2 bg-muted/60 rounded-2xl border border-border/50 text-center">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground font-medium">Đạm</span>
-                    <span className="text-xs font-black text-primary">
-                      {food.macros?.protein || 0}g
+                    <span className="text-[10px] text-muted-foreground font-medium">Độ Hiếm</span>
+                    <span className="text-xs font-black text-foreground">
+                      {food.rarity}
                     </span>
                   </div>
                   <div className="flex flex-col border-x border-border/50">
-                    <span className="text-[10px] text-muted-foreground font-medium">Carbs</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">Trạng Thái</span>
                     <span className="text-xs font-black text-secondary">
-                      {food.macros?.carbs || 0}g
+                      {food.status === "ACTIVE" ? "Khả dụng" : food.status}
                     </span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground font-medium">Chất Béo</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">Mã Món</span>
                     <span className="text-xs font-black text-foreground">
-                      {food.macros?.fat || 0}g
+                      #{food.food_id || food.id}
                     </span>
                   </div>
+                </div>
+
+                {/* External Links: Google Maps & YouTube */}
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${food.name}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-emerald-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-emerald-500 transition-all shadow-2xs group/btn cursor-pointer"
+                    title={`Tìm quán ${food.name} trên Google Maps`}
+                  >
+                    <img
+                      src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
+                      referrerPolicy="no-referrer"
+                      alt="Maps"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                    <span className="truncate">Maps</span>
+                  </a>
+
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`Công thức làm ${food.name}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
+                    title={`Xem công thức làm ${food.name} trên YouTube`}
+                  >
+                    <img
+                      src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
+                      referrerPolicy="no-referrer"
+                      alt="Công thức"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                    <span className="truncate">Công thức</span>
+                  </a>
                 </div>
 
                 {/* Swipe Guidance Helper Text */}
@@ -453,7 +466,7 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
               </div>
             </div>
 
-            {/* ================= BACK SIDE (NUTRITION & INGREDIENTS) ================= */}
+            {/* ================= BACK SIDE (DETAILS) ================= */}
             <div
               className={`absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-3xl border-2 ${
                 rarity.border
@@ -466,7 +479,7 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-wider text-secondary flex items-center gap-1">
                     <FontAwesomeIcon icon={faUtensils} className="text-[9px]" />
-                    Thông Số Dinh Dưỡng
+                    Chi Tiết Món Ăn
                   </span>
                   <h3 className="text-lg font-black text-foreground line-clamp-1">
                     {food.name}
@@ -484,87 +497,103 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                 </Button>
               </div>
 
-              {/* Nutrition Breakdown Grid */}
+              {/* Dish Breakdown Grid */}
               <div className="my-3 space-y-3 flex-1 overflow-y-auto pr-1">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Tổng Calo:</span>
+                    <span className="text-muted-foreground font-medium">Yêu thích:</span>
+                    <span className="font-black text-rose-500">
+                      {food.favorite_count || 0} lượt
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">Đã ăn:</span>
+                    <span className="font-black text-amber-500">
+                      {food.eaten_count || 0} lượt
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">Trạng thái:</span>
+                    <span className="font-black text-foreground">
+                      {food.status === "ACTIVE" ? "Đã kiểm duyệt" : food.status}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">Độ hiếm:</span>
                     <span className="font-black text-secondary">
-                      {food.macros?.calories || 0} kcal
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Chất đạm:</span>
-                    <span className="font-black text-primary">
-                      {food.macros?.protein || 0} g
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Carbohydrate:</span>
-                    <span className="font-black text-foreground">
-                      {food.macros?.carbs || 0} g
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Chất béo:</span>
-                    <span className="font-black text-foreground">
-                      {food.macros?.fat || 0} g
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Chất xơ:</span>
-                    <span className="font-black text-emerald-600 dark:text-emerald-400">
-                      {food.macros?.fiber || 0} g
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Natri (Sodium):</span>
-                    <span className="font-black text-foreground">
-                      {food.macros?.sodium || 0} mg
+                      {food.rarity}
                     </span>
                   </div>
                 </div>
 
-                {/* Ingredients List */}
+                {/* Description */}
                 <div className="space-y-1.5">
                   <h4 className="text-xs font-bold text-foreground uppercase tracking-wide">
-                    Thành phần chính:
+                    Mô tả món ăn:
                   </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {food.ingredients && food.ingredients.length > 0 ? (
-                      food.ingredients.map((ing, i) => (
-                        <span
-                          key={i}
-                          className="text-[11px] px-2.5 py-1 rounded-lg bg-muted text-foreground/90 border border-border/40 font-medium"
-                        >
-                          {ing}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">
-                        Đang cập nhật nguyên liệu
-                      </span>
-                    )}
+                  <div className="p-3 rounded-2xl bg-muted/40 border border-border/50 text-xs text-foreground/90 leading-relaxed">
+                    {food.description && food.description.trim() !== ""
+                      ? food.description
+                      : "Món ăn ngon và hấp dẫn từ thực đơn hệ thống Ăn Gì."}
                   </div>
                 </div>
 
-                {food.quip && (
-                  <div className="p-2.5 rounded-xl bg-secondary/10 border border-secondary/20 text-xs italic text-foreground/90">
-                    &ldquo;{food.quip}&rdquo;
+                {food.contributor?.username && (
+                  <div className="p-2.5 rounded-xl bg-secondary/10 border border-secondary/20 text-xs text-foreground/90">
+                    Người đóng góp: <span className="font-bold">{food.contributor.username}</span>
                   </div>
                 )}
               </div>
 
-              {/* Action Bar on Back */}
-              <div className="pt-2 border-t border-border/80 flex gap-2">
-                <Button
-                  type="button"
-                  onClick={toggleFlip}
-                  className="w-full rounded-2xl text-xs font-bold py-2 bg-primary text-primary-foreground hover:brightness-105 cursor-pointer"
-                >
-                  Tiếp Tục Quẹt Món Này
-                </Button>
-              </div>
+                {/* External Links on Back */}
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <a
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${food.name}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-emerald-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-emerald-500 transition-all shadow-2xs group/btn cursor-pointer"
+                    title={`Tìm quán ${food.name} trên Google Maps`}
+                  >
+                    <img
+                      src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
+                      referrerPolicy="no-referrer"
+                      alt="Maps"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                    <span className="truncate">Maps</span>
+                  </a>
+
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`Công thức làm ${food.name}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
+                    title={`Xem công thức nấu ${food.name} trên YouTube`}
+                  >
+                    <img
+                      src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
+                      referrerPolicy="no-referrer"
+                      alt="Công thức"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                    <span className="truncate">Công thức</span>
+                  </a>
+                </div>
+
+                {/* Action Bar on Back */}
+                <div className="pt-2 border-t border-border/80 flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={toggleFlip}
+                    className="w-full rounded-2xl text-xs font-bold py-2 bg-primary text-primary-foreground hover:brightness-105 cursor-pointer"
+                  >
+                    Tiếp Tục Quẹt Món Này
+                  </Button>
+                </div>
             </div>
           </div>
         </div>

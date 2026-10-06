@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimeTheme } from "@/context/TimeThemeContext";
 import type { FoodItem } from "@/types/food";
-import { allFoods as defaultFoods } from "@/lib/foodData";
+import { foodsApi } from "@/api";
+import { mapFoodCardToFoodItem } from "@/lib/foodAdapter";
 import {
   TinderFilterBar,
   type TinderFilterState,
@@ -17,15 +18,32 @@ interface TinderGameProps {
 }
 
 export const TinderGame: React.FC<TinderGameProps> = ({
-  allFoods = defaultFoods,
+  allFoods: propFoods,
   initialMode = "filter",
 }) => {
   const { recommendedSession } = useTimeTheme();
+  const [apiFoods, setApiFoods] = useState<FoodItem[]>([]);
+
+  useEffect(() => {
+    if (propFoods && propFoods.length > 0) return;
+    foodsApi
+      .list({ pageSize: 100 })
+      .then((res) => {
+        if (res.data) {
+          setApiFoods(res.data.map(mapFoodCardToFoodItem));
+        }
+      })
+      .catch((err) => console.error("Lỗi khi tải món ăn cho Tinder:", err));
+  }, [propFoods]);
+
+  const allFoods = useMemo(() => {
+    return propFoods && propFoods.length > 0 ? propFoods : apiFoods;
+  }, [propFoods, apiFoods]);
 
   // Filters state
   const [filters, setFilters] = useState<TinderFilterState>({
     diet: "all",
-    price: "all",
+    rarity: "all",
     session: "auto",
     maxDishes: 20,
   });
@@ -45,6 +63,7 @@ export const TinderGame: React.FC<TinderGameProps> = ({
       // Session matching
       if (
         effectiveSession !== "all" &&
+        food.sessions &&
         !food.sessions.includes(effectiveSession)
       ) {
         return false;
@@ -54,31 +73,20 @@ export const TinderGame: React.FC<TinderGameProps> = ({
       if (filters.diet === "veg" && !food.veg) return false;
       if (filters.diet === "meat" && food.veg) return false;
 
-      // Price filter
-      if (filters.price === "under_50" && food.price >= 50) return false;
-      if (
-        filters.price === "50_80" &&
-        (food.price < 50 || food.price > 80)
-      ) {
+      // Rarity filter
+      if (filters.rarity !== "all" && food.rarity !== filters.rarity) {
         return false;
       }
-      if (
-        filters.price === "80_120" &&
-        (food.price <= 80 || food.price > 120)
-      ) {
-        return false;
-      }
-      if (filters.price === "above_120" && food.price <= 120) return false;
 
       return true;
     });
-  }, [allFoods, effectiveSession, filters.diet, filters.price]);
+  }, [allFoods, effectiveSession, filters.diet, filters.rarity]);
 
   // Safe fallback if pool is too small
   const safePool = useMemo(() => {
     if (candidatePool.length >= 3) return candidatePool;
     const relaxed = allFoods.filter((f) =>
-      effectiveSession !== "all" ? f.sessions.includes(effectiveSession) : true
+      effectiveSession !== "all" && f.sessions ? f.sessions.includes(effectiveSession) : true
     );
     return relaxed.length >= 3 ? relaxed : allFoods;
   }, [allFoods, candidatePool, effectiveSession]);
@@ -91,7 +99,7 @@ export const TinderGame: React.FC<TinderGameProps> = ({
   const handleResetFilters = () => {
     setFilters({
       diet: "all",
-      price: "all",
+      rarity: "all",
       session: "auto",
       maxDishes: 20,
     });

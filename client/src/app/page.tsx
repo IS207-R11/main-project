@@ -4,7 +4,6 @@ import { faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { Badge } from "@/components/ui/badge";
 import { TimeGreetingBar } from "@/components/home/TimeGreetingBar";
 import { GachaGame } from "@/components/home/GachaGame";
-import { allFoods } from "@/lib/foodData";
 
 export const metadata: Metadata = {
   title: "Trang Chủ | Ăn gì? - Gợi Ý & Khám Phá Ẩm Thực Thông Minh",
@@ -37,7 +36,7 @@ export default function HomePage() {
         </div>
 
         {/* ================= GACHA GAME ISLAND ================= */}
-        <GachaGame allFoods={allFoods} />
+        <GachaGame />
       </div>
     </div>
   );

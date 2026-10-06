@@ -1,6 +1,7 @@
 import { PaginationParams } from './common';
 
 export type FoodStatus = 'ACTIVE' | 'PENDING' | 'DISABLED';
+export type FoodRank = 'C' | 'UC' | 'SR' | 'SSR';
 
 export interface FoodCard {
   food_id: number;
@@ -8,6 +9,7 @@ export interface FoodCard {
   description: string | null;
   image_url: string | null;
   status: FoodStatus;
+  rank?: FoodRank;
   created_at: string | null;
   contributor_id: number | null;
   favorite_count: number;
@@ -29,6 +31,7 @@ export interface UserFoodItem {
   description: string | null;
   image_url: string | null;
   status: FoodStatus;
+  rank?: FoodRank;
   note: string | null;
   created_at: string | null;
   contributor_id: number | null;

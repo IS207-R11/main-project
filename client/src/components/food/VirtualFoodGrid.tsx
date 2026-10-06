@@ -12,7 +12,7 @@ interface VirtualFoodGridProps {
 
 const CARD_WIDTH = 225;
 const GAP = 16;
-const ROW_HEIGHT = 306; // 290px card + 16px gap
+const ROW_HEIGHT = 336; // 320px card + 16px gap
 
 interface RowExtraProps {
   foods: FoodItem[];

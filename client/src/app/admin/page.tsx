@@ -48,6 +48,7 @@ export default function AdminPage() {
   const [foods, setFoods] = useState<FoodCard[]>([]);
   const [foodsLoading, setFoodsLoading] = useState(false);
   const [foodsSearch, setFoodsSearch] = useState('');
+  const [foodsStatus, setFoodsStatus] = useState<string>('all');
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [editingFood, setEditingFood] = useState<FoodCard | null>(null);
   const [foodForm, setFoodForm] = useState({ name: '', description: '', image_url: '' });
@@ -90,6 +91,7 @@ export default function AdminPage() {
       const res = await foodsApi.list({
         pageSize: 50,
         search: foodsSearch || undefined,
+        status: foodsStatus === 'all' ? undefined : (foodsStatus as FoodStatus),
         sort_by: 'name',
       });
       if (res && res.data) {
@@ -100,7 +102,7 @@ export default function AdminPage() {
     } finally {
       setFoodsLoading(false);
     }
-  }, [foodsSearch]);
+  }, [foodsSearch, foodsStatus]);
 
   // LOAD USERS
   const loadUsers = useCallback(async () => {
@@ -418,19 +420,34 @@ export default function AdminPage() {
             {/* TAB 1: FOOD MANAGEMENT */}
             <TabsContent value="foods" className="space-y-4">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="relative w-full sm:w-80">
-                  <FontAwesomeIcon
-                    icon={faMagnifyingGlass}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Tìm theo tên món..."
-                    value={foodsSearch}
-                    onChange={(e) => setFoodsSearch(e.target.value)}
-                    className="pl-8"
-                  />
+                <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto flex-1">
+                  <div className="relative w-full sm:w-80">
+                    <FontAwesomeIcon
+                      icon={faMagnifyingGlass}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs"
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Tìm theo tên món..."
+                      value={foodsSearch}
+                      onChange={(e) => setFoodsSearch(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+
+                  {/* Status Filter for Admin/Moderator */}
+                  <select
+                    value={foodsStatus}
+                    onChange={(e) => setFoodsStatus(e.target.value)}
+                    className="w-full sm:w-auto h-9 px-3 bg-background border border-border text-foreground text-xs font-semibold rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden shadow-2xs cursor-pointer"
+                  >
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="ACTIVE">ACTIVE (Đã duyệt)</option>
+                    <option value="PENDING">PENDING (Chờ duyệt)</option>
+                    <option value="DISABLED">DISABLED (Vô hiệu)</option>
+                  </select>
                 </div>
+
                 <div className="flex gap-2">
                   <Button onClick={loadFoods} variant="outline" size="sm" className="font-bold">
                     Làm mới
@@ -460,6 +477,7 @@ export default function AdminPage() {
                           <th className="p-3">Hình ảnh</th>
                           <th className="p-3">Tên món & Mô tả</th>
                           <th className="p-3">Thống kê</th>
+                          <th className="p-3">Độ hiếm</th>
                           <th className="p-3">Trạng thái</th>
                           <th className="p-3 text-right">Hành động</th>
                         </tr>
@@ -504,6 +522,11 @@ export default function AdminPage() {
                                   <FontAwesomeIcon icon={faUtensils} className="text-[10px]" />
                                   <span>{food.eaten_count ?? 0} đã ăn</span>
                                 </div>
+                              </td>
+                              <td className="p-3">
+                                <Badge className="text-[10px] font-black px-2 py-0.5 rounded-full border bg-secondary/15 text-foreground border-secondary/30">
+                                  {food.rank || 'C'}
+                                </Badge>
                               </td>
                               <td className="p-3">
                                 <Badge

@@ -14,11 +14,9 @@ interface SavedFoodsContextType {
   isSaved: (id: number | string) => boolean;
   saveMultiple: (foods: FoodItem[]) => Promise<void>;
   clearSaved: () => void;
-  totalCalories: number;
-  totalProtein: number;
-  totalCarbs: number;
-  totalFat: number;
-  totalCost: number;
+  totalSaved: number;
+  totalFavorites: number;
+  totalEaten: number;
 }
 
 const STORAGE_KEY = 'an_gi_saved_meals_v1';
@@ -55,7 +53,27 @@ export const SavedFoodsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && isMounted) {
-            setSavedFoods(parsed);
+            // Sanitize saved items so no old mock data remains
+            const sanitized = parsed.map((item) => {
+              const rankVal = item.rank || item.rarity || 'C';
+              return {
+                id: item.id || item.food_id,
+                food_id: item.food_id || item.id,
+                name: item.name || '',
+                description: item.description || item.sub || '',
+                sub: item.description || item.sub || '',
+                image_url: item.image_url || null,
+                imagePath: item.imagePath || item.image_url || '/logos/main-logo.png',
+                status: item.status || 'ACTIVE',
+                rank: rankVal,
+                rarity: rankVal,
+                favorite_count: item.favorite_count || 0,
+                eaten_count: item.eaten_count || 0,
+                created_at: item.created_at || null,
+                contributor: item.contributor || null,
+              };
+            });
+            setSavedFoods(sanitized);
           }
         }
       } catch (e) {
@@ -72,11 +90,26 @@ export const SavedFoodsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
   }, [isAuthenticated, user?.user_id]);
 
-  // Persist to localStorage for offline cache
+  // Persist to localStorage for offline cache (storing only clean API attributes)
   useEffect(() => {
     if (!isInitialized) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedFoods));
+      const cleanData = savedFoods.map((item) => ({
+        id: item.id,
+        food_id: item.food_id,
+        name: item.name,
+        description: item.description,
+        image_url: item.image_url,
+        imagePath: item.imagePath,
+        status: item.status,
+        rank: item.rank || item.rarity || 'C',
+        rarity: item.rarity,
+        favorite_count: item.favorite_count,
+        eaten_count: item.eaten_count,
+        created_at: item.created_at,
+        contributor: item.contributor,
+      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanData));
     } catch (e) {
       console.error('Failed to save foods to localStorage', e);
     }
@@ -169,13 +202,10 @@ export const SavedFoodsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const totals = useMemo(() => {
     return savedFoods.reduce(
       (acc, item) => ({
-        calories: acc.calories + (item.macros?.calories || 0),
-        protein: acc.protein + (item.macros?.protein || 0),
-        carbs: acc.carbs + (item.macros?.carbs || 0),
-        fat: acc.fat + (item.macros?.fat || 0),
-        cost: acc.cost + (item.price || 0),
+        favorites: acc.favorites + (item.favorite_count || 0),
+        eaten: acc.eaten + (item.eaten_count || 0),
       }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0, cost: 0 }
+      { favorites: 0, eaten: 0 }
     );
   }, [savedFoods]);
 
@@ -188,11 +218,9 @@ export const SavedFoodsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       isSaved,
       saveMultiple,
       clearSaved,
-      totalCalories: Math.round(totals.calories),
-      totalProtein: Math.round(totals.protein * 10) / 10,
-      totalCarbs: Math.round(totals.carbs * 10) / 10,
-      totalFat: Math.round(totals.fat * 10) / 10,
-      totalCost: totals.cost,
+      totalSaved: savedFoods.length,
+      totalFavorites: totals.favorites,
+      totalEaten: totals.eaten,
     }),
     [savedFoods, saveFood, removeFood, toggleSaveFood, isSaved, saveMultiple, clearSaved, totals]
   );

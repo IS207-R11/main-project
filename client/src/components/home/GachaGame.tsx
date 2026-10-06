@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 type GachaState = "pack" | "opening" | "revealed";
 
 export interface GachaGameProps {
-  allFoods?: unknown[];
+  className?: string;
 }
 
 export const GachaGame: React.FC<GachaGameProps> = () => {

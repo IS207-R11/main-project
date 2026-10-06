@@ -12,13 +12,10 @@ import {
   faCheck,
   faRotate,
   faShareNodes,
-  faFire,
-  faTag,
-  faLeaf,
+  faUtensils,
   faSliders,
 } from "@fortawesome/free-solid-svg-icons";
 import type { FoodItem, Rarity } from "@/types/food";
-import { formatPrice } from "@/lib/foodData";
 import { useSavedFoods } from "@/context/SavedFoodsContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,9 +118,9 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
 
   const saved = isSaved(food.id);
   const glowStyle = rarityGlows[food.rarity] || rarityGlows.C;
-  const imageSrc = imgError
+  const imageSrc = imgError || !food.imagePath
     ? "/logos/main-logo.png"
-    : food.imagePath || `/data/images/${food.id}.webp`;
+    : food.imagePath;
 
   return (
     <AnimatePresence>
@@ -182,15 +179,14 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
-              {/* Rarity & Tags over image */}
+              {/* Rarity & Status over image */}
               <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
                 <Badge className="px-2.5 py-1 text-xs font-black rounded-full bg-primary text-primary-foreground shadow-md">
                   {food.rarity}
                 </Badge>
-                {food.veg && (
-                  <Badge className="bg-emerald-600 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
-                    <FontAwesomeIcon icon={faLeaf} className="text-[10px]" />
-                    <span>Món Chay</span>
+                {food.status === "PENDING" && (
+                  <Badge className="bg-amber-500 text-white text-xs px-2.5 py-1 rounded-full shadow-md">
+                    Chờ duyệt
                   </Badge>
                 )}
               </div>
@@ -202,73 +198,56 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
                     <h3 className="text-xl sm:text-2xl font-black drop-shadow-md leading-tight">
                       {food.name}
                     </h3>
-                    {food.sub && (
-                      <p className="text-xs text-amber-300 font-semibold drop-shadow-sm mt-0.5">
-                        {food.sub}
-                      </p>
-                    )}
+                    <p className="text-xs text-amber-300 font-semibold drop-shadow-sm mt-0.5">
+                      #{food.food_id || food.id} • {food.rarity}
+                    </p>
                   </div>
-                  {food.price > 0 && (
-                    <span className="shrink-0 bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded-full text-xs shadow-md flex items-center gap-1">
-                      <FontAwesomeIcon icon={faTag} className="text-[10px]" />
-                      {formatPrice(food.price)}
-                    </span>
-                  )}
+                  <Badge className="shrink-0 bg-primary text-primary-foreground font-black px-2.5 py-1 rounded-full text-xs shadow-md">
+                    {food.status === "ACTIVE" ? "Đã duyệt" : food.status}
+                  </Badge>
                 </div>
               </div>
             </div>
 
-            {/* Nutrition & Ingredients in Modal */}
+            {/* Real Details in Modal */}
             <div className="p-4 space-y-3">
-              {/* Macro Bars */}
-              <div className="grid grid-cols-4 gap-2 text-center">
+              {/* Engagement Stats Grid */}
+              <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
                   <span className="text-[10px] text-muted-foreground block font-medium">
-                    Calo
+                    Yêu Thích
                   </span>
-                  <span className="text-xs sm:text-sm font-black text-secondary flex items-center justify-center gap-0.5">
-                    <FontAwesomeIcon icon={faFire} className="text-[10px]" />
-                    {food.macros?.calories || 0}
+                  <span className="text-xs sm:text-sm font-black text-rose-500 flex items-center justify-center gap-1">
+                    <FontAwesomeIcon icon={faHeart} className="text-[10px]" />
+                    {food.favorite_count || 0}
                   </span>
                 </div>
                 <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
                   <span className="text-[10px] text-muted-foreground block font-medium">
-                    Đạm
+                    Đã Ăn
                   </span>
-                  <span className="text-xs sm:text-sm font-black text-primary">
-                    {food.macros?.protein || 0}g
+                  <span className="text-xs sm:text-sm font-black text-amber-500 flex items-center justify-center gap-1">
+                    <FontAwesomeIcon icon={faUtensils} className="text-[10px]" />
+                    {food.eaten_count || 0}
                   </span>
                 </div>
                 <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
                   <span className="text-[10px] text-muted-foreground block font-medium">
-                    Carbs
+                    Phân Hạng
                   </span>
                   <span className="text-xs sm:text-sm font-black text-foreground">
-                    {food.macros?.carbs || 0}g
-                  </span>
-                </div>
-                <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
-                  <span className="text-[10px] text-muted-foreground block font-medium">
-                    Béo
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-foreground">
-                    {food.macros?.fat || 0}g
+                    {food.rarity}
                   </span>
                 </div>
               </div>
 
-              {/* Ingredients preview */}
-              {food.ingredients && food.ingredients.length > 0 && (
-                <div className="text-xs">
-                  <span className="text-muted-foreground font-medium mr-1.5">
-                    Nguyên liệu:
-                  </span>
-                  <span className="text-foreground/90 font-medium">
-                    {food.ingredients.slice(0, 5).join(", ")}
-                    {food.ingredients.length > 5 && "..."}
-                  </span>
-                </div>
-              )}
+              {/* Description preview */}
+              <div className="text-xs text-muted-foreground leading-relaxed bg-muted/30 p-3 rounded-2xl border border-border/40">
+                <span className="font-bold text-foreground block mb-0.5">Mô tả:</span>
+                {food.description && food.description.trim() !== ""
+                  ? food.description
+                  : "Món ăn ngon và hấp dẫn từ thực đơn hệ thống Ăn Gì."}
+              </div>
             </div>
           </div>
 

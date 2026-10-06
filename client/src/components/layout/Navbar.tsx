@@ -15,6 +15,10 @@ import {
   faMoon,
   faCloudSun,
   faCloudSunRain,
+  faChevronDown,
+  faBookOpen,
+  faFileContract,
+  faUserShield,
 } from "@fortawesome/free-solid-svg-icons";
 import { useTimeTheme } from "@/context/TimeThemeContext";
 import type { ThemeMode } from "@/context/TimeThemeContext";
@@ -53,18 +57,6 @@ const periodIcons: Record<string, typeof faSun> = {
   night: faMoon,
 };
 
-interface NavItem {
-  href: string;
-  label: string;
-  segment: string | null;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Trang Chủ", segment: null },
-  { href: "/tai-nguyen", label: "Tài Nguyên", segment: "tai-nguyen" },
-  { href: "/tai-lieu", label: "Tài Liệu", segment: "tai-lieu" },
-];
-
 export const Navbar: React.FC = () => {
   const segment = useSelectedLayoutSegment();
   const { period, themeMode, setThemeMode, currentTime } = useTimeTheme();
@@ -74,6 +66,10 @@ export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const CurrentPeriodIcon = periodIcons[period] || faSun;
+
+  const isHomeActive = segment === null;
+  const isResourcesActive = segment === "tai-nguyen";
+  const isGuideActive = segment === "huong-dan";
 
   return (
     <>
@@ -103,41 +99,107 @@ export const Navbar: React.FC = () => {
             </div>
           </Link>
 
-          {/* Desktop Nav Links - Clean Navbar Style */}
-          <nav className="hidden md:flex items-center gap-8 lg:gap-10">
-            {NAV_ITEMS.map((item) => {
-              const isActive = segment === item.segment;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`relative py-1 text-sm tracking-normal transition-all duration-200 cursor-pointer ${
-                    isActive
-                      ? "text-foreground font-bold"
-                      : "text-muted-foreground hover:text-foreground font-medium"
-                  }`}
-                >
-                  {item.label}
-                  {isActive && (
-                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Desktop Nav Links - Shared Style */}
+          <nav className="hidden md:flex items-center gap-7 lg:gap-8">
+            {/* 1. Trang Chủ */}
+            <Link
+              href="/"
+              className={`relative py-1 text-sm tracking-normal transition-all duration-200 cursor-pointer ${
+                isHomeActive
+                  ? "text-foreground font-bold"
+                  : "text-muted-foreground hover:text-foreground font-medium"
+              }`}
+            >
+              Trang Chủ
+              {isHomeActive && (
+                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+              )}
+            </Link>
 
-          {/* Right Action Group */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            {/* Saved Dishes Drawer Trigger */}
-            <Button
-              variant="ghost"
-              size="sm"
+            {/* 2. Tài Nguyên */}
+            <Link
+              href="/tai-nguyen"
+              className={`relative py-1 text-sm tracking-normal transition-all duration-200 cursor-pointer ${
+                isResourcesActive
+                  ? "text-foreground font-bold"
+                  : "text-muted-foreground hover:text-foreground font-medium"
+              }`}
+            >
+              Tài Nguyên
+              {isResourcesActive && (
+                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+              )}
+            </Link>
+
+            {/* 3. Hướng Dẫn (Dropdown) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <button
+                    type="button"
+                    className={`relative py-1 text-sm tracking-normal transition-all duration-200 cursor-pointer flex items-center gap-1.5 outline-none ${
+                      isGuideActive
+                        ? "text-foreground font-bold"
+                        : "text-muted-foreground hover:text-foreground font-medium"
+                    }`}
+                  >
+                    <span>Hướng Dẫn</span>
+                    <FontAwesomeIcon icon={faChevronDown} className="text-[10px] text-muted-foreground/70" />
+                    {isGuideActive && (
+                      <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                    )}
+                  </button>
+                }
+              />
+              <DropdownMenuContent
+                align="start"
+                className="w-56 bg-card text-card-foreground border border-border shadow-xl rounded-2xl p-1.5"
+              >
+                <DropdownMenuItem
+                  render={
+                    <Link
+                      href="/huong-dan/quy-dinh-dong-gop"
+                      className="w-full flex items-center gap-2.5 p-2 text-xs font-semibold cursor-pointer rounded-xl"
+                    />
+                  }
+                >
+                  <FontAwesomeIcon icon={faBookOpen} className="text-secondary text-xs shrink-0" />
+                  <span>Quy Định Đóng Góp</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  render={
+                    <Link
+                      href="/huong-dan/dieu-khoan-su-dung"
+                      className="w-full flex items-center gap-2.5 p-2 text-xs font-semibold cursor-pointer rounded-xl"
+                    />
+                  }
+                >
+                  <FontAwesomeIcon icon={faFileContract} className="text-primary text-xs shrink-0" />
+                  <span>Điều Khoản Sử Dụng</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  render={
+                    <Link
+                      href="/huong-dan/chinh-sach-bao-mat"
+                      className="w-full flex items-center gap-2.5 p-2 text-xs font-semibold cursor-pointer rounded-xl"
+                    />
+                  }
+                >
+                  <FontAwesomeIcon icon={faUserShield} className="text-emerald-500 text-xs shrink-0" />
+                  <span>Chính Sách Bảo Mật</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* 4. Đã Lưu */}
+            <button
+              type="button"
               onClick={openSaved}
-              className="relative flex items-center gap-1.5 text-xs font-semibold hover:bg-muted rounded-full px-3 text-foreground cursor-pointer"
+              className="relative py-1 text-sm tracking-normal transition-all duration-200 cursor-pointer flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium outline-none"
               title="Món Đã Lưu"
             >
               <FontAwesomeIcon icon={faBookmark} className="text-secondary text-xs" />
-              <span className="hidden sm:inline">Đã Lưu</span>
+              <span>Đã Lưu</span>
               {savedFoods.length > 0 && (
                 <Badge
                   variant="default"
@@ -146,8 +208,11 @@ export const Navbar: React.FC = () => {
                   {savedFoods.length}
                 </Badge>
               )}
-            </Button>
+            </button>
+          </nav>
 
+          {/* Right Action Group */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {/* Time-Theme Mode Switcher */}
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -229,25 +294,81 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border bg-card/95 px-4 py-4 backdrop-blur-md animate-in slide-in-from-top-2 space-y-2">
+          <div className="md:hidden border-t border-border bg-card/95 px-4 py-4 backdrop-blur-md animate-in slide-in-from-top-2 space-y-3">
             <div className="flex flex-col gap-1.5">
-              {NAV_ITEMS.map((item) => {
-                const isActive = segment === item.segment;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors cursor-pointer ${
-                      isActive
-                        ? "bg-primary text-primary-foreground font-bold"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
+              <Link
+                href="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors cursor-pointer ${
+                  isHomeActive
+                    ? "bg-primary text-primary-foreground font-bold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                Trang Chủ
+              </Link>
+              <Link
+                href="/tai-nguyen"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors cursor-pointer ${
+                  isResourcesActive
+                    ? "bg-primary text-primary-foreground font-bold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                Tài Nguyên
+              </Link>
+
+              {/* Guide Group Mobile */}
+              <div className="pt-2 pb-1 space-y-1 border-t border-border/50 mt-1">
+                <div className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Hướng Dẫn
+                </div>
+                <Link
+                  href="/huong-dan/quy-dinh-dong-gop"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl"
+                >
+                  <FontAwesomeIcon icon={faBookOpen} className="text-secondary text-xs" />
+                  <span>Quy Định Đóng Góp</span>
+                </Link>
+                <Link
+                  href="/huong-dan/dieu-khoan-su-dung"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl"
+                >
+                  <FontAwesomeIcon icon={faFileContract} className="text-primary text-xs" />
+                  <span>Điều Khoản Sử Dụng</span>
+                </Link>
+                <Link
+                  href="/huong-dan/chinh-sach-bao-mat"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl"
+                >
+                  <FontAwesomeIcon icon={faUserShield} className="text-emerald-500 text-xs" />
+                  <span>Chính Sách Bảo Mật</span>
+                </Link>
+              </div>
+
+              {/* Saved Mobile */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openSaved();
+                }}
+                className="flex items-center justify-between px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl transition-colors cursor-pointer text-left border-t border-border/50 pt-2"
+              >
+                <div className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faBookmark} className="text-secondary text-xs" />
+                  <span>Đã Lưu</span>
+                </div>
+                {savedFoods.length > 0 && (
+                  <Badge className="px-1.5 py-0.5 text-[10px] bg-primary text-primary-foreground font-black rounded-full">
+                    {savedFoods.length}
+                  </Badge>
+                )}
+              </button>
             </div>
           </div>
         )}
@@ -255,3 +376,4 @@ export const Navbar: React.FC = () => {
     </>
   );
 };
+

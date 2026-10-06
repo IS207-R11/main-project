@@ -7,21 +7,21 @@ import {
   faFire,
   faUtensils,
   faClock,
-  faTag,
   faLeaf,
   faRotateRight,
+  faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import type {
   DietaryFilter,
-  PriceFilter,
   SessionFilter,
   MealSession,
+  Rarity,
 } from "@/types/food";
 import { Button } from "@/components/ui/button";
 
 export interface TinderFilterState {
   diet: DietaryFilter;
-  price: PriceFilter;
+  rarity: "all" | Rarity;
   session: SessionFilter;
   maxDishes: number;
 }
@@ -118,22 +118,22 @@ export const TinderFilterBar: React.FC<TinderFilterBarProps> = ({
           </select>
         </div>
 
-        {/* 3. Price Filter */}
+        {/* 3. Rarity Filter */}
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-            <FontAwesomeIcon icon={faTag} className="text-amber-500 text-[11px]" />
-            <span>Khoảng giá</span>
+            <FontAwesomeIcon icon={faStar} className="text-amber-500 text-[11px]" />
+            <span>Phân hạng / Độ hiếm</span>
           </label>
           <select
-            value={filters.price}
-            onChange={(e) => onChange({ price: e.target.value as PriceFilter })}
+            value={filters.rarity}
+            onChange={(e) => onChange({ rarity: e.target.value as "all" | Rarity })}
             className="w-full bg-background border border-border text-foreground text-xs font-semibold rounded-2xl p-2.5 focus:ring-2 focus:ring-primary focus:outline-hidden shadow-xs cursor-pointer"
           >
-            <option value="all">Tất Cả Mức Giá</option>
-            <option value="under_50">&lt; 50.000 ₫ (Tiết kiệm)</option>
-            <option value="50_80">50.000 - 80.000 ₫ (Phổ thông)</option>
-            <option value="80_120">80.000 - 120.000 ₫ (Đặc sắc)</option>
-            <option value="above_120">&gt; 120.000 ₫ (Thượng hạng)</option>
+            <option value="all">Tất Cả Độ Hiếm</option>
+            <option value="SSR">👑 SSR - Thượng Hạng</option>
+            <option value="SR">💜 SR - Đặc Sắc</option>
+            <option value="UC">💎 UC - Trung Cấp</option>
+            <option value="C">🍀 C - Phổ Biến</option>
           </select>
         </div>
 
