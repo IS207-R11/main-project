@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FoodController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RootController;
+use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -96,5 +97,13 @@ Route::prefix('reports')->group(function () {
 
         // Only Admin can change report status
         Route::put('/{reportId}/change-status', [ReportController::class, 'changeStatus'])->middleware('role:ADMIN')->whereNumber('reportId');
+    });
+});
+
+// Upload Routes (Authenticated users only)
+Route::prefix('upload')->group(function () {
+    Route::middleware(['jwt.auth'])->group(function () {
+        Route::post('/image', [UploadController::class, 'uploadImage']);
+        Route::post('/', [UploadController::class, 'uploadImage']);
     });
 });

@@ -361,7 +361,7 @@ export const ResourcesExplorer: React.FC = () => {
         </div>
       )}
 
-      {/* Modal create food with Supabase image upload */}
+      {/* Modal create food */}
       <CreateFoodModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}

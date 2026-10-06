@@ -2087,6 +2087,82 @@
                 }
             }
         },
+        "/upload/image": {
+            "post": {
+                "tags": [
+                    "Upload"
+                ],
+                "summary": "Upload an image to Cloudinary (Authenticated user only)",
+                "description": "Upload image with validation: user authenticated, file must be an image, size strictly under 5MB.",
+                "operationId": "e8fe91730943fa13067f0542751461d3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "image"
+                                ],
+                                "properties": {
+                                    "image": {
+                                        "description": "Image file (max 5MB, format: jpeg, png, jpg, webp, gif, svg, avif)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Image uploaded successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tải ảnh lên thành công"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "url": {
+                                                    "type": "string",
+                                                    "example": "https://res.cloudinary.com/..."
+                                                },
+                                                "secure_url": {
+                                                    "type": "string",
+                                                    "example": "https://res.cloudinary.com/..."
+                                                },
+                                                "public_id": {
+                                                    "type": "string",
+                                                    "example": "foods/example_id"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Chưa xác thực người dùng"
+                    },
+                    "422": {
+                        "description": "File không hợp lệ hoặc kích thước vượt quá 5MB"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/users": {
             "get": {
                 "tags": [
@@ -2413,6 +2489,10 @@
         {
             "name": "System",
             "description": "System"
+        },
+        {
+            "name": "Upload",
+            "description": "Upload"
         },
         {
             "name": "Users",

@@ -304,10 +304,53 @@ class FoodController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'image_url' => 'nullable|string|max:2048',
+            'image' => [
+                'nullable',
+                'file',
+                'image',
+                'mimes:jpeg,png,jpg,webp,gif,svg,avif',
+                'max:5120',
+            ],
+        ], [
+            'name.required' => 'Vui lòng nhập tên món ăn.',
+            'image.image' => 'File tải lên bắt buộc phải là định dạng hình ảnh.',
+            'image.mimes' => 'Hình ảnh chỉ chấp nhận các định dạng: jpeg, png, jpg, webp, gif, svg, avif.',
+            'image.max' => 'Kích thước ảnh phải dưới 5MB.',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $imageUrl = $request->input('image_url');
+
+        if ($request->hasFile('image')) {
+            $imageFile = $request->file('image');
+            if ($imageFile->getSize() >= 5 * 1024 * 1024) {
+                return response()->json([
+                    'message' => 'Kích thước ảnh phải dưới 5MB.',
+                    'errors' => ['image' => ['Kích thước ảnh vượt quá giới hạn 5MB.']],
+                ], 422);
+            }
+
+            try {
+                $folder = 'foods';
+                $uploadPreset = config('cloudinary.upload_preset');
+                $options = ['folder' => $folder, 'resource_type' => 'image'];
+                if (! empty($uploadPreset)) {
+                    $options['upload_preset'] = $uploadPreset;
+                }
+
+                $uploadResult = cloudinary()->uploadApi()->upload($imageFile->getRealPath(), $options);
+                $imageUrl = $uploadResult['secure_url'] ?? $uploadResult['url'] ?? $imageUrl;
+            } catch (\Throwable $e) {
+                return response()->json([
+                    'message' => 'Lỗi khi tải ảnh lên Cloudinary: '.$e->getMessage(),
+                ], 500);
+            }
         }
 
         $user = $request->user();
@@ -316,7 +359,7 @@ class FoodController extends Controller
         $food = Food::create([
             'name' => $request->input('name'),
             'description' => $request->input('description'),
-            'image_url' => $request->input('image_url'),
+            'image_url' => $imageUrl,
             'status' => FoodStatus::PENDING,
             'contributor_id' => $user?->user_id,
         ]);

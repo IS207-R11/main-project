@@ -5,3 +5,4 @@ export * from './foods';
 export * from './nutritions';
 export * from './healthProfiles';
 export * from './reports';
+export * from './upload';

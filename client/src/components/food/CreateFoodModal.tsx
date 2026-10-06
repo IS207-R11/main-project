@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import imageCompression from 'browser-image-compression';
-import { createClient } from '@/utils/supabase/client';
-import { foodsApi } from '@/api';
+import { foodsApi, uploadApi } from '@/api';
 import { FoodCard } from '@/api/types';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -35,6 +33,15 @@ interface CreateFoodModalProps {
 }
 
 const FIVE_MB = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/jpg',
+  'image/webp',
+  'image/gif',
+  'image/svg+xml',
+  'image/avif',
+];
 
 export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
   open,
@@ -48,34 +55,65 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
   const [description, setDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isOver5MB, setIsOver5MB] = useState(false);
-  const [originalSizeMB, setOriginalSizeMB] = useState<string>('0');
+  const [fileSizeMB, setFileSizeMB] = useState<string>('0');
 
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Handle file selection
+  const handleClearImage = useCallback(() => {
+    setSelectedFile(null);
+    setFileSizeMB('0');
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [previewUrl]);
+
+  // Luồng xác thực ảnh phía Client
   const processSelectedFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setErrorMessage('Vui lòng chọn hoặc dán định dạng file hình ảnh (PNG, JPG, WEBP, v.v.)');
+    setErrorMessage(null);
+
+    // 1. Xác thực người dùng
+    if (!isAuthenticated) {
+      setErrorMessage('Bạn cần đăng nhập tài khoản để có thể chọn và tải ảnh lên.');
+      openAuthModal('login');
       return;
     }
 
-    setErrorMessage(null);
+    // 2. Xác thực kiểu file (chỉ được phép là ảnh)
+    const isImageMime = file.type.startsWith('image/') || ALLOWED_IMAGE_TYPES.includes(file.type);
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    const isAllowedExt = ['jpeg', 'jpg', 'png', 'webp', 'gif', 'svg', 'avif'].includes(fileExt || '');
+
+    if (!isImageMime || !isAllowedExt) {
+      setErrorMessage('Định dạng tập tin không hợp lệ. Chỉ được phép tải lên file hình ảnh (PNG, JPG, JPEG, WEBP, GIF, SVG, AVIF).');
+      handleClearImage();
+      return;
+    }
+
+    // 3. Xác thực kích thước từ dưới 5MB
+    if (file.size >= FIVE_MB) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      setErrorMessage(`Dung lượng ảnh (${sizeMB} MB) vượt quá giới hạn 5MB. Vui lòng chọn ảnh có kích thước dưới 5MB.`);
+      handleClearImage();
+      return;
+    }
+
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+    setFileSizeMB(sizeInMB);
     setSelectedFile(file);
 
-    const sizeInMB = file.size / (1024 * 1024);
-    setOriginalSizeMB(sizeInMB.toFixed(2));
-    setIsOver5MB(file.size > FIVE_MB);
-
-    // Create preview
+    // Tạo preview
     setPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
     });
-  }, []);
+  }, [isAuthenticated, openAuthModal, handleClearImage]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -84,7 +122,7 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
     }
   };
 
-  // Handle Ctrl + V (Paste image)
+  // Hỗ trợ dán ảnh bằng Ctrl + V
   useEffect(() => {
     if (!open) return;
 
@@ -109,7 +147,7 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
     };
   }, [open, processSelectedFile]);
 
-  // Clean up preview object URL on unmount
+  // Giải phóng URL đối tượng khi unmount
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -118,23 +156,12 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
     };
   }, [previewUrl]);
 
-  const handleClearImage = () => {
-    setSelectedFile(null);
-    setIsOver5MB(false);
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
 
+    // 1. Xác thực người dùng
     if (!isAuthenticated) {
       onOpenChange(false);
       openAuthModal('login');
@@ -142,80 +169,29 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
     }
 
     if (!name.trim()) {
-      setErrorMessage('Vui lòng nhập tên món ăn');
+      setErrorMessage('Vui lòng nhập tên món ăn.');
+      return;
+    }
+
+    // Xác thực lại kích thước file nếu có chọn ảnh
+    if (selectedFile && selectedFile.size >= FIVE_MB) {
+      setErrorMessage('Dung lượng ảnh phải dưới 5MB. Vui lòng chọn lại ảnh hợp lệ.');
       return;
     }
 
     setLoading(true);
-    let uploadedFilePath: string | null = null;
-    let targetBucket = 'storage';
-    const supabase = createClient();
 
     try {
       let finalImageUrl: string | undefined = undefined;
 
-      // STEP 1: Upload image to Supabase if file selected
+      // STEP 1: Upload ảnh lên Server Backend (xử lý qua Cloudinary)
       if (selectedFile) {
-        let fileToUpload = selectedFile;
-
-        // If file > 5MB, compress it
-        if (selectedFile.size > FIVE_MB) {
-          setStatusText(`Đang nén ảnh từ ${originalSizeMB}MB về dưới 5MB...`);
-          const compressionOptions = {
-            maxSizeMB: 4.8,
-            maxWidthOrHeight: 2048,
-            useWebWorker: true,
-          };
-          fileToUpload = await imageCompression(selectedFile, compressionOptions);
-        }
-
-        setStatusText('Đang tải ảnh lên Supabase Storage...');
-
-        // Try 'storage' bucket, or fallback to first available bucket
-        try {
-          const { data: buckets } = await supabase.storage.listBuckets();
-          if (buckets && buckets.length > 0) {
-            const hasStorageBucket = buckets.some((b) => b.name === 'storage');
-            if (!hasStorageBucket) {
-              targetBucket = buckets[0].name;
-            }
-          }
-        } catch (bucketErr) {
-          console.warn('Could not list buckets, defaulting to storage:', bucketErr);
-        }
-
-        const fileExt = fileToUpload.name.split('.').pop() || 'png';
-        const cleanName = name
-          .trim()
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]/g, '_');
-        const fileName = `${Date.now()}_${cleanName || 'food'}.${fileExt}`;
-        const filePath = `foods/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from(targetBucket)
-          .upload(filePath, fileToUpload, {
-            cacheControl: '3600',
-            upsert: false,
-          });
-
-        if (uploadError) {
-          throw new Error(`Lỗi tải ảnh lên Supabase: ${uploadError.message}`);
-        }
-
-        uploadedFilePath = filePath;
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from(targetBucket)
-          .getPublicUrl(filePath);
-
-        finalImageUrl = urlData.publicUrl;
+        setStatusText('Đang tải ảnh lên máy chủ Cloudinary...');
+        const uploadRes = await uploadApi.uploadImage(selectedFile);
+        finalImageUrl = uploadRes.data?.secure_url || uploadRes.data?.url;
       }
 
-      // STEP 2: Insert into server backend (PUT /foods)
+      // STEP 2: Tạo món ăn trong hệ thống backend
       setStatusText('Đang lưu thông tin món ăn vào hệ thống...');
       const createdFoodRes = await foodsApi.create({
         name: name.trim(),
@@ -239,17 +215,6 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
       }, 1200);
     } catch (err: unknown) {
       console.error('Lỗi quy trình tạo món:', err);
-
-      // STEP 3: ROLLBACK - If server insertion fails, delete uploaded image from Supabase storage
-      if (uploadedFilePath) {
-        try {
-          setStatusText('Đang hoàn tác: xóa ảnh khỏi Supabase storage...');
-          await supabase.storage.from(targetBucket).remove([uploadedFilePath]);
-        } catch (cleanupErr) {
-          console.error('Lỗi khi xóa ảnh rollback khỏi Supabase:', cleanupErr);
-        }
-      }
-
       const msg = err instanceof Error ? err.message : 'Lỗi khi tạo món ăn';
       setErrorMessage(msg);
     } finally {
@@ -274,7 +239,7 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
         {!isAuthenticated ? (
           <div className="py-6 text-center space-y-3">
             <p className="text-xs text-muted-foreground">
-              Bạn cần đăng nhập tài khoản để có thể đóng góp món ăn mới vào hệ thống.
+              Bạn cần đăng nhập tài khoản để có thể đóng góp món ăn và tải ảnh lên hệ thống.
             </p>
             <Button
               onClick={() => {
@@ -343,7 +308,7 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml,image/avif"
                 onChange={handleFileInputChange}
                 className="hidden"
                 disabled={loading}
@@ -369,17 +334,10 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
                       Xóa ảnh
                     </Button>
                   </div>
-
-                  {/* 5MB Warning note */}
-                  {isOver5MB && (
-                    <div className="mt-2 p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-[11px] flex items-start gap-2">
-                      <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 shrink-0" />
-                      <span>
-                        Dung lượng ảnh hiện tại là <strong>{originalSizeMB} MB</strong> (vượt quá 5MB).
-                        Hệ thống sẽ <strong>tự động nén về dưới 5MB</strong> khi tải lên để tối ưu tốc độ.
-                      </span>
-                    </div>
-                  )}
+                  <div className="mt-2 px-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>Đã chọn ảnh: <strong>{selectedFile?.name}</strong></span>
+                    <span>Dung lượng: <strong>{fileSizeMB} MB</strong> (hợp lệ &lt; 5MB)</span>
+                  </div>
                 </div>
               ) : (
                 <div
@@ -404,7 +362,7 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
                     </p>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Hỗ trợ PNG, JPG, WEBP. Ảnh lớn hơn 5MB sẽ được nén tự động.
+                    Chỉ chấp nhận file hình ảnh (PNG, JPG, WEBP, GIF, SVG). Dung lượng tối đa <strong>dưới 5MB</strong>.
                   </p>
                 </div>
               )}
