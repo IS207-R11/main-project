@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { toast } from 'react-toastify';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +17,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowRightToBracket,
-  faUser,
+  faHeartPulse,
   faBookOpen,
   faShieldHalved,
   faRightFromBracket,
@@ -89,13 +88,13 @@ export const UserNavMenu: React.FC = () => {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem render={<Link href="/profile" className="w-full flex items-center gap-2.5 p-2 text-xs font-semibold cursor-pointer" />}>
-          <FontAwesomeIcon icon={faUser} className="text-secondary text-xs shrink-0" />
-          <span>Hồ Sơ Cá Nhân</span>
+          <FontAwesomeIcon icon={faHeartPulse} className="text-rose-500 text-xs shrink-0" />
+          <span>Hồ Sơ Sức Khỏe & Cá Nhân</span>
         </DropdownMenuItem>
 
         <DropdownMenuItem render={<Link href="/nhat-ky" className="w-full flex items-center gap-2.5 p-2 text-xs font-semibold cursor-pointer" />}>
           <FontAwesomeIcon icon={faBookOpen} className="text-amber-500 text-xs shrink-0" />
-          <span>Nhật Ký Ăn Uống</span>
+          <span>Nhật Ký Ăn Uống & Calo</span>
         </DropdownMenuItem>
 
         {(isAdmin || isModerator) && (
@@ -111,10 +110,7 @@ export const UserNavMenu: React.FC = () => {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          onClick={async () => {
-            await logout();
-            toast.success('Đã đăng xuất tài khoản!');
-          }}
+          onClick={logout}
           className="w-full flex items-center gap-2.5 p-2 text-xs font-semibold text-destructive focus:text-destructive cursor-pointer"
         >
           <FontAwesomeIcon icon={faRightFromBracket} className="text-xs shrink-0" />

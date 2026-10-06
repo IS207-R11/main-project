@@ -1,38 +1,42 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
-import { HomeTabs } from "@/components/home/HomeTabs";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
+import { Badge } from "@/components/ui/badge";
+import { TimeGreetingBar } from "@/components/home/TimeGreetingBar";
+import { GachaGame } from "@/components/home/GachaGame";
 
 export const metadata: Metadata = {
   title: "Trang Chủ | Ăn gì? - Gợi Ý & Khám Phá Ẩm Thực Thông Minh",
   description:
-    "Mở gói thẻ bài ẩm thực hoặc quẹt món ăn thông minh để nhận gợi ý món ăn dinh dưỡng ngẫu nhiên được tinh chọn riêng cho khẩu vị của bạn.",
+    "Mở gói thẻ bài ẩm thực để nhận gợi ý món ăn dinh dưỡng ngẫu nhiên được tinh chọn riêng cho khẩu vị và khung giờ ăn của bạn.",
 };
-
-function HomeLoadingSkeleton() {
-  return (
-    <div className="w-full flex flex-col items-center gap-6 py-12">
-      <Skeleton className="h-8 w-48 rounded-full" />
-      <Skeleton className="h-12 w-96 rounded-xl" />
-      <Skeleton className="h-5 w-80 rounded-md" />
-      <div className="w-full max-w-md h-12 flex gap-4 mt-4">
-        <Skeleton className="h-10 flex-1 rounded-lg" />
-        <Skeleton className="h-10 flex-1 rounded-lg" />
-      </div>
-      <div className="w-full max-w-4xl h-96 mt-6">
-        <Skeleton className="h-full w-full rounded-2xl" />
-      </div>
-    </div>
-  );
-}
 
 export default function HomePage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] pb-20 transition-colors duration-500">
+      {/* ================= TOP TIME & GREETING BAR ================= */}
+      <TimeGreetingBar />
+
       <div className="container mx-auto max-w-6xl px-4 sm:px-6 pt-10">
-        <Suspense fallback={<HomeLoadingSkeleton />}>
-          <HomeTabs />
-        </Suspense>
+        {/* ================= HERO HEADER ================= */}
+        <div className="text-center max-w-2xl mx-auto space-y-3 mb-10">
+          <Badge className="bg-secondary/15 text-foreground font-black px-3.5 py-1 rounded-full border border-secondary/30 text-xs shadow-xs">
+            <FontAwesomeIcon
+              icon={faWandMagicSparkles}
+              className="mr-1.5 text-xs text-secondary"
+            />
+            <span>Trải Nghiệm Gacha Ẩm Thực</span>
+          </Badge>
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">
+            Hôm Nay Bạn Muốn Ăn Gì?
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
+            Mở gói thẻ bài ngẫu nhiên để khám phá món ăn dinh dưỡng thơm ngon, chuẩn thông số calo và cân bằng dưỡng chất.
+          </p>
+        </div>
+
+        {/* ================= GACHA GAME ISLAND ================= */}
+        <GachaGame />
       </div>
     </div>
   );

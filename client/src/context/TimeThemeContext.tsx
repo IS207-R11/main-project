@@ -1,53 +1,47 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import type { TimePeriod, MealSession } from "@/types/food";
+import { periodToSession } from "@/lib/foodData";
 
-export type ThemeMode = "system" | "light" | "dark";
-export type ColorTheme = "light" | "dark";
+export type ThemeMode = "auto" | TimePeriod;
 
 interface TimeThemeContextType {
   currentTime: string;
   currentDate: string;
   period: TimePeriod;
   themeMode: ThemeMode;
-  colorTheme: ColorTheme;
   setThemeMode: (mode: ThemeMode) => void;
   recommendedSession: MealSession;
   isMounted: boolean;
 }
 
-const THEME_STORAGE_KEY = "an_gi_theme_mode";
-
 const TimeThemeContext = createContext<TimeThemeContextType | undefined>(undefined);
 
+/**
+ * Determines the time period based on hour:
+ * - 05:00 - 10:59: Morning (Buổi sáng)
+ * - 11:00 - 13:59: Midday / Lunch (Buổi trưa)
+ * - 14:00 - 17:59: Afternoon (Buổi chiều)
+ * - 18:00 - 04:59: Evening / Night (Buổi tối)
+ */
+export function getPeriodFromHour(hour: number): TimePeriod {
+  if (hour >= 5 && hour < 11) return "morning";
+  if (hour >= 11 && hour < 14) return "midday";
+  if (hour >= 14 && hour < 18) return "afternoon";
+  return "night";
+}
+
 export const TimeThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
-  const [systemIsDark, setSystemIsDark] = useState<boolean>(false);
+  const pathname = usePathname();
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("auto");
   const [dateObj, setDateObj] = useState<Date>(() => new Date());
   const [isMounted, setIsMounted] = useState(false);
 
-  // Initialize theme mode and system preference on client mount
+  // Mark mounted on client (NO localStorage persistence per requirements)
   useEffect(() => {
     setIsMounted(true);
-    try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
-      if (stored === "system" || stored === "light" || stored === "dark") {
-        setThemeModeState(stored);
-      }
-    } catch (e) {
-      console.warn("Failed to read theme mode from localStorage", e);
-    }
-
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    setSystemIsDark(mql.matches);
-
-    const handleSystemChange = (e: MediaQueryListEvent) => {
-      setSystemIsDark(e.matches);
-    };
-
-    mql.addEventListener("change", handleSystemChange);
-    return () => mql.removeEventListener("change", handleSystemChange);
   }, []);
 
   // Update clock periodically
@@ -58,37 +52,38 @@ export const TimeThemeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => clearInterval(timer);
   }, []);
 
-  // Resolved active color theme
-  const colorTheme: ColorTheme = useMemo(() => {
-    if (themeMode === "light") return "light";
-    if (themeMode === "dark") return "dark";
-    return systemIsDark ? "dark" : "light";
-  }, [themeMode, systemIsDark]);
+  const realHour = dateObj.getHours();
+  const autoPeriod = useMemo(() => getPeriodFromHour(realHour), [realHour]);
 
-  // Backward compatibility: morning/night mapped to light/dark
-  const activePeriod: TimePeriod = colorTheme === "dark" ? "night" : "morning";
+  const activePeriod: TimePeriod = themeMode === "auto" ? autoPeriod : themeMode;
+
+  // Determine if current route supports full 4-theme system (/ and /tinder)
+  // Other routes only use morning and night themes
+  const isFourThemePage = useMemo(() => {
+    return pathname === "/" || pathname === "/tinder";
+  }, [pathname]);
+
+  const effectivePeriod: TimePeriod = useMemo(() => {
+    if (isFourThemePage) {
+      return activePeriod;
+    }
+    // For other pages: only "morning" (daytime) and "night" (nighttime)
+    if (themeMode !== "auto") {
+      return themeMode === "morning" || themeMode === "midday" ? "morning" : "night";
+    }
+    return realHour >= 6 && realHour < 18 ? "morning" : "night";
+  }, [isFourThemePage, activePeriod, themeMode, realHour]);
 
   const setThemeMode = useCallback((mode: ThemeMode) => {
+    // In-memory state only - no localStorage
     setThemeModeState(mode);
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, mode);
-    } catch (e) {
-      console.warn("Failed to save theme mode to localStorage", e);
-    }
   }, []);
 
-  // Sync HTML root attributes and classes
+  // Sync data-time-theme on root HTML for instant CSS styling
   useEffect(() => {
     const root = document.documentElement;
-    const isDark = colorTheme === "dark";
-    root.setAttribute("data-theme", colorTheme);
-    root.setAttribute("data-time-theme", isDark ? "night" : "morning");
-    if (isDark) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  }, [colorTheme]);
+    root.setAttribute("data-time-theme", effectivePeriod);
+  }, [effectivePeriod]);
 
   const currentTime = useMemo(() => {
     const hours = String(dateObj.getHours()).padStart(2, "0");
@@ -104,26 +99,21 @@ export const TimeThemeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, [dateObj]);
 
-  const realHour = dateObj.getHours();
-  const recommendedSession = useMemo((): MealSession => {
-    if (realHour >= 5 && realHour < 11) return "Sáng sớm";
-    if (realHour >= 11 && realHour < 14) return "Giữa trưa";
-    if (realHour >= 14 && realHour < 18) return "Chiều";
-    return "Tối";
-  }, [realHour]);
+  const recommendedSession = useMemo(() => {
+    return periodToSession(activePeriod);
+  }, [activePeriod]);
 
   const value = useMemo(
     () => ({
       currentTime,
       currentDate,
-      period: activePeriod,
+      period: effectivePeriod,
       themeMode,
-      colorTheme,
       setThemeMode,
       recommendedSession,
       isMounted,
     }),
-    [currentTime, currentDate, activePeriod, themeMode, colorTheme, setThemeMode, recommendedSession, isMounted]
+    [currentTime, currentDate, effectivePeriod, themeMode, setThemeMode, recommendedSession, isMounted]
   );
 
   return <TimeThemeContext.Provider value={value}>{children}</TimeThemeContext.Provider>;

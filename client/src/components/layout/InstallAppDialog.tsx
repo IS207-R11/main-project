@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { toast } from "react-toastify";
-import { Image } from "@/components/ui/image";
+import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faDownload,
@@ -80,7 +79,6 @@ export const InstallAppDialog: React.FC<InstallAppDialogProps> = ({
       if (outcome === "accepted") {
         setIsInstalled(true);
         setDeferredPrompt(null);
-        toast.success("Cảm ơn bạn đã cài đặt ứng dụng Ăn Gì!");
         onOpenChange(false);
       }
     }

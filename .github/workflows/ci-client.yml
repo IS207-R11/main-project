@@ -1,0 +1,61 @@
+name: CI client on release PR
+
+on:
+  pull_request:
+    paths:
+      - "client/**"
+      - ".github/workflows/ci-client.yml" # sửa workflow này cũng chạy lại để kiểm tra
+
+# Huỷ run cũ của cùng PR khi có commit mới
+concurrency:
+  group: ci-client-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client # mọi lệnh `run` đều chạy trong client/
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      # continue-on-error: true để step sau vẫn chạy dù step này fail
+      - name: Install dependencies (npm ci)
+        id: install
+        continue-on-error: true
+        run: npm ci
+
+      - name: Run lint
+        id: lint
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Run build
+        id: build
+        continue-on-error: true
+        run: npm run build
+
+      # Tổng hợp kết quả 3 step ở trên, fail job nếu có bất kỳ step nào fail
+      - name: Check results
+        if: always()
+        run: |
+          echo "install: ${{ steps.install.outcome }}"
+          echo "lint:    ${{ steps.lint.outcome }}"
+          echo "build:   ${{ steps.build.outcome }}"
+
+          if [ "${{ steps.install.outcome }}" != "success" ] || \
+             [ "${{ steps.lint.outcome }}" != "success" ] || \
+             [ "${{ steps.build.outcome }}" != "success" ]; then
+            echo "❌ Có ít nhất 1 step fail, đánh dấu job fail."
+            exit 1
+          fi
+
+          echo "✅ Cả 3 step đều pass."

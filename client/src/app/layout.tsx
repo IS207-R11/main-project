@@ -120,23 +120,12 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var stored = localStorage.getItem('an_gi_theme_mode');
-                  var isDark = false;
-                  if (stored === 'dark') {
-                    isDark = true;
-                  } else if (stored === 'light') {
-                    isDark = false;
-                  } else {
-                    isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  }
-                  var theme = isDark ? 'dark' : 'light';
-                  document.documentElement.setAttribute('data-theme', theme);
-                  document.documentElement.setAttribute('data-time-theme', isDark ? 'night' : 'morning');
-                  if (isDark) {
-                    document.documentElement.classList.add('dark');
-                  } else {
-                    document.documentElement.classList.remove('dark');
-                  }
+                  var h = new Date().getHours();
+                  var p = 'night';
+                  if (h >= 5 && h < 11) p = 'morning';
+                  else if (h >= 11 && h < 14) p = 'midday';
+                  else if (h >= 14 && h < 18) p = 'afternoon';
+                  document.documentElement.setAttribute('data-time-theme', p);
                 } catch (e) {}
               })();
             `,

@@ -7,7 +7,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { Image } from "@/components/ui/image";
+import Image from "next/image";
 import {
   motion,
   useMotionValue,
@@ -18,6 +18,8 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faRotate,
+  faCheck,
+  faBookmark,
   faHeart,
   faXmark,
   faStar,
@@ -37,6 +39,8 @@ interface TinderCardProps {
   isFront: boolean;
   stackIndex: number;
   onSwipe: (direction: "left" | "right" | "up", food: FoodItem) => void;
+  isSaved?: boolean;
+  onToggleSave?: (food: FoodItem) => void;
 }
 
 const rarityStyles: Record<
@@ -81,6 +85,8 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
       isFront,
       stackIndex,
       onSwipe,
+      isSaved = false,
+      onToggleSave,
     },
     ref
   ) => {
@@ -209,6 +215,11 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
       setIsFlipped(!isFlipped);
     };
 
+    const handleSaveClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onToggleSave) onToggleSave(food);
+    };
+
     return (
       <motion.div
         style={{
@@ -322,6 +333,38 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                       </Badge>
                     )}
                   </div>
+
+                  {/* Bookmark / Quick Save Button */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleSaveClick}
+                    className={`h-8 w-8 rounded-full backdrop-blur-md transition-all shadow-md shrink-0 cursor-pointer ${
+                      isSaved
+                        ? "text-white bg-primary ring-2 ring-primary/40"
+                        : "text-white bg-black/50 hover:bg-black/75 hover:scale-105"
+                    }`}
+                    title={isSaved ? "Đã lưu vào thực đơn" : "Lưu món"}
+                  >
+                    <FontAwesomeIcon
+                      icon={isSaved ? faCheck : faBookmark}
+                      className="text-xs"
+                    />
+                  </Button>
+                </div>
+
+                {/* Real Stats Pill at Image Bottom */}
+                <div className="absolute bottom-3 left-3.5 right-3.5 flex items-center justify-between text-xs text-white font-bold drop-shadow-md">
+                  <span className="bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-rose-500/40 text-rose-300 font-extrabold flex items-center gap-1.5 shadow-md">
+                    <FontAwesomeIcon icon={faHeart} className="text-[10px]" />
+                    <span>{food.favorite_count || 0} yêu thích</span>
+                  </span>
+
+                  <span className="bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-amber-400/40 text-amber-300 font-extrabold flex items-center gap-1.5 shadow-md">
+                    <FontAwesomeIcon icon={faUtensils} className="text-[10px]" />
+                    <span>{food.eaten_count || 0} đã ăn</span>
+                  </span>
                 </div>
               </div>
 
@@ -383,8 +426,9 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                     className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-emerald-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-emerald-500 transition-all shadow-2xs group/btn cursor-pointer"
                     title={`Tìm quán ${food.name} trên Google Maps`}
                   >
-                    <Image
+                    <img
                       src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
+                      referrerPolicy="no-referrer"
                       alt="Maps"
                       className="w-4 h-4 object-contain shrink-0"
                     />
@@ -400,8 +444,9 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                     className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
                     title={`Xem công thức làm ${food.name} trên YouTube`}
                   >
-                    <Image
+                    <img
                       src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
+                      referrerPolicy="no-referrer"
                       alt="Công thức"
                       className="w-4 h-4 object-contain shrink-0"
                     />
@@ -456,21 +501,27 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
               <div className="my-3 space-y-3 flex-1 overflow-y-auto pr-1">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Mã món:</span>
+                    <span className="text-muted-foreground font-medium">Yêu thích:</span>
+                    <span className="font-black text-rose-500">
+                      {food.favorite_count || 0} lượt
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">Đã ăn:</span>
+                    <span className="font-black text-amber-500">
+                      {food.eaten_count || 0} lượt
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">Trạng thái:</span>
                     <span className="font-black text-foreground">
-                      #{food.food_id || food.id}
+                      {food.status === "ACTIVE" ? "Đã kiểm duyệt" : food.status}
                     </span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
                     <span className="text-muted-foreground font-medium">Độ hiếm:</span>
                     <span className="font-black text-secondary">
-                      {food.food_rank || food.rarity}
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center col-span-2">
-                    <span className="text-muted-foreground font-medium">Trạng thái:</span>
-                    <span className="font-black text-foreground">
-                      {food.status === "ACTIVE" ? "Đã kiểm duyệt" : food.status}
+                      {food.rarity}
                     </span>
                   </div>
                 </div>
@@ -486,6 +537,12 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                       : "Món ăn ngon và hấp dẫn từ thực đơn hệ thống Ăn Gì."}
                   </div>
                 </div>
+
+                {food.contributor?.username && (
+                  <div className="p-2.5 rounded-xl bg-secondary/10 border border-secondary/20 text-xs text-foreground/90">
+                    Người đóng góp: <span className="font-bold">{food.contributor.username}</span>
+                  </div>
+                )}
               </div>
 
                 {/* External Links on Back */}
@@ -499,8 +556,9 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                     className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-emerald-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-emerald-500 transition-all shadow-2xs group/btn cursor-pointer"
                     title={`Tìm quán ${food.name} trên Google Maps`}
                   >
-                    <Image
+                    <img
                       src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
+                      referrerPolicy="no-referrer"
                       alt="Maps"
                       className="w-4 h-4 object-contain shrink-0"
                     />
@@ -516,8 +574,9 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                     className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
                     title={`Xem công thức nấu ${food.name} trên YouTube`}
                   >
-                    <Image
+                    <img
                       src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
+                      referrerPolicy="no-referrer"
                       alt="Công thức"
                       className="w-4 h-4 object-contain shrink-0"
                     />

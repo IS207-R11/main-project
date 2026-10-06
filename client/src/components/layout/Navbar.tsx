@@ -2,16 +2,19 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Image } from "@/components/ui/image";
+import Image from "next/image";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faDesktop,
+  faClock,
+  faBookmark,
   faBars,
   faXmark,
   faCheck,
   faSun,
   faMoon,
+  faCloudSun,
+  faCloudSunRain,
   faChevronDown,
   faBookOpen,
   faFileContract,
@@ -19,27 +22,50 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useTimeTheme } from "@/context/TimeThemeContext";
 import type { ThemeMode } from "@/context/TimeThemeContext";
+import { useSavedFoods } from "@/context/SavedFoodsContext";
+import { useSavedSheet } from "@/components/providers/AppProviders";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { UserNavMenu } from "@/components/auth/UserNavMenu";
 
-const themeOptions: { mode: ThemeMode; label: string; icon: typeof faSun }[] = [
-  { mode: "system", label: "Theo hệ thống", icon: faDesktop },
-  { mode: "light", label: "Chế độ sáng", icon: faSun },
-  { mode: "dark", label: "Chế độ tối", icon: faMoon },
-];
+const timePeriodLabels: Record<string, string> = {
+  morning: "Buổi Sáng",
+  midday: "Buổi Trưa",
+  afternoon: "Buổi Chiều",
+  night: "Buổi Tối",
+};
+
+const timePeriodDetailLabels: Record<string, string> = {
+  morning: "Buổi Sáng (05:00 - 10:59)",
+  midday: "Buổi Trưa (11:00 - 13:59)",
+  afternoon: "Buổi Chiều (14:00 - 17:59)",
+  night: "Buổi Tối (18:00 - 04:59)",
+};
+
+const periodIcons: Record<string, typeof faSun> = {
+  morning: faSun,
+  midday: faCloudSun,
+  afternoon: faCloudSunRain,
+  night: faMoon,
+};
 
 export const Navbar: React.FC = () => {
   const segment = useSelectedLayoutSegment();
-  const { themeMode, colorTheme, setThemeMode } = useTimeTheme();
+  const { period, themeMode, setThemeMode, currentTime } = useTimeTheme();
+  const { savedFoods } = useSavedFoods();
+  const { openSaved } = useSavedSheet();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const CurrentPeriodIcon = periodIcons[period] || faSun;
 
   const isHomeActive = segment === null;
   const isResourcesActive = segment === "tai-nguyen";
@@ -164,11 +190,30 @@ export const Navbar: React.FC = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* 4. Đã Lưu */}
+            <button
+              type="button"
+              onClick={openSaved}
+              className="relative py-1 text-sm tracking-normal transition-all duration-200 cursor-pointer flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium outline-none"
+              title="Món Đã Lưu"
+            >
+              <FontAwesomeIcon icon={faBookmark} className="text-secondary text-xs" />
+              <span>Đã Lưu</span>
+              {savedFoods.length > 0 && (
+                <Badge
+                  variant="default"
+                  className="ml-0.5 h-4.5 min-w-4.5 px-1.5 text-[10px] bg-primary text-primary-foreground font-black rounded-full"
+                >
+                  {savedFoods.length}
+                </Badge>
+              )}
+            </button>
           </nav>
 
           {/* Right Action Group */}
           <div className="flex items-center gap-2 sm:gap-2.5">
-            {/* Theme Mode Switcher */}
+            {/* Time-Theme Mode Switcher */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
@@ -176,42 +221,54 @@ export const Navbar: React.FC = () => {
                     variant="outline"
                     size="sm"
                     className="rounded-full gap-1.5 border-border bg-card/60 text-xs font-semibold hover:bg-muted text-foreground cursor-pointer"
-                    title="Chế độ sáng/tối"
                   >
                     <FontAwesomeIcon
-                      icon={colorTheme === "dark" ? faMoon : faSun}
-                      className={colorTheme === "dark" ? "text-amber-400 text-xs" : "text-amber-500 text-xs"}
+                      icon={CurrentPeriodIcon}
+                      className="text-secondary text-xs"
                     />
                     <span className="hidden sm:inline">
-                      {themeMode === "system" ? "Hệ thống" : themeMode === "dark" ? "Tối" : "Sáng"}
+                      {timePeriodLabels[period] || period}
+                    </span>
+                    <span
+                      suppressHydrationWarning
+                      className="text-[11px] text-muted-foreground font-mono hidden md:inline"
+                    >
+                      {currentTime}
                     </span>
                   </Button>
                 }
               />
-              <DropdownMenuContent align="end" className="w-52 bg-card text-card-foreground border border-border shadow-xl rounded-2xl p-1.5">
-                <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
-                  Chế Độ Sáng/Tối
+              <DropdownMenuContent align="end" className="w-60 bg-card text-card-foreground border border-border shadow-xl rounded-2xl p-1.5">
+                <DropdownMenuLabel suppressHydrationWarning className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
+                  Chủ Đề Theo Giờ ({currentTime})
                 </DropdownMenuLabel>
-                {themeOptions.map((opt) => (
+                <DropdownMenuItem
+                  onClick={() => setThemeMode("auto")}
+                  className="flex items-center justify-between text-xs font-medium rounded-xl cursor-pointer py-2 px-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faClock} className="text-primary text-xs" />
+                    <span>Tự Động (Theo Thời Gian)</span>
+                  </div>
+                  {themeMode === "auto" && (
+                    <FontAwesomeIcon icon={faCheck} className="text-primary text-xs" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="my-1 bg-border/60" />
+                {(["morning", "midday", "afternoon", "night"] as ThemeMode[]).map((mode) => (
                   <DropdownMenuItem
-                    key={opt.mode}
-                    onClick={() => setThemeMode(opt.mode)}
-                    className="flex items-center justify-between text-xs font-medium rounded-xl cursor-pointer py-2 px-2.5"
+                    key={mode}
+                    onClick={() => setThemeMode(mode)}
+                    className="flex items-center justify-between text-xs font-medium rounded-xl cursor-pointer py-1.5 px-2.5"
                   >
                     <div className="flex items-center gap-2">
                       <FontAwesomeIcon
-                        icon={opt.icon}
-                        className={
-                          opt.mode === "dark"
-                            ? "text-amber-400 text-xs"
-                            : opt.mode === "light"
-                            ? "text-amber-500 text-xs"
-                            : "text-primary text-xs"
-                        }
+                        icon={periodIcons[mode] || faSun}
+                        className="text-secondary text-xs"
                       />
-                      <span>{opt.label}</span>
+                      <span>{timePeriodDetailLabels[mode]}</span>
                     </div>
-                    {themeMode === opt.mode && (
+                    {themeMode === mode && (
                       <FontAwesomeIcon icon={faCheck} className="text-primary text-xs" />
                     )}
                   </DropdownMenuItem>
@@ -292,6 +349,26 @@ export const Navbar: React.FC = () => {
                   <span>Chính Sách Bảo Mật</span>
                 </Link>
               </div>
+
+              {/* Saved Mobile */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openSaved();
+                }}
+                className="flex items-center justify-between px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl transition-colors cursor-pointer text-left border-t border-border/50 pt-2"
+              >
+                <div className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faBookmark} className="text-secondary text-xs" />
+                  <span>Đã Lưu</span>
+                </div>
+                {savedFoods.length > 0 && (
+                  <Badge className="px-1.5 py-0.5 text-[10px] bg-primary text-primary-foreground font-black rounded-full">
+                    {savedFoods.length}
+                  </Badge>
+                )}
+              </button>
             </div>
           </div>
         )}

@@ -7,8 +7,8 @@ import {
   CreateFoodRequest,
   EatenFood,
   FoodCard,
+  FoodOption,
   GachaRequest,
-  TinderRequest,
   ListEatenFoodParams,
   ListFoodsParams,
   ListUserFoodParams,
@@ -24,7 +24,7 @@ import {
 export const foodsApi = {
   /**
    * GET /foods
-   * Get list of foods with filters, pagination, and sorting from V_FOODS_RANKED
+   * Get list of foods with filters, pagination, and sorting (Public, includes favorite_count & eaten_count)
    */
   list: (params?: ListFoodsParams): Promise<PaginatedResponse<FoodCard>> => {
     return apiClient<PaginatedResponse<FoodCard>>('/foods', {
@@ -34,22 +34,32 @@ export const foodsApi = {
   },
 
   /**
-   * POST /foods/gacha
-   * Smart Gacha API based on V_FOODS_RANKED
+   * GET /foods/{foodId}
+   * Get detail of a food by ID (Public, includes favorite_count & eaten_count)
    */
-  gacha: (data?: GachaRequest): Promise<ApiResponse<FoodCard>> => {
-    return apiClient<ApiResponse<FoodCard>>('/foods/gacha', {
-      method: 'POST',
-      body: data || {},
+  getById: (foodId: number): Promise<ApiResponse<FoodCard>> => {
+    return apiClient<ApiResponse<FoodCard>>(`/foods/${foodId}`, {
+      method: 'GET',
     });
   },
 
   /**
-   * POST /foods/tinder
-   * Smart Tinder foods API based on V_FOODS_RANKED
+   * GET /foods/options
+   * Search foods and return top 5 options (ID and name only, Public)
    */
-  tinder: (data?: TinderRequest): Promise<PaginatedResponse<FoodCard>> => {
-    return apiClient<PaginatedResponse<FoodCard>>('/foods/tinder', {
+  options: (search: string): Promise<FoodOption[]> => {
+    return apiClient<FoodOption[]>('/foods/options', {
+      method: 'GET',
+      params: { search },
+    });
+  },
+
+  /**
+   * POST /foods/gacha
+   * Smart Gacha API based on ranking formula, excluded eaten/gacha lists, or foodSet
+   */
+  gacha: (data?: GachaRequest): Promise<ApiResponse<FoodCard>> => {
+    return apiClient<ApiResponse<FoodCard>>('/foods/gacha', {
       method: 'POST',
       body: data || {},
     });

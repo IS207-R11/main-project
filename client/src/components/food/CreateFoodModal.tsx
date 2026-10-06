@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { toast } from 'react-toastify';
 import { foodsApi, uploadApi } from '@/api';
 import { FoodCard } from '@/api/types';
 import { useAuth } from '@/context/AuthContext';
@@ -16,13 +15,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
-import { Image } from '@/components/ui/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUtensils,
   faCloudArrowUp,
   faPaste,
+  faTriangleExclamation,
   faTrashCan,
+  faCheck,
   faArrowRightToBracket,
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -59,6 +59,8 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleClearImage = useCallback(() => {
     setSelectedFile(null);
@@ -74,9 +76,11 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
 
   // Luồng xác thực ảnh phía Client
   const processSelectedFile = useCallback((file: File) => {
+    setErrorMessage(null);
+
     // 1. Xác thực người dùng
     if (!isAuthenticated) {
-      toast.error('Bạn cần đăng nhập tài khoản để có thể chọn và tải ảnh lên.');
+      setErrorMessage('Bạn cần đăng nhập tài khoản để có thể chọn và tải ảnh lên.');
       openAuthModal('login');
       return;
     }
@@ -87,7 +91,7 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
     const isAllowedExt = ['jpeg', 'jpg', 'png', 'webp', 'gif', 'svg', 'avif'].includes(fileExt || '');
 
     if (!isImageMime || !isAllowedExt) {
-      toast.error('Định dạng tập tin không hợp lệ. Chỉ được phép tải lên file hình ảnh (PNG, JPG, JPEG, WEBP, GIF, SVG, AVIF).');
+      setErrorMessage('Định dạng tập tin không hợp lệ. Chỉ được phép tải lên file hình ảnh (PNG, JPG, JPEG, WEBP, GIF, SVG, AVIF).');
       handleClearImage();
       return;
     }
@@ -95,7 +99,7 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
     // 3. Xác thực kích thước từ dưới 5MB
     if (file.size >= FIVE_MB) {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      toast.error(`Dung lượng ảnh (${sizeMB} MB) vượt quá giới hạn 5MB. Vui lòng chọn ảnh có kích thước dưới 5MB.`);
+      setErrorMessage(`Dung lượng ảnh (${sizeMB} MB) vượt quá giới hạn 5MB. Vui lòng chọn ảnh có kích thước dưới 5MB.`);
       handleClearImage();
       return;
     }
@@ -154,6 +158,8 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
 
     // 1. Xác thực người dùng
     if (!isAuthenticated) {
@@ -163,23 +169,13 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
     }
 
     if (!name.trim()) {
-      toast.error('Vui lòng nhập tên món ăn.');
-      return;
-    }
-
-    if (!description.trim()) {
-      toast.error('Vui lòng nhập mô tả món ăn.');
-      return;
-    }
-
-    if (!selectedFile) {
-      toast.error('Vui lòng chọn hình ảnh cho món ăn.');
+      setErrorMessage('Vui lòng nhập tên món ăn.');
       return;
     }
 
     // Xác thực lại kích thước file nếu có chọn ảnh
-    if (selectedFile.size >= FIVE_MB) {
-      toast.error('Dung lượng ảnh phải dưới 5MB. Vui lòng chọn lại ảnh hợp lệ.');
+    if (selectedFile && selectedFile.size >= FIVE_MB) {
+      setErrorMessage('Dung lượng ảnh phải dưới 5MB. Vui lòng chọn lại ảnh hợp lệ.');
       return;
     }
 
@@ -189,25 +185,21 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
       let finalImageUrl: string | undefined = undefined;
 
       // STEP 1: Upload ảnh lên Server Backend (xử lý qua Cloudinary)
-      setStatusText('Đang tải ảnh lên máy chủ Cloudinary...');
-      const uploadRes = await uploadApi.uploadImage(selectedFile);
-      finalImageUrl = uploadRes.data?.secure_url || uploadRes.data?.url;
-
-      if (!finalImageUrl) {
-        toast.error('Không thể tải ảnh lên. Vui lòng thử lại.');
-        setLoading(false);
-        return;
+      if (selectedFile) {
+        setStatusText('Đang tải ảnh lên máy chủ Cloudinary...');
+        const uploadRes = await uploadApi.uploadImage(selectedFile);
+        finalImageUrl = uploadRes.data?.secure_url || uploadRes.data?.url;
       }
 
       // STEP 2: Tạo món ăn trong hệ thống backend
       setStatusText('Đang lưu thông tin món ăn vào hệ thống...');
       const createdFoodRes = await foodsApi.create({
         name: name.trim(),
-        description: description.trim(),
+        description: description.trim() || undefined,
         image_url: finalImageUrl,
       });
 
-      toast.success('Món ăn đã được tạo thành công! Đang chờ duyệt.');
+      setSuccessMessage('Món ăn đã được tạo thành công! Đang chờ duyệt.');
       setStatusText('');
 
       if (onSuccess && createdFoodRes.data) {
@@ -218,12 +210,13 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
         setName('');
         setDescription('');
         handleClearImage();
+        setSuccessMessage(null);
         onOpenChange(false);
-      }, 800);
+      }, 1200);
     } catch (err: unknown) {
       console.error('Lỗi quy trình tạo món:', err);
       const msg = err instanceof Error ? err.message : 'Lỗi khi tạo món ăn';
-      toast.error(msg);
+      setErrorMessage(msg);
     } finally {
       setLoading(false);
       setStatusText('');
@@ -261,6 +254,20 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+            {errorMessage && (
+              <div className="p-3 rounded-xl text-xs flex items-center gap-2 bg-destructive/15 text-destructive border border-destructive/30">
+                <FontAwesomeIcon icon={faTriangleExclamation} />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="p-3 rounded-xl text-xs flex items-center gap-2 bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
+                <FontAwesomeIcon icon={faCheck} />
+                <span>{successMessage}</span>
+              </div>
+            )}
+
             {/* Food Name */}
             <div className="space-y-1">
               <label className="text-xs font-semibold text-foreground">
@@ -278,25 +285,20 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
 
             {/* Food Description */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">
-                Mô tả món ăn <span className="text-destructive">*</span>
-              </label>
+              <label className="text-xs font-semibold text-foreground">Mô tả món ăn</label>
               <Textarea
                 rows={3}
                 placeholder="Mô tả hương vị, nguồn gốc hoặc đặc điểm hấp dẫn của món..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={loading}
-                required
               />
             </div>
 
             {/* Image Upload Area with Paste Support */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                <span>
-                  Hình ảnh món ăn <span className="text-destructive">*</span>
-                </span>
+                <span>Hình ảnh món ăn</span>
                 <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-normal">
                   <FontAwesomeIcon icon={faPaste} className="text-secondary" />
                   <span>Hỗ trợ bấm Ctrl + V để dán ảnh</span>
@@ -315,11 +317,10 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
               {previewUrl ? (
                 <div className="relative rounded-2xl border border-border overflow-hidden bg-muted/30 p-2">
                   <div className="relative h-44 w-full rounded-xl overflow-hidden bg-black/5">
-                    <Image
+                    <img
                       src={previewUrl}
                       alt="Preview"
-                      fill
-                      className="object-cover"
+                      className="w-full h-full object-cover"
                     />
                     <Button
                       type="button"

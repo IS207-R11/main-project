@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { toast } from 'react-toastify';
 import { useAuth } from '@/context/AuthContext';
 import {
   Dialog,
@@ -22,6 +21,7 @@ import {
   faEnvelope,
   faArrowRightToBracket,
   faUserPlus,
+  faTriangleExclamation,
   faMapMarkerAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import { validatePassword } from '@/lib/validation';
@@ -32,6 +32,7 @@ export const AuthDialog: React.FC = () => {
   // Login form state
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
   // Register form state
@@ -40,26 +41,27 @@ export const AuthDialog: React.FC = () => {
   const [regAddress, setRegAddress] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regError, setRegError] = useState<string | null>(null);
   const [regLoading, setRegLoading] = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
 
     if (!loginUsername.trim() || !loginPassword.trim()) {
-      toast.error('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
+      setLoginError('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
       return;
     }
 
     try {
       setLoginLoading(true);
       await login({ username: loginUsername.trim(), password: loginPassword });
-      toast.success('Đăng nhập thành công!');
       // Reset form
       setLoginUsername('');
       setLoginPassword('');
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Đăng nhập không thành công';
-      toast.error(errorMsg);
+      setLoginError(errorMsg);
     } finally {
       setLoginLoading(false);
     }
@@ -67,20 +69,21 @@ export const AuthDialog: React.FC = () => {
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setRegError(null);
 
     if (!regUsername.trim() || !regPassword.trim()) {
-      toast.error('Vui lòng điền tên đăng nhập và mật khẩu');
+      setRegError('Vui lòng điền tên đăng nhập và mật khẩu');
       return;
     }
 
     if (regPassword !== regConfirmPassword) {
-      toast.error('Mật khẩu xác nhận không khớp');
+      setRegError('Mật khẩu xác nhận không khớp');
       return;
     }
 
     const pwdError = validatePassword(regPassword);
     if (pwdError) {
-      toast.error(pwdError);
+      setRegError(pwdError);
       return;
     }
 
@@ -92,7 +95,6 @@ export const AuthDialog: React.FC = () => {
         email: regEmail.trim() || undefined,
         address: regAddress.trim() || undefined,
       });
-      toast.success('Đăng ký tài khoản thành công!');
       // Reset form
       setRegUsername('');
       setRegEmail('');
@@ -101,7 +103,7 @@ export const AuthDialog: React.FC = () => {
       setRegConfirmPassword('');
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Đăng ký không thành công';
-      toast.error(errorMsg);
+      setRegError(errorMsg);
     } finally {
       setRegLoading(false);
     }
@@ -146,6 +148,13 @@ export const AuthDialog: React.FC = () => {
           {/* SIGN IN TAB */}
           <TabsContent value="login">
             <form onSubmit={handleLoginSubmit} className="flex flex-col gap-3.5">
+              {loginError && (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="shrink-0" />
+                  <span>{loginError}</span>
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <FontAwesomeIcon icon={faUser} className="text-muted-foreground text-[11px]" />
@@ -206,6 +215,13 @@ export const AuthDialog: React.FC = () => {
           {/* SIGN UP TAB */}
           <TabsContent value="register">
             <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-3.5">
+              {regError && (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="shrink-0" />
+                  <span>{regError}</span>
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <FontAwesomeIcon icon={faUser} className="text-muted-foreground text-[11px]" />

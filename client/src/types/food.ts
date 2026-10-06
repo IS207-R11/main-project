@@ -5,7 +5,7 @@ export type FoodRank = Rarity;
 
 export type MealSession = "Sáng sớm" | "Giữa trưa" | "Chiều" | "Tối";
 
-export type TimePeriod = "morning" | "night";
+export type TimePeriod = "morning" | "midday" | "afternoon" | "night";
 
 export type DietaryFilter = "all" | "veg" | "meat";
 
@@ -19,19 +19,17 @@ export interface FoodItem {
   image_url?: string | null;
   imagePath: string;
   status: FoodStatus;
-  food_rank: FoodRank;
+  rank: FoodRank;
   rarity: Rarity;
-  rating_score?: number | null;
-  cd?: number | null;
+  favorite_count: number;
+  eaten_count: number;
   created_at?: string | null;
   contributor_id?: number | null;
+  contributor?: {
+    user_id?: number;
+    username?: string | null;
+  } | null;
   isFavorite?: boolean;
-  is_favorited?: boolean;
-  is_hated?: boolean;
-  is_eaten?: boolean;
-  favorites_count?: number;
-  hated_count?: number;
-  eaten_count?: number;
   sub?: string;
   sessions?: string[];
   veg?: boolean;

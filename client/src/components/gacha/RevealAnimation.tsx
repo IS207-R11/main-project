@@ -17,27 +17,14 @@ export const RevealAnimation: React.FC<RevealAnimationProps> = ({
   useEffect(() => {
     // Fire confetti blast
     try {
-      const colors =
-        highestRarity === "SSR"
-          ? ["#f59e0b", "#fbbf24", "#f4a261", "#e76f51"]
-          : highestRarity === "SR"
-          ? ["#a855f7", "#8b5cf6", "#6366f1", "#ec4899"]
-          : highestRarity === "UC"
-          ? ["#0ea5e9", "#38bdf8", "#06b6d4", "#3b82f6"]
-          : ["#10b981", "#34d399", "#14b8a6", "#22c55e"];
-
       confetti({
-        particleCount:
-          highestRarity === "SSR"
-            ? 120
-            : highestRarity === "SR"
-            ? 80
-            : highestRarity === "UC"
-            ? 60
-            : 40,
+        particleCount: highestRarity === "SSR" ? 120 : highestRarity === "SR" ? 80 : 50,
         spread: 90,
         origin: { y: 0.6 },
-        colors,
+        colors:
+          highestRarity === "SSR"
+            ? ["#f59e0b", "#fbbf24", "#f4a261", "#e76f51"]
+            : ["#f4a261", "#2e7d32", "#8b5cf6", "#38bdf8"],
       });
     } catch (e) {
       console.error(e);
@@ -65,11 +52,11 @@ export const RevealAnimation: React.FC<RevealAnimationProps> = ({
     },
     C: {
       text: "from-emerald-200 via-teal-400 to-emerald-500",
-      bg: "from-emerald-950/80 via-slate-950 to-black",
+      bg: "from-[#2e0f0c]/90 via-slate-950 to-black",
     },
   };
 
-  const currentRarityStyle = rarityColorClasses[highestRarity] || rarityColorClasses.C;
+  const currentRarityStyle = rarityColorClasses[highestRarity] || rarityColorClasses.SR;
 
   return (
     <AnimatePresence>

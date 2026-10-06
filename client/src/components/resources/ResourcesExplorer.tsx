@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -12,160 +12,110 @@ import {
   faPlus,
   faRotate,
 } from "@fortawesome/free-solid-svg-icons";
-import type { FoodItem, Rarity } from "@/types/food";
+import type {
+  FoodItem,
+  Rarity,
+} from "@/types/food";
 import { foodsApi } from "@/api";
 import { mapFoodCardToFoodItem } from "@/lib/foodAdapter";
-import { VirtualMasonryGrid } from "@/components/food/VirtualMasonryGrid";
+import { VirtualFoodGrid } from "@/components/food/VirtualFoodGrid";
 import { CreateFoodModal } from "@/components/food/CreateFoodModal";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
-type SortOption = "name" | "rarity_desc" | "newest";
+type SortOption =
+  | "name"
+  | "rarity_desc"
+  | "favorite_desc"
+  | "eaten_desc";
+
+const rarityOrder: Record<Rarity, number> = {
+  SSR: 4,
+  SR: 3,
+  UC: 2,
+  C: 1,
+};
+
+const viCollator = new Intl.Collator("vi", { sensitivity: "base", numeric: true });
 
 export const ResourcesExplorer: React.FC = () => {
   // Foods state from system API
   const [foods, setFoods] = useState<FoodItem[]>([]);
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
-
-  // Pagination state (infinite scroll)
-  const [page, setPage] = useState<number>(1);
-  const [pageSize] = useState<number>(20);
-  const [totalRecords, setTotalRecords] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(true);
 
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRarity, setSelectedRarity] = useState<"all" | Rarity>("all");
   const [sortBy, setSortBy] = useState<SortOption>("name");
 
-  // Sentinel ref for bottom intersection observer
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  // Map filters to API params
-  const getApiParams = useCallback(
-    (pageNumber: number): {
-      page: number;
-      pageSize: number;
-      status: "ACTIVE";
-      search?: string;
-      food_rank?: "SSR" | "SR" | "UC" | "C";
-      sort_by: "name" | "created_at" | "rating_score" | "cd" | "food_rank";
-      sort_order: "asc" | "desc";
-    } => {
-      const apiSortBy: "name" | "created_at" | "rating_score" | "cd" | "food_rank" =
-        sortBy === "rarity_desc"
-          ? "rating_score"
-          : sortBy === "newest"
-          ? "created_at"
-          : "name";
-      const apiSortOrder: "asc" | "desc" =
-        sortBy === "rarity_desc" || sortBy === "newest" ? "desc" : "asc";
-      const apiFoodRank =
-        selectedRarity === "all"
-          ? undefined
-          : (selectedRarity as "SSR" | "SR" | "UC" | "C");
-
-      return {
-        page: pageNumber,
-        pageSize,
-        status: "ACTIVE" as const,
-        search: searchQuery.trim() || undefined,
-        food_rank: apiFoodRank,
-        sort_by: apiSortBy,
-        sort_order: apiSortOrder,
-      };
-    },
-    [pageSize, searchQuery, selectedRarity, sortBy]
-  );
-
-  // Fetch initial/first page (resets list)
-  const fetchFirstPage = useCallback(async () => {
+  // Fetch foods from System API (GET /foods?status=ACTIVE)
+  const fetchFoods = useCallback(async () => {
     try {
-      setInitialLoading(true);
-      setPage(1);
-
-      const params = getApiParams(1);
-      const res = await foodsApi.list(params);
+      setLoading(true);
+      const res = await foodsApi.list({
+        pageSize: 100,
+        status: "ACTIVE",
+        sort_by: "name",
+        sort_order: "asc",
+      });
 
       if (res && res.data) {
-        const mapped = res.data.map((card) => mapFoodCardToFoodItem(card));
+        const mapped = res.data
+          .filter((card) => card.status === "ACTIVE")
+          .map((card) => mapFoodCardToFoodItem(card));
         setFoods(mapped);
-        const total = res.total_records ?? mapped.length;
-        setTotalRecords(total);
-        setHasMore(mapped.length < total);
-      } else {
-        setFoods([]);
-        setTotalRecords(0);
-        setHasMore(false);
       }
     } catch (err) {
-      console.error("Lỗi khi tải trang đầu món ăn:", err);
+      console.error("Lỗi khi tải danh sách món ăn từ hệ thống API:", err);
     } finally {
-      setInitialLoading(false);
+      setLoading(false);
     }
-  }, [getApiParams]);
+  }, []);
 
-  // Fetch next page when user scrolls near the bottom
-  const loadMore = useCallback(async () => {
-    if (loadingMore || initialLoading || !hasMore) return;
-
-    try {
-      setLoadingMore(true);
-      const nextPage = page + 1;
-      const params = getApiParams(nextPage);
-      const res = await foodsApi.list(params);
-
-      if (res && res.data && res.data.length > 0) {
-        const mapped = res.data.map((card) => mapFoodCardToFoodItem(card));
-        setFoods((prev) => {
-          const existingIds = new Set(prev.map((f) => f.id));
-          const uniqueNew = mapped.filter((f) => !existingIds.has(f.id));
-          const updated = [...prev, ...uniqueNew];
-          const total = res.total_records ?? totalRecords;
-          setHasMore(updated.length < total);
-          return updated;
-        });
-        setPage(nextPage);
-        if (res.total_records !== undefined) {
-          setTotalRecords(res.total_records);
-        }
-      } else {
-        setHasMore(false);
-      }
-    } catch (err) {
-      console.error("Lỗi khi tải thêm món ăn:", err);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [loadingMore, initialLoading, hasMore, page, getApiParams, totalRecords]);
-
-  // Trigger initial fetch whenever search or filter options change
   useEffect(() => {
-    fetchFirstPage();
-  }, [fetchFirstPage]);
+    fetchFoods();
+  }, [fetchFoods]);
 
-  // Infinite scroll listener using IntersectionObserver on sentinel
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !hasMore || initialLoading || loadingMore) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMore();
+  // Filter and sort items based on real API data
+  const filteredFoods = useMemo(() => {
+    return foods
+      .filter((food) => {
+        // Enforce active status
+        if (food.status && food.status !== "ACTIVE") {
+          return false;
         }
-      },
-      {
-        rootMargin: "500px 0px", // Trigger when 500px from the bottom
-        threshold: 0,
-      }
-    );
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasMore, initialLoading, loadingMore, loadMore]);
+        const name = (food.name || "").toLowerCase();
+        const desc = (food.description || "").toLowerCase();
+        const q = searchQuery.toLowerCase().trim();
+
+        // Search match on actual fields
+        if (q && !name.includes(q) && !desc.includes(q)) {
+          return false;
+        }
+
+        // Rarity match
+        if (selectedRarity !== "all" && food.rarity !== selectedRarity) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "favorite_desc":
+            return (b.favorite_count || 0) - (a.favorite_count || 0);
+          case "eaten_desc":
+            return (b.eaten_count || 0) - (a.eaten_count || 0);
+          case "rarity_desc":
+            return (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0);
+          case "name":
+          default:
+            return viCollator.compare(a.name || "", b.name || "");
+        }
+      });
+  }, [foods, searchQuery, selectedRarity, sortBy]);
 
   const handleResetFilters = () => {
     setSearchQuery("");
@@ -174,7 +124,9 @@ export const ResourcesExplorer: React.FC = () => {
   };
 
   const hasActiveFilters =
-    searchQuery || selectedRarity !== "all" || sortBy !== "name";
+    searchQuery ||
+    selectedRarity !== "all" ||
+    sortBy !== "name";
 
   return (
     <div className="space-y-6 min-h-[calc(100vh-14rem)]">
@@ -208,15 +160,12 @@ export const ResourcesExplorer: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchFirstPage}
-              disabled={initialLoading}
-              className="rounded-2xl h-11 px-4 text-xs font-bold gap-1.5 cursor-pointer"
+              onClick={fetchFoods}
+              disabled={loading}
+              className="rounded-2xl h-11 px-4 text-xs font-bold gap-1.5"
               title="Tải lại từ hệ thống"
             >
-              <FontAwesomeIcon
-                icon={faRotate}
-                className={initialLoading ? "animate-spin" : ""}
-              />
+              <FontAwesomeIcon icon={faRotate} className={loading ? "animate-spin" : ""} />
               <span className="hidden md:inline">Làm Mới</span>
             </Button>
 
@@ -235,17 +184,12 @@ export const ResourcesExplorer: React.FC = () => {
           {/* Rarity Filter */}
           <div className="space-y-1">
             <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-              <FontAwesomeIcon
-                icon={faFilter}
-                className="text-secondary text-[10px]"
-              />
+              <FontAwesomeIcon icon={faFilter} className="text-secondary text-[10px]" />
               Độ Hiếm / Phổ Biến
             </label>
             <select
               value={selectedRarity}
-              onChange={(e) =>
-                setSelectedRarity(e.target.value as "all" | Rarity)
-              }
+              onChange={(e) => setSelectedRarity(e.target.value as "all" | Rarity)}
               className="w-full bg-background border border-border text-foreground text-xs font-semibold rounded-2xl p-2.5 focus:ring-2 focus:ring-primary focus:outline-hidden shadow-xs cursor-pointer"
             >
               <option value="all">Tất Cả Độ Hiếm</option>
@@ -272,7 +216,8 @@ export const ResourcesExplorer: React.FC = () => {
             >
               <option value="name">Tên (A - Z)</option>
               <option value="rarity_desc">Độ Hiếm Cao Nhất</option>
-              <option value="newest">Mới Nhất</option>
+              <option value="favorite_desc">Được Yêu Thích Nhất</option>
+              <option value="eaten_desc">Được Ăn Nhiều Nhất</option>
             </select>
           </div>
         </div>
@@ -280,77 +225,30 @@ export const ResourcesExplorer: React.FC = () => {
         {/* Results Count & Reset Filter Badge */}
         <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
           <span className="text-muted-foreground font-semibold">
-            Đã tải <strong>{foods.length}</strong> / <strong>{totalRecords}</strong> món ăn từ hệ thống
+            Hiển thị <strong>{filteredFoods.length}</strong> món ăn từ hệ thống API
           </span>
           {hasActiveFilters && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleResetFilters}
-              className="h-7 text-xs text-destructive hover:bg-destructive/10 rounded-full px-3 cursor-pointer"
+              className="h-7 text-xs text-destructive hover:bg-destructive/10 rounded-full px-3"
             >
-              <FontAwesomeIcon
-                icon={faRotateLeft}
-                className="mr-1.5 text-[10px]"
-              />
+              <FontAwesomeIcon icon={faRotateLeft} className="mr-1.5 text-[10px]" />
               Đặt Lại Bộ Lọc
             </Button>
           )}
         </div>
       </div>
 
-      {/* ================= VIRTUAL MASONRY FOOD FLASHCARDS GRID ================= */}
-      {initialLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-items-center">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={i}
-              className="w-full max-w-[225px] h-[315px] rounded-2xl bg-card border border-border p-3.5 flex flex-col justify-between"
-            >
-              <Skeleton className="w-full h-32 rounded-xl" />
-              <div className="space-y-2 py-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-2/3" />
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-border/40">
-                <Skeleton className="h-4 w-12 rounded-full" />
-                <Skeleton className="h-6 w-16 rounded-full" />
-              </div>
-            </div>
-          ))}
+      {/* ================= VIRTUAL FOOD FLASHCARDS GRID ================= */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 space-y-3">
+          <Spinner className="w-8 h-8 text-secondary" />
+          <p className="text-xs text-muted-foreground">Đang tải kho tàng món ăn từ hệ thống...</p>
         </div>
-      ) : foods.length > 0 ? (
-        <div className="space-y-6">
-          <VirtualMasonryGrid foods={foods} />
-
-          {/* Infinite Scroll Trigger Sentinel */}
-          <div ref={sentinelRef} className="h-4 w-full pointer-events-none" />
-
-          {/* Loading More Indicator */}
-          {loadingMore && (
-            <div className="py-6 flex flex-col items-center justify-center space-y-2">
-              <div className="flex items-center gap-2.5 text-xs font-semibold text-muted-foreground px-4 py-2 rounded-full bg-muted/60 border border-border/40 shadow-xs">
-                <FontAwesomeIcon
-                  icon={faRotate}
-                  className="animate-spin text-secondary text-xs"
-                />
-                <span>Đang tải thêm món ăn...</span>
-              </div>
-            </div>
-          )}
-
-          {/* End of results message */}
-          {!hasMore && foods.length > 0 && (
-            <div className="py-10 text-center flex items-center justify-center gap-3 text-xs text-muted-foreground/70">
-              <span className="h-px w-20 bg-border/60" />
-              <span className="font-medium">
-                Đã hiển thị toàn bộ {totalRecords} món ăn
-              </span>
-              <span className="h-px w-20 bg-border/60" />
-            </div>
-          )}
-        </div>
+      ) : filteredFoods.length > 0 ? (
+        <VirtualFoodGrid foods={filteredFoods} maxVisibleRows={10} />
       ) : (
         <div className="py-20 text-center space-y-4 rounded-3xl bg-card border border-dashed border-border p-8">
           <div className="w-16 h-16 mx-auto rounded-3xl bg-muted flex items-center justify-center text-muted-foreground text-2xl">
@@ -388,7 +286,7 @@ export const ResourcesExplorer: React.FC = () => {
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         onSuccess={() => {
-          fetchFirstPage();
+          fetchFoods();
         }}
       />
     </div>

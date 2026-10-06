@@ -19,6 +19,10 @@ export function periodToSession(period: TimePeriod): MealSession {
   switch (period) {
     case "morning":
       return "Sáng sớm";
+    case "midday":
+      return "Giữa trưa";
+    case "afternoon":
+      return "Chiều";
     case "night":
       return "Tối";
   }
@@ -27,9 +31,11 @@ export function periodToSession(period: TimePeriod): MealSession {
 export function sessionToPeriod(session: MealSession): TimePeriod {
   switch (session) {
     case "Sáng sớm":
-    case "Giữa trưa":
-    case "Chiều":
       return "morning";
+    case "Giữa trưa":
+      return "midday";
+    case "Chiều":
+      return "afternoon";
     case "Tối":
       return "night";
   }
