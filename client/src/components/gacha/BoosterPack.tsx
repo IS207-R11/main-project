@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
+import { Image } from "@/components/ui/image";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faWandMagicSparkles, faStar } from "@fortawesome/free-solid-svg-icons";

@@ -15,7 +15,7 @@ class EatenFoodResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'eaten_id' => $this->eaten_id,
+            'eaten_id' => $this->eaten_id ?? $this->food_id,
             'user_id' => $this->user_id,
             'food_id' => $this->food_id,
             'food' => $this->whenLoaded('food', function () {

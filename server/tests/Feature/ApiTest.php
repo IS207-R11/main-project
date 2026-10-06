@@ -225,19 +225,10 @@ test('public foods listing, user PUT pending food, mod approval, and admin delet
     $approveRes->assertStatus(200)
         ->assertJsonPath('data.status', 'ACTIVE');
 
-    // Public options test
-    $optionsRes = $this->getJson('/api/foods/options');
-    $optionsRes->assertStatus(200);
-
-    // Detail check includes favorite_count and eaten_count
-    $detailRes = $this->getJson('/api/foods/'.$foodId);
-    $detailRes->assertStatus(200)
-        ->assertJsonStructure(['data' => ['food_id', 'name', 'favorite_count', 'eaten_count']]);
-
-    // List check includes favorite_count and eaten_count
+    // List check includes is_favorited and is_hated
     $listRes = $this->getJson('/api/foods');
     $listRes->assertStatus(200)
-        ->assertJsonStructure(['data' => [['food_id', 'favorite_count', 'eaten_count']]]);
+        ->assertJsonStructure(['data' => [['food_id', 'name', 'is_favorited', 'is_hated']]]);
 
     // Regular user cannot delete food (only Admin)
     $this->withHeader('Authorization', 'Bearer '.$userToken)
@@ -261,9 +252,24 @@ test('smart gacha ranking with foodSet and excluded eaten/gacha logic', function
     $userToken = $this->jwtService->generateAccessToken($user);
 
     // Create 3 active foods
-    $foodA = Food::create(['name' => 'Food A '.uniqid(), 'status' => FoodStatus::ACTIVE]);
-    $foodB = Food::create(['name' => 'Food B '.uniqid(), 'status' => FoodStatus::ACTIVE]);
-    $foodC = Food::create(['name' => 'Food C '.uniqid(), 'status' => FoodStatus::ACTIVE]);
+    $foodA = Food::create([
+        'name' => 'Food A '.uniqid(),
+        'description' => 'Description for Food A',
+        'image_url' => 'https://example.com/food-a.jpg',
+        'status' => FoodStatus::ACTIVE,
+    ]);
+    $foodB = Food::create([
+        'name' => 'Food B '.uniqid(),
+        'description' => 'Description for Food B',
+        'image_url' => 'https://example.com/food-b.jpg',
+        'status' => FoodStatus::ACTIVE,
+    ]);
+    $foodC = Food::create([
+        'name' => 'Food C '.uniqid(),
+        'description' => 'Description for Food C',
+        'image_url' => 'https://example.com/food-c.jpg',
+        'status' => FoodStatus::ACTIVE,
+    ]);
 
     // Give Food A high rank: 2 favorites, 1 eaten
     $user->favoriteFoods()->syncWithoutDetaching([$foodA->food_id]);
@@ -278,7 +284,7 @@ test('smart gacha ranking with foodSet and excluded eaten/gacha logic', function
             'foodSet' => [$foodA->food_id, $foodB->food_id],
         ]);
     $gachaFoodSetRes->assertStatus(200)
-        ->assertJsonStructure(['data' => ['food_id', 'name', 'favorite_count', 'eaten_count']]);
+        ->assertJsonStructure(['data' => ['food_id', 'name', 'food_rank', 'is_favorited', 'is_hated']]);
     expect(in_array($gachaFoodSetRes->json('data.food_id'), [$foodA->food_id, $foodB->food_id]))->toBeTrue();
 
     // 2. Gacha with numberOfExcludedEaten = 1, typeOfExcludedEaten = newest
@@ -299,10 +305,68 @@ test('smart gacha ranking with foodSet and excluded eaten/gacha logic', function
     // Food A was excluded, so winner should not be Food A (it's either Food B, Food C, or others)
     expect($gachaExcludeAllRes->json('data.food_id'))->not->toBe($foodA->food_id);
 
+    // 3. Gacha with excludedGachaSet = true
+    \Illuminate\Support\Facades\DB::table('GACHA_FOODS')->upsert([
+        'user_id' => $user->user_id,
+        'food_id' => $foodB->food_id,
+        'created_at' => now(),
+    ], ['user_id', 'food_id'], ['created_at']);
+
+    $gachaExcludeGachaRes = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->postJson('/api/foods/gacha', [
+            'excludedGachaSet' => true,
+        ]);
+    $gachaExcludeGachaRes->assertStatus(200);
+    expect($gachaExcludeGachaRes->json('data.food_id'))->not->toBe($foodB->food_id);
+
     // Clean up
     $foodA->delete();
     $foodB->delete();
     $foodC->delete();
+});
+
+test('smart tinder returns list of foods matching filters', function () {
+    $user = User::create([
+        'username' => 'tinder_user_'.uniqid(),
+        'email' => 'tinder_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::USER,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $userToken = $this->jwtService->generateAccessToken($user);
+
+    $food1 = Food::create([
+        'name' => 'Tinder Food 1 '.uniqid(),
+        'description' => 'Description 1',
+        'image_url' => 'https://example.com/1.jpg',
+        'status' => FoodStatus::ACTIVE,
+    ]);
+    $food2 = Food::create([
+        'name' => 'Tinder Food 2 '.uniqid(),
+        'description' => 'Description 2',
+        'image_url' => 'https://example.com/2.jpg',
+        'status' => FoodStatus::ACTIVE,
+    ]);
+
+    $res = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->postJson('/api/foods/tinder', [
+            'numberOfResult' => 5,
+            'foodSet' => [$food1->food_id, $food2->food_id],
+        ]);
+
+    $res->assertStatus(200)
+        ->assertJsonStructure([
+            'data' => [
+                ['food_id', 'name', 'status', 'is_favorited', 'is_hated'],
+            ],
+            'total_records',
+        ]);
+
+    $foodIds = collect($res->json('data'))->pluck('food_id')->all();
+    expect($foodIds)->toContain($food1->food_id);
+
+    $food1->delete();
+    $food2->delete();
 });
 
 test('user has full CRUD on EATEN, FAVORITE, HATED of their own, forbidden for other users', function () {
@@ -327,6 +391,7 @@ test('user has full CRUD on EATEN, FAVORITE, HATED of their own, forbidden for o
     $food = Food::create([
         'name' => 'Banh Mi '.uniqid(),
         'description' => 'Crispy bread',
+        'image_url' => 'https://example.com/banhmi.jpg',
         'status' => FoodStatus::ACTIVE,
     ]);
 

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFire,
-  faSliders,
+  faArrowLeft,
   faVolumeHigh,
   faVolumeXmark,
   faKeyboard,
@@ -17,7 +17,6 @@ import { TinderCard, type TinderCardHandle } from "@/components/tinder/TinderCar
 import { TinderControls } from "@/components/tinder/TinderControls";
 import { TinderMatchModal } from "@/components/tinder/TinderMatchModal";
 import { tinderSounds } from "@/lib/tinderSound";
-import { useSavedFoods } from "@/context/SavedFoodsContext";
 import { Button } from "@/components/ui/button";
 
 interface TinderCardStackProps {
@@ -31,8 +30,6 @@ export const TinderCardStack: React.FC<TinderCardStackProps> = ({
   onOpenFilters,
   onRestartAll,
 }) => {
-  const { isSaved, toggleSaveFood } = useSavedFoods();
-
   const [currentIndex, setCurrentIndex] = useState(0);
   const [history, setHistory] = useState<{ food: FoodItem; action: "left" | "right" | "up" }[]>([]);
   const [matchedFood, setMatchedFood] = useState<FoodItem | null>(null);
@@ -241,9 +238,10 @@ export const TinderCardStack: React.FC<TinderCardStackProps> = ({
             size="sm"
             onClick={onOpenFilters}
             className="h-8 rounded-full text-xs font-bold gap-1.5 border-border bg-card hover:bg-muted text-foreground cursor-pointer"
+            title="Quay lại màn hình chính"
           >
-            <FontAwesomeIcon icon={faSliders} className="text-[11px] text-secondary" />
-            <span className="hidden sm:inline">Bộ lọc</span>
+            <FontAwesomeIcon icon={faArrowLeft} className="text-[11px] text-secondary" />
+            <span className="hidden sm:inline">Quay lại</span>
           </Button>
         </div>
       </div>
@@ -288,8 +286,6 @@ export const TinderCardStack: React.FC<TinderCardStackProps> = ({
                     isFront={isFront}
                     stackIndex={stackIndex}
                     onSwipe={handleSwipe}
-                    isSaved={isSaved(food.id)}
-                    onToggleSave={toggleSaveFood}
                   />
                 );
               })
@@ -331,8 +327,8 @@ export const TinderCardStack: React.FC<TinderCardStackProps> = ({
                 onClick={onOpenFilters}
                 className="w-full rounded-2xl text-xs font-bold py-2.5 border-border bg-card hover:bg-muted text-foreground gap-2 cursor-pointer"
               >
-                <FontAwesomeIcon icon={faSliders} className="text-secondary" />
-                <span>Điều Chỉnh Bộ Lọc</span>
+                <FontAwesomeIcon icon={faArrowLeft} className="text-secondary" />
+                <span>Quay Lại</span>
               </Button>
             </div>
           </motion.div>

@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Tinder Món Ăn | Ăn gì?",
-  description: "Trang đang tạm ẩn để nâng cấp hệ thống.",
+  description: "Trang quẹt món ăn thông minh.",
 };
 
 export default function TinderPage() {
-  redirect("/");
+  redirect("/?tab=tinder");
 }

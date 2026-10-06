@@ -45,9 +45,8 @@ Route::prefix('users')->group(function () {
 Route::prefix('foods')->group(function () {
     // Public routes
     Route::get('/', [FoodController::class, 'index']);
-    Route::get('/options', [FoodController::class, 'options']);
     Route::match(['get', 'post'], '/gacha', [FoodController::class, 'gacha']);
-    Route::get('/{foodId}', [FoodController::class, 'show'])->whereNumber('foodId');
+    Route::match(['get', 'post'], '/tinder', [FoodController::class, 'tinder']);
 
     // Authenticated routes
     Route::middleware(['jwt.auth'])->group(function () {
@@ -68,8 +67,9 @@ Route::prefix('foods')->group(function () {
         // User collections routes (EATEN - only owner has full CRUD)
         Route::get('/eaten/{userId}', [FoodController::class, 'getEaten'])->middleware('owner')->whereNumber('userId');
         Route::post('/eaten', [FoodController::class, 'addEaten']);
-        Route::put('/eaten/{eatenId}', [FoodController::class, 'updateEaten'])->whereNumber('eatenId');
-        Route::delete('/eaten/{eatenId}', [FoodController::class, 'removeEaten'])->whereNumber('eatenId');
+        Route::put('/eaten/{foodId}', [FoodController::class, 'updateEaten'])->whereNumber('foodId');
+        Route::put('/eaten', [FoodController::class, 'updateEaten']);
+        Route::delete('/eaten/{foodId}', [FoodController::class, 'removeEaten'])->whereNumber('foodId');
         Route::delete('/eaten', [FoodController::class, 'removeEaten']);
 
         // Food item creation: User can only PUT new food, default status is PENDING

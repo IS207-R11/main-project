@@ -276,7 +276,7 @@
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Get list of foods with filters, pagination, and sorting (Public, includes favorite_count & eaten_count)",
+                "summary": "Get list of foods with filters, pagination, and sorting from V_FOODS_RANKED",
                 "operationId": "d0bcfb89a41dea9059c953cff927c2d7",
                 "parameters": [
                     {
@@ -326,7 +326,10 @@
                             "type": "string",
                             "enum": [
                                 "name",
-                                "created_at"
+                                "created_at",
+                                "rating_score",
+                                "cd",
+                                "food_rank"
                             ]
                         }
                     },
@@ -346,7 +349,82 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated list of foods"
+                        "description": "Paginated list of foods from V_FOODS_RANKED with total records in table",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "food_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Phở Bò"
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "example": "Phở bò truyền thống",
+                                                        "nullable": true
+                                                    },
+                                                    "image_url": {
+                                                        "type": "string",
+                                                        "example": "https://res.cloudinary.com/...",
+                                                        "nullable": true
+                                                    },
+                                                    "status": {
+                                                        "type": "string",
+                                                        "example": "ACTIVE"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "example": "2026-03-01 12:00:00",
+                                                        "nullable": true
+                                                    },
+                                                    "contributor_id": {
+                                                        "type": "integer",
+                                                        "example": 1,
+                                                        "nullable": true
+                                                    },
+                                                    "rating_score": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 12.5,
+                                                        "nullable": true
+                                                    },
+                                                    "cd": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 0.04,
+                                                        "nullable": true
+                                                    },
+                                                    "food_rank": {
+                                                        "type": "string",
+                                                        "example": "SSR",
+                                                        "enum": [
+                                                            "SSR",
+                                                            "SR",
+                                                            "UC",
+                                                            "C"
+                                                        ]
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "total_records": {
+                                            "type": "integer",
+                                            "example": 120
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -362,7 +440,9 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "name"
+                                    "name",
+                                    "description",
+                                    "image_url"
                                 ],
                                 "properties": {
                                     "name": {
@@ -401,32 +481,138 @@
                 ]
             }
         },
-        "/foods/{foodId}": {
-            "get": {
+        "/foods/gacha": {
+            "post": {
                 "tags": [
                     "Foods"
                 ],
-                "summary": "Get food detail by ID (Public, includes favorite_count & eaten_count)",
-                "operationId": "2006df66f517dec7e27c02b80f3c9ed0",
-                "parameters": [
-                    {
-                        "name": "foodId",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
+                "summary": "Smart Gacha API based on V_FOODS_RANKED",
+                "description": "Picks winner from top 10 ranked foods in V_FOODS_RANKED according to rating_score/cd.",
+                "operationId": "3e3c2a6dbcb6571c75311c8710c293db",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "numberOfExcludedEaten": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "typeOfExcludedEaten": {
+                                        "type": "string",
+                                        "default": "newest",
+                                        "enum": [
+                                            "newest",
+                                            "oldest",
+                                            "random"
+                                        ]
+                                    },
+                                    "excludedGachaSet": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "foodSet": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2,
+                                            3,
+                                            4,
+                                            5
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
                         }
                     }
-                ],
+                },
                 "responses": {
                     "200": {
-                        "description": "Food detail with favorite_count and eaten_count"
+                        "description": "Gacha winner food from V_FOODS_RANKED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "food_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Phở Bò"
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "example": "Phở bò truyền thống",
+                                                    "nullable": true
+                                                },
+                                                "image_url": {
+                                                    "type": "string",
+                                                    "example": "https://res.cloudinary.com/...",
+                                                    "nullable": true
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "ACTIVE"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "example": "2026-03-01 12:00:00",
+                                                    "nullable": true
+                                                },
+                                                "contributor_id": {
+                                                    "type": "integer",
+                                                    "example": 1,
+                                                    "nullable": true
+                                                },
+                                                "rating_score": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 12.5,
+                                                    "nullable": true
+                                                },
+                                                "cd": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 0.04,
+                                                    "nullable": true
+                                                },
+                                                "food_rank": {
+                                                    "type": "string",
+                                                    "example": "SSR",
+                                                    "enum": [
+                                                        "SSR",
+                                                        "SR",
+                                                        "UC",
+                                                        "C"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Food not found"
+                        "description": "No eligible food found"
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 }
-            },
+            }
+        },
+        "/foods/{foodId}": {
             "put": {
                 "tags": [
                     "Foods"
@@ -521,102 +707,6 @@
                         "bearerAuth": []
                     }
                 ]
-            }
-        },
-        "/foods/options": {
-            "get": {
-                "tags": [
-                    "Foods"
-                ],
-                "summary": "Search foods and return top 5 options (ID and name only, Public)",
-                "operationId": "98ade332d6f159894ac652a7633aecef",
-                "parameters": [
-                    {
-                        "name": "search",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Top 5 food options"
-                    }
-                }
-            }
-        },
-        "/foods/gacha": {
-            "post": {
-                "tags": [
-                    "Foods"
-                ],
-                "summary": "Smart Gacha API based on ranking formula, excluded lists, or foodSet",
-                "description": "Rank foods by (favorites + eaten - hated), selects top 10 and returns 1 random winner.",
-                "operationId": "3e3c2a6dbcb6571c75311c8710c293db",
-                "requestBody": {
-                    "required": false,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "numberOfExcludedEaten": {
-                                        "type": "integer",
-                                        "example": 5
-                                    },
-                                    "typeOfExcludedEaten": {
-                                        "type": "string",
-                                        "default": "newest",
-                                        "enum": [
-                                            "newest",
-                                            "oldest",
-                                            "random"
-                                        ]
-                                    },
-                                    "numberOfExcludedGacha": {
-                                        "type": "integer",
-                                        "example": 3
-                                    },
-                                    "typeOfExcludedGacha": {
-                                        "type": "string",
-                                        "default": "newest",
-                                        "enum": [
-                                            "newest",
-                                            "oldest",
-                                            "random"
-                                        ]
-                                    },
-                                    "foodSet": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "integer"
-                                        },
-                                        "example": [
-                                            1,
-                                            2,
-                                            3,
-                                            4,
-                                            5
-                                        ]
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Gacha winner food"
-                    },
-                    "404": {
-                        "description": "No eligible food found"
-                    },
-                    "422": {
-                        "description": "Validation error"
-                    }
-                }
             }
         },
         "/foods/{foodId}/change-status": {
@@ -1151,25 +1241,25 @@
                 ]
             }
         },
-        "/foods/eaten/{eatenId}": {
+        "/foods/eaten/{foodId}": {
             "put": {
                 "tags": [
                     "Foods"
                 ],
                 "summary": "Update an eaten food record (OWNER only)",
-                "operationId": "dddb48333aa0fae11aa8cb40de4de6ec",
+                "operationId": "20be00c7d36ce5484da00e2cb0bd1876",
                 "parameters": [
                     {
-                        "name": "eatenId",
+                        "name": "foodId",
                         "in": "path",
-                        "required": true,
+                        "required": false,
                         "schema": {
                             "type": "integer"
                         }
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
@@ -1195,6 +1285,9 @@
                     "401": {
                         "description": "Unauthorized"
                     },
+                    "403": {
+                        "description": "Forbidden"
+                    },
                     "404": {
                         "description": "Entry not found"
                     }
@@ -1210,11 +1303,19 @@
                     "Foods"
                 ],
                 "summary": "Delete eaten food entry (OWNER only)",
-                "operationId": "69a2ae11c6b91750dabb8fa6cc1befa3",
+                "operationId": "9954d5f580d5ec06afb333a7f86604fc",
                 "parameters": [
                     {
-                        "name": "eatenId",
+                        "name": "foodId",
                         "in": "path",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "food_id",
+                        "in": "query",
                         "required": false,
                         "schema": {
                             "type": "integer"

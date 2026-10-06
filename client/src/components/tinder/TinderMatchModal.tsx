@@ -1,24 +1,29 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
+import { Image } from "@/components/ui/image";
+import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHeart,
   faStar,
-  faBookmark,
-  faCheck,
   faRotate,
   faShareNodes,
-  faUtensils,
-  faSliders,
+  faArrowLeft,
+  faMapLocationDot,
 } from "@fortawesome/free-solid-svg-icons";
 import type { FoodItem, Rarity } from "@/types/food";
-import { useSavedFoods } from "@/context/SavedFoodsContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface TinderMatchModalProps {
   food: FoodItem | null;
@@ -44,16 +49,12 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
   onRestart,
   onChangeFilter,
 }) => {
-  const { isSaved, toggleSaveFood, saveFood } = useSavedFoods();
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   // Trigger grand confetti celebration on open
   useEffect(() => {
     if (!isOpen || !food) return;
-
-    // Automatically ensure the matched food is saved to recent choices
-    saveFood(food);
 
     const count = 200;
     const defaults = {
@@ -93,7 +94,7 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
       spread: 120,
       startVelocity: 45,
     });
-  }, [isOpen, food, saveFood]);
+  }, [isOpen, food]);
 
   const handleShare = useCallback(() => {
     if (!food) return;
@@ -109,6 +110,7 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
     } else {
       navigator.clipboard.writeText(`${text}\n${window.location.href}`).then(() => {
         setCopied(true);
+        toast.success("Đã sao chép liên kết chia sẻ món ăn!");
         setTimeout(() => setCopied(false), 2500);
       });
     }
@@ -116,32 +118,24 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
 
   if (!isOpen || !food) return null;
 
-  const saved = isSaved(food.id);
   const glowStyle = rarityGlows[food.rarity] || rarityGlows.C;
   const imageSrc = imgError || !food.imagePath
     ? "/logos/main-logo.png"
     : food.imagePath;
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        {/* Backdrop with dark blur */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-black/80"
-        />
-
-        {/* Modal Container */}
-        <motion.div
-          initial={{ scale: 0.82, opacity: 0, y: 30 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.85, opacity: 0, y: 20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className={`relative z-10 w-full max-w-lg rounded-2xl border-2 bg-gradient-to-b ${glowStyle} bg-popover text-popover-foreground p-5 sm:p-7 shadow-2xl overflow-hidden`}
-        >
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className={`sm:max-w-lg rounded-2xl border-2 bg-gradient-to-b ${glowStyle} bg-popover text-popover-foreground p-5 sm:p-7 shadow-2xl overflow-hidden`}
+      >
+        <DialogHeader className="sr-only">
+          <DialogTitle>
+            {isSuperMatch ? "SUPER MATCH!" : "IT'S A MATCH!"} - {food.name}
+          </DialogTitle>
+          <DialogDescription>
+            {food.description}
+          </DialogDescription>
+        </DialogHeader>
           {/* Top Celebration Title */}
           <div className="text-center space-y-2 mb-4">
             <motion.div
@@ -211,32 +205,30 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
 
             {/* Real Details in Modal */}
             <div className="p-4 space-y-3">
-              {/* Engagement Stats Grid */}
+              {/* Real Details Grid */}
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
                   <span className="text-[10px] text-muted-foreground block font-medium">
-                    Yêu Thích
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-rose-500 flex items-center justify-center gap-1">
-                    <FontAwesomeIcon icon={faHeart} className="text-[10px]" />
-                    {food.favorite_count || 0}
-                  </span>
-                </div>
-                <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
-                  <span className="text-[10px] text-muted-foreground block font-medium">
-                    Đã Ăn
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-amber-500 flex items-center justify-center gap-1">
-                    <FontAwesomeIcon icon={faUtensils} className="text-[10px]" />
-                    {food.eaten_count || 0}
-                  </span>
-                </div>
-                <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
-                  <span className="text-[10px] text-muted-foreground block font-medium">
-                    Phân Hạng
+                    Mã Món
                   </span>
                   <span className="text-xs sm:text-sm font-black text-foreground">
-                    {food.rarity}
+                    #{food.food_id || food.id}
+                  </span>
+                </div>
+                <div className="p-2 rounded-xl bg-secondary/15 border border-secondary/30">
+                  <span className="text-[10px] text-secondary block font-bold">
+                    Độ Hiếm
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-foreground">
+                    {food.food_rank || food.rarity}
+                  </span>
+                </div>
+                <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
+                  <span className="text-[10px] text-muted-foreground block font-medium">
+                    Trạng Thái
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-foreground">
+                    {food.status === "ACTIVE" ? "Khả dụng" : food.status}
                   </span>
                 </div>
               </div>
@@ -254,19 +246,15 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
           {/* Action Buttons */}
           <div className="space-y-2.5">
             <div className="grid grid-cols-2 gap-2.5">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => toggleSaveFood(food)}
-                className={`rounded-2xl text-xs font-bold gap-1.5 py-2.5 border-border transition-all cursor-pointer ${
-                  saved
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card hover:bg-muted text-foreground"
-                }`}
+              <a
+                href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${food.name}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl text-xs font-bold gap-1.5 py-2.5 border border-border bg-card hover:bg-muted text-foreground flex items-center justify-center transition-all cursor-pointer shadow-2xs"
               >
-                <FontAwesomeIcon icon={saved ? faCheck : faBookmark} className="text-xs" />
-                <span>{saved ? "Đã Trong Thực Đơn" : "Lưu Vào Thực Đơn"}</span>
-              </Button>
+                <FontAwesomeIcon icon={faMapLocationDot} className="text-xs text-emerald-500" />
+                <span>Tìm Quán Ăn</span>
+              </a>
 
               <Button
                 type="button"
@@ -296,13 +284,12 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
                 onClick={onChangeFilter}
                 className="rounded-2xl text-xs font-bold gap-1.5 py-2.5 text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
               >
-                <FontAwesomeIcon icon={faSliders} className="text-xs" />
-                <span>Đổi Bộ Lọc Món</span>
+                <FontAwesomeIcon icon={faArrowLeft} className="text-xs" />
+                <span>Quay Lại</span>
               </Button>
             </div>
           </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+      </DialogContent>
+    </Dialog>
   );
 };

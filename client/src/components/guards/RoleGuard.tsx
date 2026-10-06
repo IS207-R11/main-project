@@ -3,7 +3,7 @@
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/api/types';
-import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShieldHalved, faArrowRightToBracket, faHouse } from '@fortawesome/free-solid-svg-icons';
@@ -19,8 +19,17 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ allowedRoles, children }) 
 
   if (isLoading) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <Spinner />
+      <div className="min-h-[50vh] flex items-center justify-center p-6">
+        <div className="w-full max-w-md p-6 rounded-3xl bg-card border border-border shadow-md space-y-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-10 rounded-xl" />
+            <div className="space-y-1.5 flex-1">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+          <Skeleton className="h-20 w-full rounded-2xl" />
+        </div>
       </div>
     );
   }

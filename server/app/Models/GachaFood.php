@@ -12,9 +12,11 @@ class GachaFood extends Model
 
     protected $table = 'GACHA_FOODS';
 
-    protected $primaryKey = 'gacha_id';
+    public $incrementing = false;
 
     public $timestamps = false;
+
+    protected $primaryKey = null;
 
     protected $fillable = [
         'user_id',
