@@ -24,7 +24,9 @@ import {
   faUserPlus,
   faMapMarkerAlt,
 } from '@fortawesome/free-solid-svg-icons';
-import { validatePassword } from '@/lib/validation';
+import { validatePassword, validateUsername, validateEmail } from '@/lib/validation';
+import { PasswordInput } from '@/components/ui/password-input';
+import { formatApiError } from '@/lib/errorMapping';
 
 export const AuthDialog: React.FC = () => {
   const { authModalOpen, authModalTab, closeAuthModal, openAuthModal, login, register } = useAuth();
@@ -45,20 +47,31 @@ export const AuthDialog: React.FC = () => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!loginUsername.trim() || !loginPassword.trim()) {
+    const trimmedLogin = loginUsername.trim();
+    if (!trimmedLogin || !loginPassword.trim()) {
       toast.error('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
+      return;
+    }
+
+    if (/\s/.test(loginUsername)) {
+      toast.error('Tên đăng nhập không được chứa khoảng trắng.');
+      return;
+    }
+
+    if (Array.from(loginUsername).some((ch) => ch.charCodeAt(0) > 127)) {
+      toast.error('Tên đăng nhập không được chứa ký tự có dấu hoặc unicode.');
       return;
     }
 
     try {
       setLoginLoading(true);
-      await login({ username: loginUsername.trim(), password: loginPassword });
+      await login({ username: trimmedLogin, password: loginPassword });
       toast.success('Đăng nhập thành công!');
       // Reset form
       setLoginUsername('');
       setLoginPassword('');
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Đăng nhập không thành công';
+      const errorMsg = formatApiError(err, 'Đăng nhập');
       toast.error(errorMsg);
     } finally {
       setLoginLoading(false);
@@ -68,8 +81,20 @@ export const AuthDialog: React.FC = () => {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!regUsername.trim() || !regPassword.trim()) {
-      toast.error('Vui lòng điền tên đăng nhập và mật khẩu');
+    const usernameError = validateUsername(regUsername);
+    if (usernameError) {
+      toast.error(usernameError);
+      return;
+    }
+
+    const emailError = validateEmail(regEmail);
+    if (emailError) {
+      toast.error(emailError);
+      return;
+    }
+
+    if (!regPassword.trim()) {
+      toast.error('Vui lòng nhập mật khẩu');
       return;
     }
 
@@ -88,8 +113,8 @@ export const AuthDialog: React.FC = () => {
       setRegLoading(true);
       await register({
         username: regUsername.trim(),
+        email: regEmail.trim(),
         password: regPassword,
-        email: regEmail.trim() || undefined,
         address: regAddress.trim() || undefined,
       });
       toast.success('Đăng ký tài khoản thành công!');
@@ -100,7 +125,7 @@ export const AuthDialog: React.FC = () => {
       setRegPassword('');
       setRegConfirmPassword('');
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Đăng ký không thành công';
+      const errorMsg = formatApiError(err, 'Đăng ký');
       toast.error(errorMsg);
     } finally {
       setRegLoading(false);
@@ -149,11 +174,11 @@ export const AuthDialog: React.FC = () => {
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <FontAwesomeIcon icon={faUser} className="text-muted-foreground text-[11px]" />
-                  <span>Tên đăng nhập</span>
+                  <span>Tên đăng nhập hoặc Email</span>
                 </label>
                 <Input
                   type="text"
-                  placeholder="Nhập username của bạn..."
+                  placeholder="Nhập username hoặc email của bạn..."
                   value={loginUsername}
                   onChange={(e) => setLoginUsername(e.target.value)}
                   disabled={loginLoading}
@@ -166,8 +191,7 @@ export const AuthDialog: React.FC = () => {
                   <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
                   <span>Mật khẩu</span>
                 </label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="••••••••"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
@@ -213,7 +237,7 @@ export const AuthDialog: React.FC = () => {
                 </label>
                 <Input
                   type="text"
-                  placeholder="Chọn username độc nhất..."
+                  placeholder="Chọn username độc nhất (không dấu, không khoảng trắng)..."
                   value={regUsername}
                   onChange={(e) => setRegUsername(e.target.value)}
                   disabled={regLoading}
@@ -224,7 +248,7 @@ export const AuthDialog: React.FC = () => {
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <FontAwesomeIcon icon={faEnvelope} className="text-muted-foreground text-[11px]" />
-                  <span>Email (tùy chọn)</span>
+                  <span>Email *</span>
                 </label>
                 <Input
                   type="email"
@@ -232,6 +256,7 @@ export const AuthDialog: React.FC = () => {
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   disabled={regLoading}
+                  required
                 />
               </div>
 
@@ -254,8 +279,7 @@ export const AuthDialog: React.FC = () => {
                   <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
                   <span>Mật khẩu *</span>
                 </label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="Tối thiểu 8 ký tự..."
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
@@ -272,8 +296,7 @@ export const AuthDialog: React.FC = () => {
                   <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
                   <span>Xác nhận mật khẩu *</span>
                 </label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="Nhập lại mật khẩu..."
                   value={regConfirmPassword}
                   onChange={(e) => setRegConfirmPassword(e.target.value)}

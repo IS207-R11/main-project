@@ -1,15 +1,18 @@
 import { API_BASE_URL } from './config';
 import { ApiErrorResponse } from './types/common';
+import { normalizeErrorMessage } from '@/lib/errorMapping';
 
 export class ApiError extends Error {
   status: number;
   data?: ApiErrorResponse;
+  originalMessage: string;
 
-  constructor(status: number, message: string, data?: ApiErrorResponse) {
+  constructor(status: number, message: string, data?: ApiErrorResponse, originalMessage?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.data = data;
+    this.originalMessage = originalMessage || message;
   }
 }
 
@@ -85,32 +88,65 @@ export async function apiClient<T>(
     }
   }
 
-  const response = await fetch(url, {
-    ...restOptions,
-    headers: reqHeaders,
-    body: requestBody,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...restOptions,
+      headers: reqHeaders,
+      body: requestBody,
+    });
+  } catch (err: unknown) {
+    console.error(`[Network Error] ${url}:`, err);
+    throw new ApiError(
+      0,
+      normalizeErrorMessage('Network error'),
+      undefined,
+      err instanceof Error ? err.message : String(err)
+    );
+  }
 
   const contentType = response.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
 
   if (!response.ok) {
     let errorData: ApiErrorResponse | undefined;
-    let errorMessage = `HTTP Error ${response.status}: ${response.statusText}`;
+    let rawErrorMessage = `HTTP Error ${response.status}: ${response.statusText}`;
 
     try {
       if (isJson) {
         errorData = await response.json();
-        errorMessage = errorData?.message || errorMessage;
+        if (errorData?.errors && typeof errorData.errors === 'object') {
+          const firstKey = Object.keys(errorData.errors)[0];
+          const errList = firstKey ? errorData.errors[firstKey] : null;
+          if (Array.isArray(errList) && errList.length > 0) {
+            rawErrorMessage = String(errList[0]);
+          } else if (errorData?.message) {
+            rawErrorMessage = errorData.message;
+          }
+        } else if (errorData?.message) {
+          rawErrorMessage = errorData.message;
+        }
       } else {
         const text = await response.text();
-        if (text) errorMessage = text;
+        if (text) rawErrorMessage = text;
       }
     } catch {
       // Failed to parse response body
     }
 
-    throw new ApiError(response.status, errorMessage, errorData);
+    // Requirement: Lỗi thật sự thì xuất ra console log
+    console.error(`[API Error] ${response.status} ${url}:`, {
+      status: response.status,
+      statusText: response.statusText,
+      url,
+      rawErrorMessage,
+      errorData,
+    });
+
+    // Requirement: Chuẩn hóa các thông báo phổ biến nhất sang tiếng Việt, không được chuẩn hóa thì "Đã có lỗi xảy ra!"
+    const normalizedMessage = normalizeErrorMessage(rawErrorMessage);
+
+    throw new ApiError(response.status, normalizedMessage, errorData, rawErrorMessage);
   }
 
   if (response.status === 204) {

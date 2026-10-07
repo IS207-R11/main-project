@@ -1,4 +1,39 @@
 /**
+ * Username validation rule:
+ * - Required (bắt buộc)
+ * - No whitespace (không có khoảng trắng)
+ * - No unicode / ASCII only (không có unicode)
+ */
+export function validateUsername(username: string): string | null {
+  if (!username || !username.trim()) {
+    return 'Tên đăng nhập là bắt buộc.';
+  }
+  if (/\s/.test(username)) {
+    return 'Tên đăng nhập không được chứa khoảng trắng.';
+  }
+  if (Array.from(username).some((ch) => ch.charCodeAt(0) > 127)) {
+    return 'Tên đăng nhập không được chứa ký tự có dấu hoặc unicode.';
+  }
+  return null;
+}
+
+/**
+ * Email validation rule:
+ * - Required (bắt buộc)
+ * - Valid email format
+ */
+export function validateEmail(email: string): string | null {
+  if (!email || !email.trim()) {
+    return 'Email là bắt buộc.';
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.trim())) {
+    return 'Địa chỉ email không đúng định dạng.';
+  }
+  return null;
+}
+
+/**
  * Password validation rule:
  * - At least 8 characters
  * - Uppercase letter

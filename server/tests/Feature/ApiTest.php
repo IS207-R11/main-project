@@ -51,6 +51,50 @@ test('signup and signin flow with hashed_password and address', function () {
     $signoutRes->assertStatus(200);
 });
 
+test('signup validation rejects missing email, whitespace, and unicode in username', function () {
+    // Missing email
+    $resNoEmail = $this->postJson('/api/auth/signup', [
+        'username' => 'validuser123',
+        'password' => 'Password123!',
+    ]);
+    $resNoEmail->assertStatus(422)
+        ->assertJsonValidationErrors(['email']);
+
+    // Username with whitespace
+    $resSpace = $this->postJson('/api/auth/signup', [
+        'username' => 'invalid user',
+        'email' => 'valid_'.uniqid().'@example.com',
+        'password' => 'Password123!',
+    ]);
+    $resSpace->assertStatus(422)
+        ->assertJsonValidationErrors(['username']);
+
+    // Username with unicode
+    $resUnicode = $this->postJson('/api/auth/signup', [
+        'username' => 'nguyễn_văn_a',
+        'email' => 'valid_'.uniqid().'@example.com',
+        'password' => 'Password123!',
+    ]);
+    $resUnicode->assertStatus(422)
+        ->assertJsonValidationErrors(['username']);
+});
+
+test('signin validation rejects whitespace and unicode in username', function () {
+    $resSpace = $this->postJson('/api/auth/signin', [
+        'username' => 'user with space',
+        'password' => 'Password123!',
+    ]);
+    $resSpace->assertStatus(422)
+        ->assertJsonValidationErrors(['username']);
+
+    $resUnicode = $this->postJson('/api/auth/signin', [
+        'username' => 'người_dùng',
+        'password' => 'Password123!',
+    ]);
+    $resUnicode->assertStatus(422)
+        ->assertJsonValidationErrors(['username']);
+});
+
 test('refresh token generates new access token', function () {
     $uniqueName = 'refreshuser_'.uniqid();
     $user = User::create([

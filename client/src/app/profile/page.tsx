@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { usersApi, authApi, foodsApi } from '@/api';
 import { UserFoodItem } from '@/api/types';
 import { validatePassword } from '@/lib/validation';
+import { PasswordInput } from '@/components/ui/password-input';
+import { formatApiError } from '@/lib/errorMapping';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import {
   Dialog,
@@ -183,7 +185,7 @@ export default function ProfilePage() {
       setConfirmNewPassword('');
       toast.success('Đổi mật khẩu thành công!');
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Lỗi đổi mật khẩu');
+      toast.error(formatApiError(err, 'Đổi mật khẩu'));
     } finally {
       setSecSaving(false);
     }
@@ -626,8 +628,7 @@ export default function ProfilePage() {
                 <form onSubmit={handleChangePassword} className="space-y-4 w-full">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-foreground">Mật khẩu hiện tại</label>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       placeholder="••••••••"
                       value={oldPassword}
                       onChange={(e) => setOldPassword(e.target.value)}
@@ -637,8 +638,7 @@ export default function ProfilePage() {
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-foreground">Mật khẩu mới</label>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       placeholder="Tối thiểu 8 ký tự..."
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
@@ -652,8 +652,7 @@ export default function ProfilePage() {
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-foreground">Xác nhận mật khẩu mới</label>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       placeholder="Nhập lại mật khẩu mới..."
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}

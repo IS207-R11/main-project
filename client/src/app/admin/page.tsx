@@ -15,6 +15,8 @@ import {
   ReportStatus,
 } from '@/api/types';
 import { validatePassword } from '@/lib/validation';
+import { PasswordInput } from '@/components/ui/password-input';
+import { formatApiError } from '@/lib/errorMapping';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -289,7 +291,7 @@ export default function AdminPage() {
       setPasswordModalUser(null);
       setNewPasswordInput('');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Lỗi khi đổi mật khẩu');
+      toast.error(formatApiError(err, 'Đổi mật khẩu người dùng'));
     } finally {
       setPasswordSaving(false);
       setActionUserId(null);
@@ -1011,8 +1013,7 @@ export default function AdminPage() {
             <form onSubmit={handleAdminResetPassword} className="space-y-3">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground">Mật khẩu mới *</label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="Tối thiểu 8 ký tự..."
                   value={newPasswordInput}
                   onChange={(e) => setNewPasswordInput(e.target.value)}

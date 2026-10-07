@@ -61,8 +61,13 @@ class AuthController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string',
-            'password' => 'required|string',
+            'username' => ['required', 'string', 'ascii', 'regex:/^\S+$/'],
+            'password' => ['required', 'string'],
+        ], [
+            'username.required' => 'Tên đăng nhập là bắt buộc.',
+            'username.ascii' => 'Tên đăng nhập không được chứa ký tự có dấu hoặc unicode.',
+            'username.regex' => 'Tên đăng nhập không được chứa khoảng trắng.',
+            'password.required' => 'Mật khẩu là bắt buộc.',
         ]);
 
         if ($validator->fails()) {
@@ -104,7 +109,7 @@ class AuthController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['username', 'password'],
+                required: ['username', 'email', 'password'],
                 properties: [
                     new OA\Property(property: 'username', type: 'string', example: 'new_user'),
                     new OA\Property(property: 'email', type: 'string', format: 'email', example: 'new_user@example.com'),
@@ -128,8 +133,8 @@ class AuthController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:100|unique:USERS,username',
-            'email' => 'nullable|email|max:255|unique:USERS,email',
+            'username' => ['required', 'string', 'max:100', 'ascii', 'regex:/^\S+$/', 'unique:USERS,username'],
+            'email' => ['required', 'email', 'max:255', 'unique:USERS,email'],
             'password' => [
                 'required',
                 'string',
@@ -139,7 +144,15 @@ class AuthController extends Controller
                     ->numbers()
                     ->symbols(),
             ],
-            'address' => 'nullable|string|max:255',
+            'address' => ['nullable', 'string', 'max:255'],
+        ], [
+            'username.required' => 'Tên đăng nhập là bắt buộc.',
+            'username.ascii' => 'Tên đăng nhập không được chứa ký tự có dấu hoặc unicode.',
+            'username.regex' => 'Tên đăng nhập không được chứa khoảng trắng.',
+            'username.unique' => 'Tên đăng nhập này đã được sử dụng.',
+            'email.required' => 'Email là bắt buộc.',
+            'email.email' => 'Địa chỉ email không đúng định dạng.',
+            'email.unique' => 'Email này đã được sử dụng.',
         ]);
 
         if ($validator->fails()) {
@@ -147,12 +160,7 @@ class AuthController extends Controller
         }
 
         $username = $request->input('username');
-        $email = $request->input('email') ?? ($username.'@AnGi.app');
-
-        // Check if generated email exists
-        if (User::where('email', $email)->exists()) {
-            $email = $username.'_'.time().'@AnGi.app';
-        }
+        $email = $request->input('email');
 
         $user = User::create([
             'username' => $username,

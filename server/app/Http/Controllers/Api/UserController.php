@@ -137,8 +137,8 @@ class UserController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'username' => 'nullable|string|max:100|unique:USERS,username,'.$user->user_id.',user_id',
-            'email' => 'nullable|email|max:255|unique:USERS,email,'.$user->user_id.',user_id',
+            'username' => ['nullable', 'string', 'max:100', 'ascii', 'regex:/^\S+$/', 'unique:USERS,username,'.$user->user_id.',user_id'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:USERS,email,'.$user->user_id.',user_id'],
             'address' => 'nullable|string|max:255',
         ]);
 
