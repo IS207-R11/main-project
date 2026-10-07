@@ -49,7 +49,7 @@ export interface EatenFood {
 
 export interface ListFoodsParams extends PaginationParams {
   search?: string;
-  status?: FoodStatus;
+  status?: FoodStatus | 'ALL';
   food_rank?: FoodRank;
   sort_by?: 'name' | 'created_at' | 'rating_score' | 'cd' | 'food_rank';
   sort_order?: 'asc' | 'desc';

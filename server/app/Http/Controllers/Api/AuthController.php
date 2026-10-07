@@ -54,7 +54,7 @@ class AuthController extends Controller
     public function signin(Request $request): JsonResponse
     {
         $raw = $request->getContent();
-        if ($request->isJson() && !empty($raw) && json_decode($raw) === null && json_last_error() !== JSON_ERROR_NONE) {
+        if ($request->isJson() && ! empty($raw) && json_decode($raw) === null && json_last_error() !== JSON_ERROR_NONE) {
             return response()->json([
                 'message' => 'Dữ liệu JSON không hợp lệ: '.json_last_error_msg().'. Vui lòng kiểm tra lại cú pháp (ví dụ: dấu phẩy thừa).',
             ], 400);
@@ -126,7 +126,7 @@ class AuthController extends Controller
     public function signup(Request $request): JsonResponse
     {
         $raw = $request->getContent();
-        if ($request->isJson() && !empty($raw) && json_decode($raw) === null && json_last_error() !== JSON_ERROR_NONE) {
+        if ($request->isJson() && ! empty($raw) && json_decode($raw) === null && json_last_error() !== JSON_ERROR_NONE) {
             return response()->json([
                 'message' => 'Dữ liệu JSON không hợp lệ: '.json_last_error_msg().'. Vui lòng kiểm tra lại cú pháp (ví dụ: dấu phẩy thừa).',
             ], 400);

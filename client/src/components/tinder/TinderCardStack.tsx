@@ -124,13 +124,17 @@ export const TinderCardStack: React.FC<TinderCardStackProps> = ({
 
   const handleInfo = useCallback(() => {
     if (!currentFood || isSwipingRef.current) return;
-    // Simulate click on flip button of the active card
-    tinderSounds.playFlip();
-    const flipBtn = containerRef.current?.querySelector(
-      'button[title="Lật thẻ xem dinh dưỡng & nguyên liệu"]'
-    ) as HTMLButtonElement | null;
-    if (flipBtn) flipBtn.click();
+    if (topCardRef.current?.flip) {
+      topCardRef.current.flip();
+    } else {
+      tinderSounds.playFlip();
+      const flipBtn = containerRef.current?.querySelector(
+        'button[title="Lật thẻ"]'
+      ) as HTMLButtonElement | null;
+      if (flipBtn) flipBtn.click();
+    }
   }, [currentFood]);
+
 
   // Keyboard navigation support
   useEffect(() => {

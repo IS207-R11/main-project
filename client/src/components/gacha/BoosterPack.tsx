@@ -4,7 +4,7 @@ import React from "react";
 import { Image } from "@/components/ui/image";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBolt, faWandMagicSparkles, faStar } from "@fortawesome/free-solid-svg-icons";
+import { faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 
 interface BoosterPackProps {

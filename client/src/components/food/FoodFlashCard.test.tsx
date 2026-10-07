@@ -26,6 +26,7 @@ vi.mock('@/api', () => ({
     addHated: vi.fn().mockResolvedValue({ message: 'Success' }),
     removeHated: vi.fn().mockResolvedValue({ message: 'Success' }),
     recordEaten: vi.fn().mockResolvedValue({ message: 'Success' }),
+    deleteNearlyEaten: vi.fn().mockResolvedValue({ message: 'Success' }),
   },
 }));
 
@@ -170,4 +171,36 @@ describe('FoodFlashCard Component (Testing Matrix & Negative User Scenarios)', (
     render(<FoodFlashCard food={pendingFood} />);
     expect(screen.getAllByText('Chờ duyệt').length).toBeGreaterThan(0);
   });
+
+  it('8. Lật thẻ 3D: Click nút Lật thẻ chuyển sang mặt sau hiển thị logo Ăn Gì và không chứa chi tiết món ăn', async () => {
+    render(<FoodFlashCard food={mockFood} />);
+
+    // Click nút lật thẻ trên mặt trước
+    const flipBtn = screen.getByTitle('Lật thẻ');
+    fireEvent.click(flipBtn);
+
+    // Mặt sau hiển thị logo Ăn Gì và nút lật lại
+    await waitFor(() => {
+      expect(screen.getByAltText('AnGi Logo')).toBeInTheDocument();
+      expect(screen.getByText('Lật lại mặt trước')).toBeInTheDocument();
+    });
+
+    // Lật lại mặt trước
+    const flipBackBtn = screen.getByText('Lật lại mặt trước');
+    fireEvent.click(flipBackBtn);
+  });
+
+  it('9. Thao tác Đã ăn: Hover action bar và click "Bỏ lần ăn gần nhất" gọi deleteNearlyEaten và giảm số lượng', async () => {
+    render(<FoodFlashCard food={mockFood} />);
+
+    // Click "Bỏ lần ăn gần nhất" trong tooltip action bar
+    const removeBtn = screen.getByTitle('Bỏ lần ăn gần nhất');
+    fireEvent.click(removeBtn);
+
+    await waitFor(() => {
+      expect(foodsApi.deleteNearlyEaten).toHaveBeenCalledWith(42);
+      expect(screen.getByText('7')).toBeInTheDocument(); // ban đầu là 8, giảm xuống 7
+    });
+  });
 });
+

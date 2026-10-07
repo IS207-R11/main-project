@@ -6,17 +6,13 @@ use App\Enums\FoodStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EatenFoodResource;
 use App\Http\Resources\FoodCardResource;
-use App\Http\Resources\FoodOptionResource;
 use App\Http\Resources\UserFoodResource;
 use App\Models\EatenFood;
-use App\Models\FavoriteFood;
 use App\Models\Food;
 use App\Models\GachaFood;
-use App\Models\HatedFood;
 use App\Models\User;
 use App\Services\FuzzySearchService;
 use App\Services\JwtService;
-use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +35,7 @@ class FoodController extends Controller
             new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
             new OA\Parameter(name: 'pageSize', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10)),
             new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['ACTIVE', 'PENDING', 'DISABLED'])),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['ALL', 'ACTIVE', 'PENDING', 'DISABLED'])),
             new OA\Parameter(name: 'sort_by', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['name', 'created_at', 'rating_score', 'cd', 'food_rank'])),
             new OA\Parameter(name: 'sort_order', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'], default: 'asc')),
         ],
@@ -82,16 +78,29 @@ class FoodController extends Controller
             }
         }
 
-        $role = $user?->role instanceof \BackedEnum ? $user->role->value : (string) $user?->role;
-        $statusFilter = $request->query('status');
+        $query = DB::table('FOODS as f')
+            ->leftJoin('V_FOODS_RANKED as v', 'f.food_id', '=', 'v.food_id')
+            ->select([
+                'f.food_id',
+                'f.name',
+                'f.description',
+                'f.image_url',
+                'f.status',
+                'f.created_at',
+                'f.contributor_id',
+                'f.rating_score',
+                'v.cd',
+                DB::raw("COALESCE(v.food_rank, 'C') as food_rank"),
+            ]);
 
-        if (in_array($role, ['ADMIN', 'MODERATOR'], true) && $statusFilter && $statusFilter !== FoodStatus::ACTIVE->value && $statusFilter !== 'ACTIVE') {
-            $query = DB::table('FOODS')
-                ->select('food_id', 'name', 'description', 'image_url', 'status', 'created_at', 'contributor_id')
-                ->selectRaw('rating_score, NULL as cd, NULL as food_rank')
-                ->where('status', $statusFilter);
+        $statusFilter = $request->query('status');
+        if ($statusFilter !== null && trim((string) $statusFilter) !== '') {
+            $upperStatus = strtoupper(trim((string) $statusFilter));
+            if ($upperStatus !== 'ALL') {
+                $query->where('f.status', $upperStatus);
+            }
         } else {
-            $query = DB::table('V_FOODS_RANKED');
+            $query->where('f.status', FoodStatus::ACTIVE->value);
         }
 
         return $this->queryFoods($request, $query);
@@ -438,9 +447,23 @@ class FoodController extends Controller
                 $uploadResult = cloudinary()->uploadApi()->upload($imageFile->getRealPath(), $options);
                 $imageUrl = $uploadResult['secure_url'] ?? $uploadResult['url'] ?? $imageUrl;
             } catch (\Throwable $e) {
-                return response()->json([
-                    'message' => 'Lỗi khi tải ảnh lên Cloudinary: '.$e->getMessage(),
-                ], 500);
+                $isConfigError = str_contains($e->getMessage(), 'Invalid configuration') ||
+                                 str_contains($e->getMessage(), 'please set up your environment');
+
+                if ($isConfigError) {
+                    try {
+                        $path = $imageFile->store('foods', 'public');
+                        $imageUrl = url('storage/'.$path);
+                    } catch (\Throwable $localErr) {
+                        return response()->json([
+                            'message' => 'Lỗi khi tải ảnh lên Cloudinary: '.$e->getMessage().'. Vui lòng cấu hình CLOUDINARY_URL trên Render Dashboard.',
+                        ], 500);
+                    }
+                } else {
+                    return response()->json([
+                        'message' => 'Lỗi khi tải ảnh lên Cloudinary: '.$e->getMessage(),
+                    ], 500);
+                }
             }
         }
 
@@ -1044,19 +1067,14 @@ class FoodController extends Controller
         $foodId = (int) $request->input('food_id');
         $note = $request->input('note');
 
-        DB::table('EATEN_FOODS')->upsert(
-            [
-                'user_id' => $user->user_id,
-                'food_id' => $foodId,
-                'note' => $note,
-                'created_at' => now(),
-            ],
-            ['user_id', 'food_id'],
-            ['note', 'created_at']
-        );
+        $eatenId = DB::table('EATEN_FOODS')->insertGetId([
+            'user_id' => $user->user_id,
+            'food_id' => $foodId,
+            'note' => $note,
+            'created_at' => now(),
+        ]);
 
-        $eatenFood = EatenFood::where('user_id', $user->user_id)
-            ->where('food_id', $foodId)
+        $eatenFood = EatenFood::where('eaten_id', $eatenId)
             ->with('food')
             ->first();
 
@@ -1064,6 +1082,53 @@ class FoodController extends Controller
             'message' => 'Eaten food recorded successfully',
             'data' => new EatenFoodResource($eatenFood),
         ], 201);
+    }
+
+    #[OA\Delete(
+        path: '/foods/eaten/nearly',
+        summary: 'Delete the most recent eaten food record (OWNER only)',
+        security: [['bearerAuth' => []]],
+        tags: ['Foods'],
+        parameters: [
+            new OA\Parameter(name: 'food_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Most recent eaten food entry deleted'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 404, description: 'No eaten record found to delete'),
+        ]
+    )]
+    public function removeNearlyEaten(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $foodId = $request->input('food_id')
+            ?? $request->query('food_id')
+            ?? $request->query('food-id');
+
+        $query = EatenFood::where('user_id', $user->user_id);
+        if ($foodId) {
+            $query->where('food_id', (int) $foodId);
+        }
+
+        $nearly = $query->orderBy('created_at', 'desc')
+            ->orderBy('eaten_id', 'desc')
+            ->first();
+
+        if (! $nearly) {
+            return response()->json(['message' => 'Không tìm thấy lịch sử ăn gần nhất để xóa'], 404);
+        }
+
+        DB::table('EATEN_FOODS')
+            ->where('eaten_id', $nearly->eaten_id)
+            ->delete();
+
+        return response()->json([
+            'message' => 'Đã xóa lần ăn gần nhất thành công',
+            'data' => [
+                'eaten_id' => (int) $nearly->eaten_id,
+                'food_id' => (int) $nearly->food_id,
+            ],
+        ], 200);
     }
 
     #[OA\Put(
@@ -1093,14 +1158,14 @@ class FoodController extends Controller
     public function updateEaten(Request $request, int|string|null $foodId = null): JsonResponse
     {
         $user = $request->user();
-        $targetFoodId = $foodId
-            ?? $request->input('food_id')
-            ?? $request->query('food_id')
+        $targetId = $foodId
+            ?? $request->input('eaten_id')
             ?? $request->query('eaten_id')
-            ?? $request->input('eaten_id');
+            ?? $request->input('food_id')
+            ?? $request->query('food_id');
 
-        if (! $targetFoodId) {
-            return response()->json(['message' => 'Parameter food_id is required'], 422);
+        if (! $targetId) {
+            return response()->json(['message' => 'Parameter food_id or eaten_id is required'], 422);
         }
 
         $validator = Validator::make($request->all(), [
@@ -1113,11 +1178,16 @@ class FoodController extends Controller
         }
 
         $eaten = EatenFood::where('user_id', $user->user_id)
-            ->where('food_id', $targetFoodId)
+            ->where(function ($q) use ($targetId) {
+                $q->where('eaten_id', $targetId)
+                    ->orWhere('food_id', $targetId);
+            })
             ->first();
 
         if (! $eaten) {
-            $existsForAnyone = EatenFood::where('food_id', $targetFoodId)->exists();
+            $existsForAnyone = EatenFood::where('eaten_id', $targetId)
+                ->orWhere('food_id', $targetId)
+                ->exists();
             if ($existsForAnyone) {
                 return response()->json(['message' => 'Forbidden: You can only edit your own eaten food records'], 403);
             }
@@ -1125,41 +1195,15 @@ class FoodController extends Controller
             return response()->json(['message' => 'Eaten food entry not found'], 404);
         }
 
-        $newFoodId = $request->input('food_id');
-        $note = $request->input('note');
-
-        $updateData = [];
         if ($request->has('note')) {
-            $updateData['note'] = $note;
+            $eaten->note = $request->input('note');
         }
-
-        if ($request->has('food_id') && (int) $newFoodId !== (int) $targetFoodId) {
-            DB::table('EATEN_FOODS')
-                ->where('user_id', $user->user_id)
-                ->where('food_id', $targetFoodId)
-                ->delete();
-
-            DB::table('EATEN_FOODS')->upsert(
-                [
-                    'user_id' => $user->user_id,
-                    'food_id' => (int) $newFoodId,
-                    'note' => $request->has('note') ? $note : $eaten->note,
-                    'created_at' => $eaten->created_at ?? now(),
-                ],
-                ['user_id', 'food_id'],
-                ['note']
-            );
-
-            $targetFoodId = $newFoodId;
-        } elseif (! empty($updateData)) {
-            DB::table('EATEN_FOODS')
-                ->where('user_id', $user->user_id)
-                ->where('food_id', $targetFoodId)
-                ->update($updateData);
+        if ($request->has('food_id')) {
+            $eaten->food_id = (int) $request->input('food_id');
         }
+        $eaten->save();
 
-        $updated = EatenFood::where('user_id', $user->user_id)
-            ->where('food_id', $targetFoodId)
+        $updated = EatenFood::where('eaten_id', $eaten->eaten_id)
             ->with('food')
             ->first();
 
@@ -1188,25 +1232,30 @@ class FoodController extends Controller
     )]
     public function removeEaten(Request $request, int|string|null $foodId = null): JsonResponse
     {
-        $targetFoodId = $foodId
-            ?? $request->query('food_id')
-            ?? $request->query('food-id')
-            ?? $request->input('food_id')
+        $targetId = $foodId
             ?? $request->query('eaten_id')
             ?? $request->query('eaten-id')
-            ?? $request->input('eaten_id');
+            ?? $request->input('eaten_id')
+            ?? $request->query('food_id')
+            ?? $request->query('food-id')
+            ?? $request->input('food_id');
 
-        if (! $targetFoodId) {
-            return response()->json(['message' => 'Parameter food_id is required'], 422);
+        if (! $targetId) {
+            return response()->json(['message' => 'Parameter food_id or eaten_id is required'], 422);
         }
 
         $user = $request->user();
-        $existsForUser = EatenFood::where('user_id', $user->user_id)
-            ->where('food_id', $targetFoodId)
-            ->exists();
+        $eaten = EatenFood::where('user_id', $user->user_id)
+            ->where(function ($q) use ($targetId) {
+                $q->where('eaten_id', $targetId)
+                    ->orWhere('food_id', $targetId);
+            })
+            ->first();
 
-        if (! $existsForUser) {
-            $existsForAnyone = EatenFood::where('food_id', $targetFoodId)->exists();
+        if (! $eaten) {
+            $existsForAnyone = EatenFood::where('eaten_id', $targetId)
+                ->orWhere('food_id', $targetId)
+                ->exists();
             if ($existsForAnyone) {
                 return response()->json(['message' => 'Forbidden: You can only delete your own eaten food records'], 403);
             }
@@ -1214,10 +1263,7 @@ class FoodController extends Controller
             return response()->json(['message' => 'Eaten food not found'], 404);
         }
 
-        DB::table('EATEN_FOODS')
-            ->where('user_id', $user->user_id)
-            ->where('food_id', $targetFoodId)
-            ->delete();
+        $eaten->delete();
 
         return response()->json(['message' => 'Eaten food entry deleted successfully']);
     }
@@ -1231,25 +1277,31 @@ class FoodController extends Controller
         // Filtering by rarity / food_rank
         $foodRank = $request->query('food_rank') ?? $request->query('rarity');
         if ($foodRank && in_array(strtoupper((string) $foodRank), ['SSR', 'SR', 'UC', 'C'], true)) {
-            $queryBuilder->where('food_rank', strtoupper((string) $foodRank));
+            $queryBuilder->where(DB::raw("COALESCE(v.food_rank, 'C')"), strtoupper((string) $foodRank));
         }
 
         // Sorting
         $sortBy = $request->query('sort_by') ?? $request->query('sort-by');
         $sortOrder = strtolower($request->query('sort_order') ?? $request->query('sort-order') ?? 'asc');
-        if ($sortBy && in_array($sortBy, ['name', 'created_at', 'rating_score', 'cd', 'food_rank'])) {
-            $queryBuilder->orderBy($sortBy, $sortOrder === 'desc' ? 'desc' : 'asc');
+        $sortableColumns = [
+            'name' => 'f.name',
+            'created_at' => 'f.created_at',
+            'rating_score' => 'f.rating_score',
+            'cd' => 'v.cd',
+            'food_rank' => 'food_rank',
+            'food_id' => 'f.food_id',
+        ];
+        if ($sortBy && isset($sortableColumns[$sortBy])) {
+            $queryBuilder->orderBy($sortableColumns[$sortBy], $sortOrder === 'desc' ? 'desc' : 'asc');
         } else {
-            $queryBuilder->orderBy('food_id', 'desc');
+            $queryBuilder->orderBy('f.food_id', 'desc');
         }
 
-        // Total records là số lượng toàn bộ các record có trong bảng FOODS
-        $totalRecords = DB::table('FOODS')->count();
-
         if (trim($search) !== '') {
-            $query = $this->fuzzySearchService->applyQueryFilter($queryBuilder, $search, ['name', 'description']);
+            $query = $this->fuzzySearchService->applyQueryFilter($queryBuilder, $search, ['f.name', 'f.description']);
             $items = $query->get();
             $sortedItems = $this->fuzzySearchService->sortBySimilarity($items, $search, ['name', 'description']);
+            $totalRecords = $sortedItems->count();
             $pagedItems = $sortedItems->slice(($page - 1) * $pageSize, $pageSize)->values();
 
             return response()->json([
@@ -1258,6 +1310,7 @@ class FoodController extends Controller
             ]);
         }
 
+        $totalRecords = (clone $queryBuilder)->count();
         $foods = $queryBuilder->offset(($page - 1) * $pageSize)->limit($pageSize)->get();
 
         return response()->json([

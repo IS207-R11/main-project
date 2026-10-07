@@ -8,21 +8,18 @@ import {
   faRotate,
   faArrowLeft,
   faWandMagicSparkles,
-  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import { foodsApi } from "@/api";
 import { FoodCard } from "@/api/types";
 import { Rarity } from "@/types/food";
 import { mapFoodCardToFoodItem } from "@/lib/foodAdapter";
-import { BoosterPack } from "@/components/gacha/BoosterPack";
-import { RevealAnimation } from "@/components/gacha/RevealAnimation";
+import { BoosterPack, RevealAnimation, GachaVortex } from "@/components/gacha";
 import { FoodFlashCard } from "@/components/food/FoodFlashCard";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useGameSettings } from "@/context/GameSettingsContext";
 import { SlidersHorizontal } from "lucide-react";
 
-type GachaState = "pack" | "opening" | "revealed";
+type GachaState = "pack" | "vortex" | "opening" | "revealed";
 
 export interface GachaGameProps {
   className?: string;
@@ -39,25 +36,53 @@ export const GachaGame: React.FC<GachaGameProps> = () => {
   const handleStartGacha = useCallback(async () => {
     try {
       setIsGachaLoading(true);
+      // 1. Tạo hiệu ứng vòng xoáy song song với fetch API
+      setGachaState("vortex");
+      setWinnerFood(null);
 
-      const res = await foodsApi.gacha({
-        numberOfExcludedEaten: gachaSettings.numberOfExcludedEaten > 0 ? gachaSettings.numberOfExcludedEaten : undefined,
-        typeOfExcludedEaten: gachaSettings.typeOfExcludedEaten,
-        excludedGachaSet: gachaSettings.excludedGachaSet,
-        foodSet: gachaSettings.foodSet.length > 0 ? gachaSettings.foodSet : undefined,
-      });
+      // Đảm bảo thời gian hiển thị vòng xoáy đủ mượt mà (tối thiểu 1.6s)
+      const minVortexDuration = 1600;
+      const vortexTimer = new Promise((resolve) => setTimeout(resolve, minVortexDuration));
 
-      if (res.data) {
-        setWinnerFood(res.data);
-        setGachaState("opening");
+      const [res] = await Promise.all([
+        foodsApi.gacha({
+          numberOfExcludedEaten:
+            gachaSettings.numberOfExcludedEaten > 0
+              ? gachaSettings.numberOfExcludedEaten
+              : undefined,
+          typeOfExcludedEaten: gachaSettings.typeOfExcludedEaten,
+          excludedGachaSet: gachaSettings.excludedGachaSet,
+          foodSet:
+            gachaSettings.foodSet.length > 0 ? gachaSettings.foodSet : undefined,
+        }),
+        vortexTimer,
+      ]);
+
+      if (!res?.data) {
+        throw new Error("Không tìm thấy món ăn phù hợp với bộ lọc gacha hiện tại!");
       }
+
+      // 2. Khi có response rồi thì hiển thị hiệu ứng đã gacha xong (RevealAnimation)
+      setWinnerFood(res.data);
+      setGachaState("opening");
     } catch (err: unknown) {
-      const msg = (err as { message?: string })?.message || "Không tìm thấy món ăn phù hợp cho gacha!";
+      // 3. Nếu fail thì có thông báo bằng toastify và giao diện quay lại như lúc chưa gacha
+      const msg =
+        (err as { message?: string })?.message ||
+        "Không tìm thấy món ăn phù hợp cho gacha!";
       toast.error(msg);
+      setGachaState("pack");
+      setWinnerFood(null);
     } finally {
       setIsGachaLoading(false);
     }
   }, [gachaSettings]);
+
+  const handleCancelGacha = useCallback(() => {
+    setGachaState("pack");
+    setIsGachaLoading(false);
+    setWinnerFood(null);
+  }, []);
 
   const handleRevealFinished = useCallback(() => {
     setGachaState("revealed");
@@ -77,16 +102,22 @@ export const GachaGame: React.FC<GachaGameProps> = () => {
 
   return (
     <div className="w-full">
-      {/* Reveal Overlay Animation */}
+      {/* 1. Vòng xoáy gacha song song với fetch API */}
+      {gachaState === "vortex" && (
+        <GachaVortex onCancel={handleCancelGacha} />
+      )}
+
+      {/* 2. Hiệu ứng đã gacha xong (khi có response) */}
       {gachaState === "opening" && (
         <RevealAnimation
           highestRarity={currentRarity}
+          foodName={winnerFood?.name}
           onFinish={handleRevealFinished}
         />
       )}
 
-      {/* Gacha Booster Pack Visual */}
-      {gachaState === "pack" && (
+      {/* 3. Gacha Booster Pack Visual (Lúc chưa gacha hoặc khi reset/fail) */}
+      {(gachaState === "pack" || gachaState === "vortex") && (
         <div className="py-6 flex flex-col items-center justify-center space-y-4">
           {hasCustomSettings && (
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
@@ -95,11 +126,15 @@ export const GachaGame: React.FC<GachaGameProps> = () => {
             </div>
           )}
 
-          <BoosterPack onOpen={handleStartGacha} count={1} isOpening={isGachaLoading} />
+          <BoosterPack
+            onOpen={handleStartGacha}
+            count={1}
+            isOpening={isGachaLoading}
+          />
         </div>
       )}
 
-      {/* Gacha Revealed Single Winner Food */}
+      {/* 4. Gacha Revealed Single Winner Food */}
       {gachaState === "revealed" && winnerFood && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}

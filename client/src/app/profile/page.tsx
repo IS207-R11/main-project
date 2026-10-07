@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/context/AuthContext';
 import { usersApi, authApi, foodsApi } from '@/api';
-import { UserFoodItem } from '@/api/types';
+import { UserFoodItem, EatenFood } from '@/api/types';
 import { validatePassword } from '@/lib/validation';
 import { PasswordInput } from '@/components/ui/password-input';
 import { formatApiError } from '@/lib/errorMapping';
@@ -23,6 +23,7 @@ import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Image } from '@/components/ui/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUser,
@@ -33,6 +34,8 @@ import {
   faTrashCan,
   faPencil,
   faMapMarkerAlt,
+  faUtensils,
+  faClock,
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function ProfilePage() {
@@ -40,7 +43,7 @@ export default function ProfilePage() {
     useAuth();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'security'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'eaten' | 'preferences' | 'security'>('profile');
 
   // Profile update form state
   const [username, setUsername] = useState('');
@@ -48,14 +51,16 @@ export default function ProfilePage() {
   const [address, setAddress] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
 
-  // Preferences state (Favorite & Hated)
+  // Preferences & Eaten state (Favorite, Hated, Eaten)
   const [favorites, setFavorites] = useState<UserFoodItem[]>([]);
   const [hated, setHated] = useState<UserFoodItem[]>([]);
+  const [eatenFoods, setEatenFoods] = useState<EatenFood[]>([]);
   const [loadingPref, setLoadingPref] = useState(false);
   const [actionPrefId, setActionPrefId] = useState<number | null>(null);
   const [editingPref, setEditingPref] = useState<{
-    type: 'favorite' | 'hated';
+    type: 'favorite' | 'hated' | 'eaten';
     food_id: number;
+    eaten_id?: number;
     note: string;
   } | null>(null);
 
@@ -74,23 +79,78 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  // Load preferences (Favorites & Hated)
+  // Load preferences (Favorites, Hated, Eaten)
   const loadPreferences = useCallback(async () => {
     if (!user?.user_id) return;
     try {
       setLoadingPref(true);
-      const [favRes, hatedRes] = await Promise.all([
+      const [favRes, hatedRes, eatenRes] = await Promise.all([
         foodsApi.getFavorites(user.user_id, { pageSize: 50 }),
         foodsApi.getHated(user.user_id, { pageSize: 50 }),
+        foodsApi.getEaten(user.user_id, { pageSize: 50, sort_order: 'desc' }),
       ]);
       if (favRes?.data) setFavorites(favRes.data);
       if (hatedRes?.data) setHated(hatedRes.data);
+      if (eatenRes?.data) setEatenFoods(eatenRes.data);
     } catch (e) {
-      console.warn('Failed to load food preferences:', e);
+      console.warn('Failed to load food preferences/eaten:', e);
     } finally {
       setLoadingPref(false);
     }
   }, [user]);
+
+  const parseDate = (d?: string | null): number => {
+    if (!d) return 0;
+    const parsed = new Date(d).getTime();
+    if (!isNaN(parsed)) return parsed;
+    const isoFallback = new Date(d.replace(' ', 'T')).getTime();
+    return isNaN(isoFallback) ? 0 : isoFallback;
+  };
+
+  // Sắp xếp danh mục món ăn đã ăn giảm dần theo created_at
+  const sortedEatenFoods = useMemo(() => {
+    return [...eatenFoods].sort((a, b) => {
+      const timeA = parseDate(a.created_at);
+      const timeB = parseDate(b.created_at);
+      if (timeB !== timeA) {
+        return timeB - timeA;
+      }
+      return (b.eaten_id || 0) - (a.eaten_id || 0);
+    });
+  }, [eatenFoods]);
+
+  const sortedFavorites = useMemo(() => {
+    return [...favorites].sort((a, b) => {
+      const timeA = parseDate(a.created_at);
+      const timeB = parseDate(b.created_at);
+      return timeB - timeA;
+    });
+  }, [favorites]);
+
+  const sortedHated = useMemo(() => {
+    return [...hated].sort((a, b) => {
+      const timeA = parseDate(a.created_at);
+      const timeB = parseDate(b.created_at);
+      return timeB - timeA;
+    });
+  }, [hated]);
+
+  const formatEatenDate = (dateStr?: string | null) => {
+    if (!dateStr) return 'Không rõ thời gian';
+    try {
+      const d = new Date(dateStr.replace(' ', 'T'));
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
   useEffect(() => {
     if (user?.user_id) {
@@ -225,7 +285,7 @@ export default function ProfilePage() {
     }
   };
 
-  // Preference handlers
+  // Preference & Eaten handlers
   const handleUpdatePrefNote = async () => {
     if (!editingPref) return;
     try {
@@ -234,9 +294,13 @@ export default function ProfilePage() {
           food_id: editingPref.food_id,
           note: editingPref.note,
         });
-      } else {
+      } else if (editingPref.type === 'hated') {
         await foodsApi.updateHated({
           food_id: editingPref.food_id,
+          note: editingPref.note,
+        });
+      } else if (editingPref.type === 'eaten' && editingPref.eaten_id) {
+        await foodsApi.updateEaten(editingPref.eaten_id, {
           note: editingPref.note,
         });
       }
@@ -244,7 +308,7 @@ export default function ProfilePage() {
       await loadPreferences();
       toast.success('Đã cập nhật ghi chú thành công!');
     } catch (err) {
-      console.error('Lỗi cập nhật ghi chú sở thích:', err);
+      console.error('Lỗi cập nhật ghi chú:', err);
       toast.error('Lỗi khi cập nhật ghi chú');
     }
   };
@@ -276,6 +340,157 @@ export default function ProfilePage() {
       setActionPrefId(null);
     }
   };
+
+  const handleRemoveEaten = async (eatenId: number) => {
+    setActionPrefId(eatenId);
+    try {
+      await foodsApi.deleteEaten(eatenId);
+      setEatenFoods((prev) => prev.filter((item) => item.eaten_id !== eatenId));
+      toast.success('Đã xóa món khỏi danh mục đã ăn');
+    } catch (err) {
+      console.error('Lỗi xóa món đã ăn:', err);
+      toast.error('Lỗi khi xóa món đã ăn');
+    } finally {
+      setActionPrefId(null);
+    }
+  };
+
+  const renderEatenCard = (isFullWidth = true) => (
+    <Card className={`rounded-2xl border-border bg-card shadow-md flex flex-col ${isFullWidth ? 'w-full' : ''}`}>
+      <CardHeader>
+        <CardTitle className="text-base font-bold flex items-center gap-2 text-amber-500">
+          <FontAwesomeIcon icon={faUtensils} />
+          <span>Danh Mục Món Ăn Đã Ăn ({sortedEatenFoods.length})</span>
+        </CardTitle>
+        <CardDescription className="text-xs text-muted-foreground">
+          Danh sách món ăn bạn đã thưởng thức, sắp xếp giảm dần theo thời gian tạo gần nhất
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 flex-1">
+        {loadingPref ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="p-3 rounded-xl border border-border bg-muted/30 flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <Skeleton className="size-12 rounded-xl shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                </div>
+                <Skeleton className="h-7 w-14 rounded-full" />
+              </div>
+            ))}
+          </div>
+        ) : sortedEatenFoods.length === 0 ? (
+          <div className="text-center py-10 space-y-2">
+            <div className="size-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto text-muted-foreground text-lg">
+              <FontAwesomeIcon icon={faUtensils} />
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              Chưa có món ăn nào trong danh mục đã ăn
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
+            {sortedEatenFoods.map((item) => {
+              if (actionPrefId === item.eaten_id) {
+                return (
+                  <div
+                    key={item.eaten_id}
+                    className="p-3 rounded-xl border border-border bg-muted/20 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <Skeleton className="size-12 rounded-xl shrink-0" />
+                      <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-48" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-7 w-14 rounded-full" />
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={item.eaten_id}
+                  className="p-3 rounded-xl border border-border bg-muted/30 hover:bg-muted/50 transition-colors flex items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {item.food?.image_url ? (
+                      <Image
+                        src={item.food.image_url}
+                        alt={item.food.name || `Món #${item.food_id}`}
+                        width={48}
+                        height={48}
+                        className="size-12 rounded-xl object-cover shrink-0 border border-border"
+                      />
+                    ) : (
+                      <div className="size-12 rounded-xl bg-muted/70 flex items-center justify-center shrink-0 text-muted-foreground">
+                        <FontAwesomeIcon icon={faUtensils} className="text-base" />
+                      </div>
+                    )}
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-foreground text-sm truncate">
+                          {item.food?.name || `Món #${item.food_id}`}
+                        </span>
+                        {item.food?.food_rank && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-bold">
+                            {item.food.food_rank}
+                          </Badge>
+                        )}
+                      </div>
+                      {item.note && (
+                        <p className="text-muted-foreground italic truncate">
+                          &ldquo;{item.note}&rdquo;
+                        </p>
+                      )}
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faClock} className="text-[10px] text-primary/70" />
+                        <span>{formatEatenDate(item.created_at)}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setEditingPref({
+                          type: 'eaten',
+                          food_id: item.food_id,
+                          eaten_id: item.eaten_id,
+                          note: item.note || '',
+                        })
+                      }
+                      className="h-7 w-7 p-0 rounded-full text-muted-foreground hover:text-foreground"
+                      title="Chỉnh sửa ghi chú"
+                    >
+                      <FontAwesomeIcon icon={faPencil} className="text-[10px]" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveEaten(item.eaten_id)}
+                      className="h-7 w-7 p-0 rounded-full text-destructive hover:text-destructive"
+                      title="Xóa món khỏi danh mục đã ăn"
+                    >
+                      <FontAwesomeIcon icon={faTrashCan} className="text-[10px]" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-[calc(100vh-4rem)] py-10 px-4 sm:px-6">
@@ -315,7 +530,7 @@ export default function ProfilePage() {
         <Tabs
           value={activeTab}
           onValueChange={(val) =>
-            setActiveTab(val as 'profile' | 'preferences' | 'security')
+            setActiveTab(val as 'profile' | 'eaten' | 'preferences' | 'security')
           }
           className="space-y-6 w-full"
         >
@@ -330,6 +545,11 @@ export default function ProfilePage() {
                   icon: <FontAwesomeIcon icon={faUser} />,
                 },
                 {
+                  value: 'eaten',
+                  label: `Món Đã Ăn (${sortedEatenFoods.length})`,
+                  icon: <FontAwesomeIcon icon={faUtensils} className="text-amber-500" />,
+                },
+                {
                   value: 'preferences',
                   label: 'Sở Thích',
                   icon: <FontAwesomeIcon icon={faHeart} className="text-rose-500" />,
@@ -342,9 +562,9 @@ export default function ProfilePage() {
               ]}
               activeTab={activeTab}
               onChange={(val) =>
-                setActiveTab(val as 'profile' | 'preferences' | 'security')
+                setActiveTab(val as 'profile' | 'eaten' | 'preferences' | 'security')
               }
-              tabClassName="px-5 sm:px-8 py-3"
+              tabClassName="px-4 sm:px-6 py-3"
             />
           </div>
 
@@ -403,15 +623,20 @@ export default function ProfilePage() {
             </Card>
           </TabsContent>
 
-          {/* TAB 2: SỞ THÍCH ĂN UỐNG (FAVORITES & HATED) */}
-          <TabsContent value="preferences" className="w-full">
+          {/* TAB 2: DANH MỤC MÓN ĂN ĐÃ ĂN (SẮP XẾP GIẢM DẦN THEO CREATED_AT) */}
+          <TabsContent value="eaten" className="w-full">
+            {renderEatenCard(true)}
+          </TabsContent>
+
+          {/* TAB 3: SỞ THÍCH ĂN UỐNG (FAVORITES & HATED & EATEN) */}
+          <TabsContent value="preferences" className="w-full space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
               {/* Favorites Card */}
               <Card className="rounded-2xl border-border bg-card shadow-md flex flex-col">
                 <CardHeader>
                   <CardTitle className="text-base font-bold flex items-center gap-2 text-rose-500">
                     <FontAwesomeIcon icon={faHeart} />
-                    <span>Món Ăn Yêu Thích ({favorites.length})</span>
+                    <span>Món Ăn Yêu Thích ({sortedFavorites.length})</span>
                   </CardTitle>
                   <CardDescription className="text-xs text-muted-foreground">
                     Danh sách các món ăn bạn đánh dấu thích
@@ -433,12 +658,12 @@ export default function ProfilePage() {
                         </div>
                       ))}
                     </div>
-                  ) : favorites.length === 0 ? (
+                  ) : sortedFavorites.length === 0 ? (
                     <p className="text-xs text-muted-foreground italic text-center py-6">
                       Chưa có món ăn yêu thích nào
                     </p>
                   ) : (
-                    favorites.map((item) => {
+                    sortedFavorites.map((item) => {
                       if (actionPrefId === item.food_id) {
                         return (
                           <div
@@ -503,7 +728,7 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="text-base font-bold flex items-center gap-2 text-muted-foreground">
                     <FontAwesomeIcon icon={faBan} className="text-destructive" />
-                    <span>Món Ăn Ghét / Dị Ứng ({hated.length})</span>
+                    <span>Món Ăn Ghét / Dị Ứng ({sortedHated.length})</span>
                   </CardTitle>
                   <CardDescription className="text-xs text-muted-foreground">
                     Các món ăn bạn không thích hoặc bị dị ứng
@@ -525,12 +750,12 @@ export default function ProfilePage() {
                         </div>
                       ))}
                     </div>
-                  ) : hated.length === 0 ? (
+                  ) : sortedHated.length === 0 ? (
                     <p className="text-xs text-muted-foreground italic text-center py-6">
                       Chưa có món ăn ghét nào
                     </p>
                   ) : (
-                    hated.map((item) => {
+                    sortedHated.map((item) => {
                       if (actionPrefId === item.food_id) {
                         return (
                           <div
@@ -591,50 +816,11 @@ export default function ProfilePage() {
               </Card>
             </div>
 
-            {/* Modal edit note */}
-            <Dialog
-              open={Boolean(editingPref)}
-              onOpenChange={(open) => !open && setEditingPref(null)}
-            >
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="text-sm font-bold">
-                    Cập Nhật Ghi Chú (Món #{editingPref?.food_id})
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-muted-foreground">
-                    Thêm hoặc chỉnh sửa ghi chú cho món ăn này trong danh sách yêu thích/kiêng ăn.
-                  </DialogDescription>
-                </DialogHeader>
-                {editingPref && (
-                  <div className="space-y-4">
-                    <Input
-                      type="text"
-                      value={editingPref.note}
-                      onChange={(e) =>
-                        setEditingPref({ ...editingPref, note: e.target.value })
-                      }
-                      placeholder="Ghi chú sở thích hoặc lưu ý..."
-                      className="w-full"
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingPref(null)}
-                      >
-                        Hủy
-                      </Button>
-                      <Button size="sm" onClick={handleUpdatePrefNote}>
-                        Lưu Ghi Chú
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
+            {/* Món ăn đã ăn hiển thị ở tab Sở Thích */}
+            {renderEatenCard(true)}
           </TabsContent>
 
-          {/* TAB 3: BẢO MẬT & ĐỔI MẬT KHẨU & XÓA TÀI KHOẢN */}
+          {/* TAB 4: BẢO MẬT & ĐỔI MẬT KHẨU & XÓA TÀI KHOẢN */}
           <TabsContent value="security" className="space-y-6 w-full">
             <Card className="rounded-2xl border-border bg-card w-full shadow-md">
               <CardHeader>
@@ -713,6 +899,54 @@ export default function ProfilePage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Modal edit note */}
+        <Dialog
+          open={Boolean(editingPref)}
+          onOpenChange={(open) => !open && setEditingPref(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-sm font-bold">
+                Cập Nhật Ghi Chú ({editingPref?.type === 'eaten' ? 'Món Đã Ăn' : 'Món'} #{editingPref?.food_id})
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Thêm hoặc chỉnh sửa ghi chú cho món ăn này trong danh sách{' '}
+                {editingPref?.type === 'eaten'
+                  ? 'đã ăn'
+                  : editingPref?.type === 'favorite'
+                  ? 'yêu thích'
+                  : 'kiêng ăn'}
+                .
+              </DialogDescription>
+            </DialogHeader>
+            {editingPref && (
+              <div className="space-y-4">
+                <Input
+                  type="text"
+                  value={editingPref.note}
+                  onChange={(e) =>
+                    setEditingPref({ ...editingPref, note: e.target.value })
+                  }
+                  placeholder="Ghi chú sở thích hoặc lưu ý bữa ăn..."
+                  className="w-full"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingPref(null)}
+                  >
+                    Hủy
+                  </Button>
+                  <Button size="sm" onClick={handleUpdatePrefNote}>
+                    Lưu Ghi Chú
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

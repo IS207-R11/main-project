@@ -27,7 +27,7 @@ class ReportController extends Controller
             new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
             new OA\Parameter(name: 'pageSize', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10)),
             new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['RESOLVED', 'PENDING'])),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['ALL', 'RESOLVED', 'PENDING'])),
             new OA\Parameter(name: 'type', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['COMMENT', 'ERROR'])),
             new OA\Parameter(name: 'sort_by', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['resolved_at', 'created_at'])),
             new OA\Parameter(name: 'sort_order', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'], default: 'desc')),
@@ -50,7 +50,10 @@ class ReportController extends Controller
         $query = Report::with(['author', 'resolvedByUser']);
 
         if ($status) {
-            $query->where('status', $status);
+            $upperStatus = strtoupper(trim((string) $status));
+            if ($upperStatus !== 'ALL') {
+                $query->where('status', $upperStatus);
+            }
         }
         if ($type) {
             $query->where('type', $type);
@@ -66,7 +69,7 @@ class ReportController extends Controller
             $query = $this->fuzzySearchService->applyQueryFilter($query, $search, ['title', 'content']);
             $items = $query->get();
             $sortedItems = $this->fuzzySearchService->sortBySimilarity($items, $search, ['title', 'content']);
-            $totalRecords = Report::count();
+            $totalRecords = $sortedItems->count();
             $pagedItems = $sortedItems->slice(($page - 1) * $pageSize, $pageSize)->values();
 
             return response()->json([
@@ -75,7 +78,7 @@ class ReportController extends Controller
             ]);
         }
 
-        $totalRecords = Report::count();
+        $totalRecords = (clone $query)->count();
         $reports = $query->offset(($page - 1) * $pageSize)->limit($pageSize)->get();
 
         return response()->json([

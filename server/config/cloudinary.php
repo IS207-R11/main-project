@@ -31,7 +31,13 @@ return [
     |
     |
     */
-    'cloud_url' => env('CLOUDINARY_URL', 'cloudinary://'.env('CLOUDINARY_KEY').':'.env('CLOUDINARY_SECRET').'@'.env('CLOUDINARY_CLOUD_NAME')),
+    'cloud_url' => !empty(env('CLOUDINARY_URL'))
+        ? env('CLOUDINARY_URL')
+        : (
+            !empty(env('CLOUDINARY_KEY')) && !empty(env('CLOUDINARY_SECRET')) && !empty(env('CLOUDINARY_CLOUD_NAME'))
+                ? 'cloudinary://'.env('CLOUDINARY_KEY').':'.env('CLOUDINARY_SECRET').'@'.env('CLOUDINARY_CLOUD_NAME')
+                : null
+        ),
 
     /**
      * Upload Preset From Cloudinary Dashboard

@@ -12,13 +12,14 @@ class EatenFood extends Model
 
     protected $table = 'EATEN_FOODS';
 
-    public $incrementing = false;
+    protected $primaryKey = 'eaten_id';
+
+    public $incrementing = true;
 
     public $timestamps = false;
 
-    protected $primaryKey = null;
-
     protected $fillable = [
+        'eaten_id',
         'user_id',
         'food_id',
         'note',

@@ -33,6 +33,6 @@ export interface ChangeReportStatusRequest {
 }
 
 export interface ListReportsParams extends SortablePaginationParams {
-  status?: ReportStatus;
+  status?: ReportStatus | 'ALL';
   type?: ReportType;
 }

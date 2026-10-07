@@ -90,6 +90,8 @@ export default function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [actionReportId, setActionReportId] = useState<number | null>(null);
+  const [reportsSearch, setReportsSearch] = useState('');
+  const [reportsStatus, setReportsStatus] = useState<string>('all');
   const [reportsPage, setReportsPage] = useState(1);
   const [reportsPageSize] = useState(10);
   const [reportsTotal, setReportsTotal] = useState(0);
@@ -102,7 +104,7 @@ export default function AdminPage() {
         page: foodsPage,
         pageSize: foodsPageSize,
         search: foodsSearch.trim() || undefined,
-        status: foodsStatus === 'all' ? undefined : (foodsStatus as FoodStatus),
+        status: foodsStatus === 'all' ? 'ALL' : (foodsStatus as FoodStatus),
         sort_by: 'name',
       });
       if (res && res.data) {
@@ -143,6 +145,8 @@ export default function AdminPage() {
       const res = await reportsApi.list({
         page: reportsPage,
         pageSize: reportsPageSize,
+        search: reportsSearch.trim() || undefined,
+        status: reportsStatus === 'all' ? 'ALL' : (reportsStatus as ReportStatus),
       });
       if (res && res.data) {
         setReports(res.data);
@@ -153,7 +157,7 @@ export default function AdminPage() {
     } finally {
       setReportsLoading(false);
     }
-  }, [reportsPage, reportsPageSize]);
+  }, [reportsPage, reportsPageSize, reportsSearch, reportsStatus]);
 
   useEffect(() => {
     if (activeTab === 'foods') loadFoods();
@@ -413,24 +417,24 @@ export default function AdminPage() {
                   </div>
 
                   {/* Status Filter for Admin/Moderator */}
-                  <Select
-                    value={foodsStatus}
-                    onValueChange={(val) => {
-                      if (!val) return;
-                      setFoodsStatus(val);
-                      setFoodsPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-full sm:w-52">
-                      <SelectValue placeholder="Trạng thái" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                      <SelectItem value="ACTIVE">ACTIVE (Đã duyệt)</SelectItem>
-                      <SelectItem value="PENDING">PENDING (Chờ duyệt)</SelectItem>
-                      <SelectItem value="DISABLED">DISABLED (Vô hiệu)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <Select
+                      value={foodsStatus}
+                      onValueChange={(val) => {
+                        if (!val) return;
+                        setFoodsStatus(val);
+                        setFoodsPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-full sm:w-52">
+                        <SelectValue placeholder="Trạng thái" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tất cả</SelectItem>
+                        <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
+                        <SelectItem value="PENDING">Đang chờ duyệt</SelectItem>
+                        <SelectItem value="DISABLED">Đang ngưng</SelectItem>
+                      </SelectContent>
+                    </Select>
                 </div>
 
                 <div className="flex gap-2">
@@ -825,10 +829,50 @@ export default function AdminPage() {
 
             {/* TAB 3: REPORT MANAGEMENT */}
             <TabsContent value="reports" className="space-y-4">
-              <div className="flex justify-end">
-                <Button onClick={loadReports} variant="outline" size="sm" className="font-bold">
-                  Làm mới
-                </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto flex-1">
+                  <div className="relative w-full sm:w-80">
+                    <FontAwesomeIcon
+                      icon={faMagnifyingGlass}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs"
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Tìm theo tiêu đề, nội dung báo cáo..."
+                      value={reportsSearch}
+                      onChange={(e) => {
+                        setReportsSearch(e.target.value);
+                        setReportsPage(1);
+                      }}
+                      className="pl-8"
+                    />
+                  </div>
+
+                  {/* Status Filter for Reports */}
+                  <Select
+                    value={reportsStatus}
+                    onValueChange={(val) => {
+                      if (!val) return;
+                      setReportsStatus(val);
+                      setReportsPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-52">
+                      <SelectValue placeholder="Trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tất cả</SelectItem>
+                      <SelectItem value="PENDING">Đang chờ duyệt</SelectItem>
+                      <SelectItem value="RESOLVED">Đã giải quyết</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-2 w-full sm:w-auto justify-end">
+                  <Button onClick={loadReports} variant="outline" size="sm" className="font-bold">
+                    Làm mới
+                  </Button>
+                </div>
               </div>
 
               {reportsLoading ? (

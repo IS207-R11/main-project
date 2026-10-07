@@ -21,15 +21,17 @@ import {
   faHeart,
   faXmark,
   faStar,
-  faUtensils,
 } from "@fortawesome/free-solid-svg-icons";
-import type { FoodItem, Rarity } from "@/types/food";
+import type { FoodItem } from "@/types/food";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { tinderSounds } from "@/lib/tinderSound";
+import { FoodCardBack } from "@/components/food/FoodCardBack";
+import { getCardRarityStyle } from "@/components/food/rarityStyles";
 
 export interface TinderCardHandle {
   swipe: (direction: "left" | "right" | "up") => Promise<void>;
+  flip?: () => void;
 }
 
 interface TinderCardProps {
@@ -38,41 +40,6 @@ interface TinderCardProps {
   stackIndex: number;
   onSwipe: (direction: "left" | "right" | "up", food: FoodItem) => void;
 }
-
-const rarityStyles: Record<
-  Rarity,
-  {
-    badge: string;
-    border: string;
-    glow: string;
-    text: string;
-  }
-> = {
-  SSR: {
-    badge: "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 font-black",
-    border: "border-amber-400/80 shadow-[0_8px_30px_rgba(251,191,36,0.3)]",
-    glow: "ring-2 ring-amber-400/40",
-    text: "text-amber-500",
-  },
-  SR: {
-    badge: "bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold",
-    border: "border-purple-400/80 shadow-[0_8px_25px_rgba(168,85,247,0.25)]",
-    glow: "ring-2 ring-purple-400/40",
-    text: "text-purple-400",
-  },
-  UC: {
-    badge: "bg-gradient-to-r from-sky-500 to-blue-500 text-white font-semibold",
-    border: "border-sky-400/80 shadow-[0_8px_20px_rgba(14,165,233,0.2)]",
-    glow: "ring-2 ring-sky-400/30",
-    text: "text-sky-400",
-  },
-  C: {
-    badge: "bg-secondary text-white font-semibold",
-    border: "border-border shadow-lg",
-    glow: "",
-    text: "text-secondary",
-  },
-};
 
 export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
   (
@@ -101,7 +68,7 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
     const nopeOpacity = useTransform(x, [-20, -100], [0, 1]);
     const superLikeOpacity = useTransform(y, [-20, -90], [0, 1]);
 
-    const rarity = rarityStyles[food.rarity] || rarityStyles.C;
+    const rarity = getCardRarityStyle(food.rarity);
     const imageSrc = imgError || !food.imagePath
       ? "/logos/main-logo.png"
       : food.imagePath;
@@ -159,13 +126,22 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
       [food, onSwipe, x, y, cardOpacity]
     );
 
-    // Expose swipe method to parent via ref
+    const toggleFlip = useCallback((e?: React.MouseEvent) => {
+      if (e) e.stopPropagation();
+      tinderSounds.playFlip();
+      setIsFlipped((prev) => !prev);
+    }, []);
+
+    // Expose swipe and flip methods to parent via ref
     useImperativeHandle(
       ref,
       () => ({
         swipe: flyAway,
+        flip: () => {
+          toggleFlip();
+        },
       }),
-      [flyAway]
+      [flyAway, toggleFlip]
     );
 
     // Handle Drag End with gesture thresholds
@@ -201,12 +177,6 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
         flyAway("up");
         return;
       }
-    };
-
-    const toggleFlip = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      tinderSounds.playFlip();
-      setIsFlipped(!isFlipped);
     };
 
     return (
@@ -338,10 +308,10 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                       size="sm"
                       onClick={toggleFlip}
                       className="h-7 px-2.5 rounded-full text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-border/60 gap-1 shrink-0 cursor-pointer"
-                      title="Lật thẻ xem chi tiết món ăn"
+                      title="Lật thẻ"
                     >
                       <FontAwesomeIcon icon={faRotate} className="text-[10px] text-secondary" />
-                      <span>Chi tiết</span>
+                      <span>Lật thẻ</span>
                     </Button>
                   </div>
 
@@ -384,7 +354,7 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                     title={`Tìm quán ${food.name} trên Google Maps`}
                   >
                     <Image
-                      src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
+                      src="other-images/googlemaps.webp"
                       alt="Maps"
                       className="w-4 h-4 object-contain shrink-0"
                     />
@@ -398,10 +368,10 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
-                    title={`Xem công thức làm ${food.name} trên YouTube`}
+                    title={`Xem công thức nấu ${food.name} trên YouTube`}
                   >
                     <Image
-                      src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
+                      src="other-images/youtube.webp"
                       alt="Công thức"
                       className="w-4 h-4 object-contain shrink-0"
                     />
@@ -421,120 +391,17 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
               </div>
             </div>
 
-            {/* ================= BACK SIDE (DETAILS) ================= */}
+            {/* ================= BACK SIDE (COLLECTIBLE CARD BACK - LOGO ONLY) ================= */}
             <div
-              className={`absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-3xl border-2 ${
-                rarity.border
-              } ${rarity.glow} bg-card text-card-foreground flex flex-col p-5 overflow-hidden shadow-2xl ${
+              className={`absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-3xl overflow-hidden ${
                 !isFlipped ? "pointer-events-none" : "pointer-events-auto"
               }`}
             >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-border/80 pb-3">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-secondary flex items-center gap-1">
-                    <FontAwesomeIcon icon={faUtensils} className="text-[9px]" />
-                    Chi Tiết Món Ăn
-                  </span>
-                  <h3 className="text-lg font-black text-foreground line-clamp-1">
-                    {food.name}
-                  </h3>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleFlip}
-                  className="h-8 rounded-full text-xs font-bold gap-1.5 border-border bg-card hover:bg-muted cursor-pointer"
-                >
-                  <FontAwesomeIcon icon={faRotate} className="text-xs text-secondary" />
-                  <span>Quay lại</span>
-                </Button>
-              </div>
-
-              {/* Dish Breakdown Grid */}
-              <div className="my-3 space-y-3 flex-1 overflow-y-auto pr-1">
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Mã món:</span>
-                    <span className="font-black text-foreground">
-                      #{food.food_id || food.id}
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Độ hiếm:</span>
-                    <span className="font-black text-secondary">
-                      {food.food_rank || food.rarity}
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/60 border border-border/50 flex justify-between items-center col-span-2">
-                    <span className="text-muted-foreground font-medium">Trạng thái:</span>
-                    <span className="font-black text-foreground">
-                      {food.status === "ACTIVE" ? "Đã kiểm duyệt" : food.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <h4 className="text-xs font-bold text-foreground uppercase tracking-wide">
-                    Mô tả món ăn:
-                  </h4>
-                  <div className="p-3 rounded-2xl bg-muted/40 border border-border/50 text-xs text-foreground/90 leading-relaxed">
-                    {food.description && food.description.trim() !== ""
-                      ? food.description
-                      : "Món ăn ngon và hấp dẫn từ thực đơn hệ thống Ăn Gì."}
-                  </div>
-                </div>
-              </div>
-
-                {/* External Links on Back */}
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <a
-                    href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${food.name}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-emerald-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-emerald-500 transition-all shadow-2xs group/btn cursor-pointer"
-                    title={`Tìm quán ${food.name} trên Google Maps`}
-                  >
-                    <Image
-                      src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
-                      alt="Maps"
-                      className="w-4 h-4 object-contain shrink-0"
-                    />
-                    <span className="truncate">Maps</span>
-                  </a>
-
-                  <a
-                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`Công thức làm ${food.name}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
-                    title={`Xem công thức nấu ${food.name} trên YouTube`}
-                  >
-                    <Image
-                      src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
-                      alt="Công thức"
-                      className="w-4 h-4 object-contain shrink-0"
-                    />
-                    <span className="truncate">Công thức</span>
-                  </a>
-                </div>
-
-                {/* Action Bar on Back */}
-                <div className="pt-2 border-t border-border/80 flex gap-2">
-                  <Button
-                    type="button"
-                    onClick={toggleFlip}
-                    className="w-full rounded-2xl text-xs font-bold py-2 bg-primary text-primary-foreground hover:brightness-105 cursor-pointer"
-                  >
-                    Tiếp Tục Quẹt Món Này
-                  </Button>
-                </div>
+              <FoodCardBack
+                rarity={food.rarity}
+                onFlip={toggleFlip}
+                size="lg"
+              />
             </div>
           </div>
         </div>

@@ -65,7 +65,13 @@ return [
             'key' => env('CLOUDINARY_KEY'),
             'secret' => env('CLOUDINARY_SECRET'),
             'cloud' => env('CLOUDINARY_CLOUD_NAME'),
-            'url' => env('CLOUDINARY_URL'),
+            'url' => !empty(env('CLOUDINARY_URL'))
+                ? env('CLOUDINARY_URL')
+                : (
+                    !empty(env('CLOUDINARY_KEY')) && !empty(env('CLOUDINARY_SECRET')) && !empty(env('CLOUDINARY_CLOUD_NAME'))
+                        ? 'cloudinary://'.env('CLOUDINARY_KEY').':'.env('CLOUDINARY_SECRET').'@'.env('CLOUDINARY_CLOUD_NAME')
+                        : null
+                ),
             'secure' => (bool) env('CLOUDINARY_SECURE', true),
             'prefix' => env('CLOUDINARY_PREFIX'),
         ],

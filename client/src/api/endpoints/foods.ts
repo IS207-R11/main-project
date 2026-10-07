@@ -256,4 +256,15 @@ export const foodsApi = {
       method: 'DELETE',
     });
   },
+
+  /**
+   * DELETE /foods/eaten/nearly
+   * Delete the most recent eaten food entry (OWNER only)
+   */
+  deleteNearlyEaten: (foodId?: number): Promise<MessageResponse> => {
+    return apiClient<MessageResponse>('/foods/eaten/nearly', {
+      method: 'DELETE',
+      params: foodId ? { food_id: foodId } : undefined,
+    });
+  },
 };

@@ -135,8 +135,30 @@ class UploadController extends Controller
                 ],
             ], 200);
         } catch (\Throwable $e) {
+            $isConfigError = str_contains($e->getMessage(), 'Invalid configuration') ||
+                             str_contains($e->getMessage(), 'please set up your environment');
+
+            // Fallback lưu trữ qua disk 'public' nếu Cloudinary chưa được cấu hình trên Render/máy chủ
+            if ($isConfigError) {
+                try {
+                    $path = $file->store('foods', 'public');
+                    $localUrl = url('storage/'.$path);
+
+                    return response()->json([
+                        'message' => 'Tải ảnh lên thành công (lưu trữ máy chủ do Cloudinary chưa được cấu hình)',
+                        'data' => [
+                            'url' => $localUrl,
+                            'secure_url' => $localUrl,
+                            'public_id' => $path,
+                        ],
+                    ], 200);
+                } catch (\Throwable $localErr) {
+                    // Fall through to 500
+                }
+            }
+
             return response()->json([
-                'message' => 'Lỗi khi tải ảnh lên Cloudinary: '.$e->getMessage(),
+                'message' => 'Lỗi khi tải ảnh lên Cloudinary: '.$e->getMessage().'. Vui lòng cấu hình biến CLOUDINARY_URL (hoặc CLOUDINARY_CLOUD_NAME, CLOUDINARY_KEY, CLOUDINARY_SECRET) trên Render Dashboard.',
             ], 500);
         }
     }

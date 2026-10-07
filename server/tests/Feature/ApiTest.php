@@ -1,13 +1,13 @@
 <?php
 
 use App\Enums\FoodStatus;
-use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Food;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\JwtService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 beforeEach(function () {
@@ -350,7 +350,7 @@ test('smart gacha ranking with foodSet and excluded eaten/gacha logic', function
     expect($gachaExcludeAllRes->json('data.food_id'))->not->toBe($foodA->food_id);
 
     // 3. Gacha with excludedGachaSet = true
-    \Illuminate\Support\Facades\DB::table('GACHA_FOODS')->upsert([
+    DB::table('GACHA_FOODS')->upsert([
         'user_id' => $user->user_id,
         'food_id' => $foodB->food_id,
         'created_at' => now(),
@@ -597,4 +597,110 @@ test('user PUT report and only Admin can change report status', function () {
     $resolveRes->assertStatus(200)
         ->assertJsonPath('data.status', 'RESOLVED')
         ->assertJsonPath('data.resolved_by.user_id', $admin->user_id);
+});
+
+test('eaten foods flow: add eaten multiple times and delete most recent with DELETE /foods/eaten/nearly', function () {
+    $user = User::create([
+        'username' => 'usr_eat_'.uniqid(),
+        'email' => 'usreat_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::USER,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $userToken = $this->jwtService->generateAccessToken($user);
+
+    $food = Food::create([
+        'name' => 'Mon An Test '.uniqid(),
+        'description' => 'Mieu ta mon an',
+        'image_url' => 'https://example.com/food.jpg',
+        'status' => FoodStatus::ACTIVE,
+        'rating_score' => 8,
+    ]);
+
+    // 1. Add first eaten record
+    $res1 = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->postJson('/api/foods/eaten', [
+            'food_id' => $food->food_id,
+            'note' => 'First time',
+        ]);
+    $res1->assertStatus(201);
+    $eatenId1 = $res1->json('data.eaten_id');
+
+    // 2. Add second eaten record for same food (must succeed and create new record)
+    $res2 = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->postJson('/api/foods/eaten', [
+            'food_id' => $food->food_id,
+            'note' => 'Second time',
+        ]);
+    $res2->assertStatus(201);
+    $eatenId2 = $res2->json('data.eaten_id');
+    expect($eatenId2)->not->toBe($eatenId1);
+
+    // 3. Delete most recent eaten record
+    $delRes = $this->withHeader('Authorization', 'Bearer '.$userToken)
+        ->deleteJson('/api/foods/eaten/nearly?food_id='.$food->food_id);
+    $delRes->assertStatus(200)
+        ->assertJsonPath('data.eaten_id', $eatenId2)
+        ->assertJsonPath('data.food_id', $food->food_id);
+
+    // First record still exists in database
+    expect(DB::table('EATEN_FOODS')->where('eaten_id', $eatenId1)->exists())->toBeTrue();
+    expect(DB::table('EATEN_FOODS')->where('eaten_id', $eatenId2)->exists())->toBeFalse();
+
+    // Clean up
+    DB::table('EATEN_FOODS')->where('user_id', $user->user_id)->delete();
+    $food->delete();
+    $user->delete();
+});
+
+test('foods and reports list status filters: ALL, ACTIVE, PENDING, DISABLED', function () {
+    // 1. Check foods with status=ALL
+    $allFoods = $this->getJson('/api/foods?status=ALL');
+    $allFoods->assertStatus(200);
+    $allData = $allFoods->json('data');
+    expect(count($allData))->toBeGreaterThan(0);
+
+    // 2. Check foods with status=ACTIVE
+    $activeFoods = $this->getJson('/api/foods?status=ACTIVE');
+    $activeFoods->assertStatus(200);
+    foreach ($activeFoods->json('data') as $food) {
+        expect($food['status'])->toBe('ACTIVE');
+    }
+
+    // 3. Create a pending food and test status=PENDING
+    $admin = User::create([
+        'username' => 'admin_flt_'.uniqid(),
+        'email' => 'admin_flt_'.uniqid().'@example.com',
+        'hashed_password' => Hash::make('Secret123!'),
+        'role' => UserRole::ADMIN,
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $adminToken = $this->jwtService->generateAccessToken($admin);
+
+    $pendingFood = Food::create([
+        'name' => 'Mon Cho Duyet '.uniqid(),
+        'description' => 'Món ăn chờ duyệt',
+        'image_url' => 'https://example.com/pending.jpg',
+        'status' => FoodStatus::PENDING,
+    ]);
+
+    $pendingRes = $this->getJson('/api/foods?status=PENDING');
+    $pendingRes->assertStatus(200);
+    $foundPending = false;
+    foreach ($pendingRes->json('data') as $item) {
+        expect($item['status'])->toBe('PENDING');
+        if ($item['food_id'] === $pendingFood->food_id) {
+            $foundPending = true;
+        }
+    }
+    expect($foundPending)->toBeTrue();
+
+    // 4. Test reports with status=ALL and status=RESOLVED
+    $reportAll = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+        ->getJson('/api/reports?status=ALL');
+    $reportAll->assertStatus(200);
+
+    // Clean up
+    $pendingFood->delete();
+    $admin->delete();
 });

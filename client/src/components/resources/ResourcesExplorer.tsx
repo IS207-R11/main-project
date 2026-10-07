@@ -11,8 +11,10 @@ import {
   faUtensils,
   faPlus,
   faRotate,
+  faCircleCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import type { FoodItem, Rarity } from "@/types/food";
+import type { FoodStatus } from "@/api/types";
 import { foodsApi } from "@/api";
 import { mapFoodCardToFoodItem } from "@/lib/foodAdapter";
 import { VirtualMasonryGrid } from "@/components/food/VirtualMasonryGrid";
@@ -44,6 +46,7 @@ export const ResourcesExplorer: React.FC = () => {
 
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<"ALL" | FoodStatus>("ALL");
   const [selectedRarity, setSelectedRarity] = useState<"all" | Rarity>("all");
   const [sortBy, setSortBy] = useState<SortOption>("name");
 
@@ -55,7 +58,7 @@ export const ResourcesExplorer: React.FC = () => {
     (pageNumber: number): {
       page: number;
       pageSize: number;
-      status: "ACTIVE";
+      status: "ALL" | FoodStatus;
       search?: string;
       food_rank?: "SSR" | "SR" | "UC" | "C";
       sort_by: "name" | "created_at" | "rating_score" | "cd" | "food_rank";
@@ -77,14 +80,14 @@ export const ResourcesExplorer: React.FC = () => {
       return {
         page: pageNumber,
         pageSize,
-        status: "ACTIVE" as const,
+        status: selectedStatus,
         search: searchQuery.trim() || undefined,
         food_rank: apiFoodRank,
         sort_by: apiSortBy,
         sort_order: apiSortOrder,
       };
     },
-    [pageSize, searchQuery, selectedRarity, sortBy]
+    [pageSize, searchQuery, selectedRarity, selectedStatus, sortBy]
   );
 
   // Fetch initial/first page (resets list)
@@ -176,12 +179,13 @@ export const ResourcesExplorer: React.FC = () => {
 
   const handleResetFilters = () => {
     setSearchQuery("");
+    setSelectedStatus("ALL");
     setSelectedRarity("all");
     setSortBy("name");
   };
 
   const hasActiveFilters =
-    searchQuery || selectedRarity !== "all" || sortBy !== "name";
+    searchQuery || selectedStatus !== "ALL" || selectedRarity !== "all" || sortBy !== "name";
 
   return (
     <div className="space-y-6 min-h-[calc(100vh-14rem)]">
@@ -238,7 +242,32 @@ export const ResourcesExplorer: React.FC = () => {
         </div>
 
         {/* Filter & Sort Controls Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Status Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <FontAwesomeIcon
+                icon={faCircleCheck}
+                className="text-secondary text-[10px]"
+              />
+              Trạng Thái
+            </label>
+            <Select
+              value={selectedStatus}
+              onValueChange={(val) => val && setSelectedStatus(val as "ALL" | FoodStatus)}
+            >
+              <SelectTrigger className="w-full rounded-2xl">
+                <SelectValue placeholder="Chọn trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tất cả</SelectItem>
+                <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
+                <SelectItem value="PENDING">Đang chờ duyệt</SelectItem>
+                <SelectItem value="DISABLED">Đang ngưng</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Rarity Filter */}
           <div className="space-y-1">
             <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">

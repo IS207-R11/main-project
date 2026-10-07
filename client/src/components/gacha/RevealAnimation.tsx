@@ -8,11 +8,13 @@ import type { Rarity } from "@/types/food";
 interface RevealAnimationProps {
   highestRarity: Rarity;
   onFinish: () => void;
+  foodName?: string;
 }
 
 export const RevealAnimation: React.FC<RevealAnimationProps> = ({
   highestRarity,
   onFinish,
+  foodName,
 }) => {
   useEffect(() => {
     // Fire confetti blast
@@ -136,6 +138,18 @@ export const RevealAnimation: React.FC<RevealAnimationProps> = ({
             </span>
             <span className="text-xs text-secondary">✦</span>
           </motion.div>
+
+          {/* Food Name Highlight */}
+          {foodName && (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mt-3 px-5 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/25 text-base sm:text-lg font-bold text-white shadow-xl"
+            >
+              {foodName}
+            </motion.div>
+          )}
 
           {/* Skip Hint */}
           <motion.span

@@ -67,6 +67,7 @@ Route::prefix('foods')->group(function () {
         // User collections routes (EATEN - only owner has full CRUD)
         Route::get('/eaten/{userId}', [FoodController::class, 'getEaten'])->middleware('owner')->whereNumber('userId');
         Route::post('/eaten', [FoodController::class, 'addEaten']);
+        Route::delete('/eaten/nearly', [FoodController::class, 'removeNearlyEaten']);
         Route::put('/eaten/{foodId}', [FoodController::class, 'updateEaten'])->whereNumber('foodId');
         Route::put('/eaten', [FoodController::class, 'updateEaten']);
         Route::delete('/eaten/{foodId}', [FoodController::class, 'removeEaten'])->whereNumber('foodId');
