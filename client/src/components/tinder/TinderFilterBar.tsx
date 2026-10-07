@@ -18,6 +18,13 @@ import type {
   Rarity,
 } from "@/types/food";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface TinderFilterState {
   diet: DietaryFilter;
@@ -87,18 +94,22 @@ export const TinderFilterBar: React.FC<TinderFilterBarProps> = ({
             <FontAwesomeIcon icon={faClock} className="text-secondary text-[11px]" />
             <span>Khung giờ ăn</span>
           </label>
-          <select
+          <Select
             value={filters.session}
-            onChange={(e) => onChange({ session: e.target.value as SessionFilter })}
-            className="w-full bg-background border border-border text-foreground text-xs font-semibold rounded-2xl p-2.5 focus:ring-2 focus:ring-primary focus:outline-hidden shadow-xs cursor-pointer"
+            onValueChange={(val) => val && onChange({ session: val as SessionFilter })}
           >
-            <option value="auto">Tự Động ({recommendedSession})</option>
-            <option value="Sáng sớm">Sáng sớm</option>
-            <option value="Giữa trưa">Giữa trưa</option>
-            <option value="Chiều">Chiều</option>
-            <option value="Tối">Tối</option>
-            <option value="all">Tất Cả Khung Giờ</option>
-          </select>
+            <SelectTrigger className="w-full rounded-2xl">
+              <SelectValue placeholder="Chọn khung giờ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Tự Động ({recommendedSession})</SelectItem>
+              <SelectItem value="Sáng sớm">Sáng sớm</SelectItem>
+              <SelectItem value="Giữa trưa">Giữa trưa</SelectItem>
+              <SelectItem value="Chiều">Chiều</SelectItem>
+              <SelectItem value="Tối">Tối</SelectItem>
+              <SelectItem value="all">Tất Cả Khung Giờ</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 2. Dietary */}
@@ -107,15 +118,19 @@ export const TinderFilterBar: React.FC<TinderFilterBarProps> = ({
             <FontAwesomeIcon icon={faLeaf} className="text-emerald-500 text-[11px]" />
             <span>Chế độ ăn</span>
           </label>
-          <select
+          <Select
             value={filters.diet}
-            onChange={(e) => onChange({ diet: e.target.value as DietaryFilter })}
-            className="w-full bg-background border border-border text-foreground text-xs font-semibold rounded-2xl p-2.5 focus:ring-2 focus:ring-primary focus:outline-hidden shadow-xs cursor-pointer"
+            onValueChange={(val) => val && onChange({ diet: val as DietaryFilter })}
           >
-            <option value="all">Tất Cả Chế Độ (Chay & Mặn)</option>
-            <option value="veg">🌱 Chỉ Món Chay</option>
-            <option value="meat">🍖 Chỉ Món Mặn</option>
-          </select>
+            <SelectTrigger className="w-full rounded-2xl">
+              <SelectValue placeholder="Chọn chế độ ăn" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất Cả Chế Độ (Chay & Mặn)</SelectItem>
+              <SelectItem value="veg">🌱 Chỉ Món Chay</SelectItem>
+              <SelectItem value="meat">🍖 Chỉ Món Mặn</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 3. Rarity Filter */}
@@ -124,17 +139,21 @@ export const TinderFilterBar: React.FC<TinderFilterBarProps> = ({
             <FontAwesomeIcon icon={faStar} className="text-amber-500 text-[11px]" />
             <span>Phân hạng / Độ hiếm</span>
           </label>
-          <select
+          <Select
             value={filters.rarity}
-            onChange={(e) => onChange({ rarity: e.target.value as "all" | Rarity })}
-            className="w-full bg-background border border-border text-foreground text-xs font-semibold rounded-2xl p-2.5 focus:ring-2 focus:ring-primary focus:outline-hidden shadow-xs cursor-pointer"
+            onValueChange={(val) => val && onChange({ rarity: val as "all" | Rarity })}
           >
-            <option value="all">Tất Cả Độ Hiếm</option>
-            <option value="SSR">👑 SSR - Thượng Hạng</option>
-            <option value="SR">💜 SR - Đặc Sắc</option>
-            <option value="UC">💎 UC - Trung Cấp</option>
-            <option value="C">🍀 C - Phổ Biến</option>
-          </select>
+            <SelectTrigger className="w-full rounded-2xl">
+              <SelectValue placeholder="Chọn độ hiếm" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất Cả Độ Hiếm</SelectItem>
+              <SelectItem value="SSR">👑 SSR - Thượng Hạng</SelectItem>
+              <SelectItem value="SR">💜 SR - Đặc Sắc</SelectItem>
+              <SelectItem value="UC">💎 UC - Trung Cấp</SelectItem>
+              <SelectItem value="C">🍀 C - Phổ Biến</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 4. Deck Size / Limit */}

@@ -28,7 +28,7 @@ export const BoosterPack: React.FC<BoosterPackProps> = ({
         whileHover={!isOpening ? { scale: 1.03, y: -6 } : {}}
         whileTap={!isOpening ? { scale: 0.98 } : {}}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className={`relative w-64 sm:w-72 h-[390px] sm:h-[430px] rounded-3xl cursor-pointer transition-all duration-300 group ${
+        className={`relative w-72 sm:w-80 h-[430px] sm:h-[475px] rounded-3xl cursor-pointer transition-all duration-300 group ${
           isOpening ? "scale-95 opacity-50 blur-xs rotate-2 pointer-events-none" : ""
         }`}
         style={{ perspective: "1000px" }}
@@ -53,7 +53,6 @@ export const BoosterPack: React.FC<BoosterPackProps> = ({
             </div>
             {/* Tear Notch Indicator */}
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[8.5px] font-black text-foreground tracking-wider">
-              <span>MỞ GÓI</span>
               <div className="w-2 h-0.5 bg-secondary" />
             </div>
           </div>
@@ -69,10 +68,10 @@ export const BoosterPack: React.FC<BoosterPackProps> = ({
                 <Image
                   src="/logos/main-logo.png"
                   alt="Logo Ăn gì?"
-                  width={80}
-                  height={100}
+                  width={90}
+                  height={110}
                   draggable={false}
-                  className="h-24 sm:h-28 w-auto object-contain select-none"
+                  className="h-28 sm:h-32 w-auto object-contain select-none"
                 />
               </motion.div>
               <div className="absolute -bottom-2 -right-1 bg-secondary text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-md">
@@ -88,7 +87,7 @@ export const BoosterPack: React.FC<BoosterPackProps> = ({
               <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
                 Gói Gợi Ý Món Ăn
               </h3>
-              <p className="text-xs text-muted-foreground font-medium max-w-[210px] mx-auto line-clamp-2">
+              <p className="text-xs text-muted-foreground font-medium max-w-[240px] mx-auto line-clamp-2">
                 Khám phá món ngon phù hợp theo khẩu vị, thời gian và chỉ số dinh dưỡng.
               </p>
             </div>
@@ -112,10 +111,6 @@ export const BoosterPack: React.FC<BoosterPackProps> = ({
                 <div key={i} className="w-2.5 h-1.5 bg-secondary/40 rounded-xs" />
               ))}
             </div>
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[8px] font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-              <FontAwesomeIcon icon={faStar} className="text-secondary text-[8px]" />
-              100% DINH DƯỠNG
-            </span>
           </div>
         </div>
       </motion.div>
@@ -136,10 +131,6 @@ export const BoosterPack: React.FC<BoosterPackProps> = ({
           <FontAwesomeIcon icon={faWandMagicSparkles} className="mr-2 text-secondary" />
           <span>{isOpening ? "Đang Mở Gói..." : "Mở Gói Khám Phá Ngay"}</span>
         </Button>
-        <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
-          <FontAwesomeIcon icon={faBolt} className="text-secondary text-[10px]" />
-          Nhấn nút để mở gói gợi ý ngẫu nhiên
-        </span>
       </motion.div>
     </div>
   );

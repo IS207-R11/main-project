@@ -19,6 +19,13 @@ import { VirtualMasonryGrid } from "@/components/food/VirtualMasonryGrid";
 import { CreateFoodModal } from "@/components/food/CreateFoodModal";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type SortOption = "name" | "rarity_desc" | "newest";
 
@@ -241,19 +248,21 @@ export const ResourcesExplorer: React.FC = () => {
               />
               Độ Hiếm / Phổ Biến
             </label>
-            <select
+            <Select
               value={selectedRarity}
-              onChange={(e) =>
-                setSelectedRarity(e.target.value as "all" | Rarity)
-              }
-              className="w-full bg-background border border-border text-foreground text-xs font-semibold rounded-2xl p-2.5 focus:ring-2 focus:ring-primary focus:outline-hidden shadow-xs cursor-pointer"
+              onValueChange={(val) => val && setSelectedRarity(val as "all" | Rarity)}
             >
-              <option value="all">Tất Cả Độ Hiếm</option>
-              <option value="SSR">👑 SSR - Thượng Hạng</option>
-              <option value="SR">💜 SR - Đặc Sắc</option>
-              <option value="UC">💎 UC - Trung Cấp</option>
-              <option value="C">🍀 C - Phổ Biến</option>
-            </select>
+              <SelectTrigger className="w-full rounded-2xl">
+                <SelectValue placeholder="Chọn độ hiếm" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất Cả Độ Hiếm</SelectItem>
+                <SelectItem value="SSR">👑 SSR - Thượng Hạng</SelectItem>
+                <SelectItem value="SR">💜 SR - Đặc Sắc</SelectItem>
+                <SelectItem value="UC">💎 UC - Trung Cấp</SelectItem>
+                <SelectItem value="C">🍀 C - Phổ Biến</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Sort Options */}
@@ -265,15 +274,19 @@ export const ResourcesExplorer: React.FC = () => {
               />
               Sắp xếp
             </label>
-            <select
+            <Select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="w-full bg-background border border-border text-foreground text-xs font-semibold rounded-2xl p-2.5 focus:ring-2 focus:ring-primary focus:outline-hidden shadow-xs cursor-pointer"
+              onValueChange={(val) => val && setSortBy(val as SortOption)}
             >
-              <option value="name">Tên (A - Z)</option>
-              <option value="rarity_desc">Độ Hiếm Cao Nhất</option>
-              <option value="newest">Mới Nhất</option>
-            </select>
+              <SelectTrigger className="w-full rounded-2xl">
+                <SelectValue placeholder="Sắp xếp" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Tên (A - Z)</SelectItem>
+                <SelectItem value="rarity_desc">Độ Hiếm Cao Nhất</SelectItem>
+                <SelectItem value="newest">Mới Nhất</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -301,13 +314,13 @@ export const ResourcesExplorer: React.FC = () => {
 
       {/* ================= VIRTUAL MASONRY FOOD FLASHCARDS GRID ================= */}
       {initialLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 justify-items-center">
           {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={i}
-              className="w-full max-w-[225px] h-[315px] rounded-2xl bg-card border border-border p-3.5 flex flex-col justify-between"
+              className="w-full max-w-[255px] h-[360px] rounded-2xl bg-card border border-border p-3.5 flex flex-col justify-between"
             >
-              <Skeleton className="w-full h-32 rounded-xl" />
+              <Skeleton className="w-full h-36 sm:h-40 rounded-xl" />
               <div className="space-y-2 py-2">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-full" />

@@ -41,21 +41,28 @@ export function validateEmail(email: string): string | null {
  * - Number
  * - Special character
  */
-export function validatePassword(password: string): string | null {
+export function getPasswordErrors(password: string): string[] {
+  const errors: string[] = [];
   if (!password || password.length < 8) {
-    return 'Mật khẩu phải có ít nhất 8 ký tự.';
+    errors.push('Mật khẩu phải có ít nhất 8 ký tự.');
   }
   if (!/[A-Z]/.test(password)) {
-    return 'Mật khẩu phải chứa ít nhất 1 chữ hoa (A-Z).';
+    errors.push('Mật khẩu phải chứa ít nhất 1 chữ hoa (A-Z).');
   }
   if (!/[a-z]/.test(password)) {
-    return 'Mật khẩu phải chứa ít nhất 1 chữ thường (a-z).';
+    errors.push('Mật khẩu phải chứa ít nhất 1 chữ thường (a-z).');
   }
   if (!/[0-9]/.test(password)) {
-    return 'Mật khẩu phải chứa ít nhất 1 chữ số (0-9).';
+    errors.push('Mật khẩu phải chứa ít nhất 1 chữ số (0-9).');
   }
   if (!/[^A-Za-z0-9]/.test(password)) {
-    return 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (!@#$%^&*...).';
+    errors.push('Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (!@#$%^&*...).');
   }
-  return null;
+  return errors;
 }
+
+export function validatePassword(password: string): string | null {
+  const errors = getPasswordErrors(password);
+  return errors.length > 0 ? errors[0] : null;
+}
+

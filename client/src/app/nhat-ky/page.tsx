@@ -275,7 +275,7 @@ export default function DiaryPage() {
 
         {/* Create / Edit Record Modal */}
         <Dialog open={recordModalOpen} onOpenChange={setRecordModalOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle className="text-lg font-bold">
                 {editItem ? 'Chỉnh Sửa Ghi Chú Món Ăn' : 'Ghi Nhận Món Vừa Ăn'}

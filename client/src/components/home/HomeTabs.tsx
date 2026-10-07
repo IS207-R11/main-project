@@ -70,10 +70,6 @@ export function HomeTabs() {
         {activeTab === "gacha" ? (
           <>
             <Badge className="bg-secondary/15 text-foreground font-black px-3.5 py-1 rounded-full border border-secondary/30 text-xs shadow-xs">
-              <FontAwesomeIcon
-                icon={faWandMagicSparkles}
-                className="mr-1.5 text-xs text-secondary"
-              />
               <span>Trải Nghiệm Gacha Ẩm Thực</span>
             </Badge>
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">
@@ -86,10 +82,6 @@ export function HomeTabs() {
         ) : (
           <>
             <Badge className="bg-rose-500/15 text-foreground font-black px-3.5 py-1 rounded-full border border-rose-500/30 text-xs shadow-xs">
-              <FontAwesomeIcon
-                icon={faHeart}
-                className="mr-1.5 text-xs text-rose-500"
-              />
               <span>Khám Phá Phong Cách Tinder</span>
             </Badge>
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">

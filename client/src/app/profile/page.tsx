@@ -165,11 +165,30 @@ export default function ProfilePage() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Kiểm tra mật khẩu hiện có trước
+    if (!oldPassword || !oldPassword.trim()) {
+      toast.error('Vui lòng nhập mật khẩu hiện tại');
+      return;
+    }
+
+    // 2. Sau đó mới kiểm tra mật khẩu mới
+    if (!newPassword || !newPassword.trim()) {
+      toast.error('Vui lòng nhập mật khẩu mới');
+      return;
+    }
+
     const pwdErr = validatePassword(newPassword);
     if (pwdErr) {
       toast.error(pwdErr);
       return;
     }
+
+    if (newPassword === oldPassword) {
+      toast.error('Mật khẩu mới không được trùng với mật khẩu hiện tại');
+      return;
+    }
+
     if (newPassword !== confirmNewPassword) {
       toast.error('Mật khẩu xác nhận không khớp');
       return;
@@ -577,7 +596,7 @@ export default function ProfilePage() {
               open={Boolean(editingPref)}
               onOpenChange={(open) => !open && setEditingPref(null)}
             >
-              <DialogContent className="sm:max-w-sm">
+              <DialogContent>
                 <DialogHeader>
                   <DialogTitle className="text-sm font-bold">
                     Cập Nhật Ghi Chú (Món #{editingPref?.food_id})
@@ -632,6 +651,7 @@ export default function ProfilePage() {
                       placeholder="••••••••"
                       value={oldPassword}
                       onChange={(e) => setOldPassword(e.target.value)}
+                      required
                       className="w-full"
                     />
                   </div>

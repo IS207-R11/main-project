@@ -128,7 +128,10 @@ describe('GameSettingsDialog Component (Testing Matrix & Mode switching)', () =>
 
     // Đổi select thứ tự sang 'random'
     const select = screen.getByRole('combobox');
-    fireEvent.change(select, { target: { value: 'random' } });
+    fireEvent.click(select);
+    const option = await screen.findByText('Chọn ngẫu nhiên');
+    fireEvent.pointerDown(option);
+    fireEvent.click(option);
     expect(mockUpdateGacha).toHaveBeenCalledWith({ typeOfExcludedEaten: 'random' });
 
     // Tick checkbox ẩn món từng quay trúng

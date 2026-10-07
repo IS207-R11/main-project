@@ -20,6 +20,13 @@ import { formatApiError } from '@/lib/errorMapping';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { Spinner } from '@/components/ui/spinner';
@@ -406,19 +413,24 @@ export default function AdminPage() {
                   </div>
 
                   {/* Status Filter for Admin/Moderator */}
-                  <select
+                  <Select
                     value={foodsStatus}
-                    onChange={(e) => {
-                      setFoodsStatus(e.target.value);
+                    onValueChange={(val) => {
+                      if (!val) return;
+                      setFoodsStatus(val);
                       setFoodsPage(1);
                     }}
-                    className="w-full sm:w-auto h-9 px-3 bg-background border border-border text-foreground text-xs font-semibold rounded-xl focus:ring-2 focus:ring-primary focus:outline-hidden shadow-2xs cursor-pointer"
                   >
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="ACTIVE">ACTIVE (Đã duyệt)</option>
-                    <option value="PENDING">PENDING (Chờ duyệt)</option>
-                    <option value="DISABLED">DISABLED (Vô hiệu)</option>
-                  </select>
+                    <SelectTrigger className="w-full sm:w-52">
+                      <SelectValue placeholder="Trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                      <SelectItem value="ACTIVE">ACTIVE (Đã duyệt)</SelectItem>
+                      <SelectItem value="PENDING">PENDING (Chờ duyệt)</SelectItem>
+                      <SelectItem value="DISABLED">DISABLED (Vô hiệu)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex gap-2">
@@ -717,17 +729,21 @@ export default function AdminPage() {
                               </td>
                               <td className="p-3">
                                 {isAdmin ? (
-                                  <select
+                                  <Select
                                     value={u.role}
-                                    onChange={(e) =>
-                                      handleUserRoleChange(u.user_id, e.target.value as UserRole)
-                                    }
-                                    className="h-7 rounded border border-input bg-transparent px-2 text-xs font-bold outline-none cursor-pointer"
+                                    onValueChange={(val) => {
+                                      if (val) handleUserRoleChange(u.user_id, val as UserRole);
+                                    }}
                                   >
-                                    <option value="USER">USER</option>
-                                    <option value="MODERATOR">MODERATOR</option>
-                                    <option value="ADMIN">ADMIN</option>
-                                  </select>
+                                    <SelectTrigger size="sm" className="h-8.5 min-w-32 text-xs font-bold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="USER">USER</SelectItem>
+                                      <SelectItem value="MODERATOR">MODERATOR</SelectItem>
+                                      <SelectItem value="ADMIN">ADMIN</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                 ) : (
                                   <Badge className="text-[10px] font-black px-2 py-0.5 rounded-full border">
                                     {u.role}
@@ -937,7 +953,7 @@ export default function AdminPage() {
 
         {/* FOOD MODAL */}
         <Dialog open={foodModalOpen} onOpenChange={setFoodModalOpen}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle className="text-base font-bold">
                 {editingFood ? 'Chỉnh Sửa Món Ăn' : 'Thêm Món Ăn Mới'}
@@ -1001,7 +1017,7 @@ export default function AdminPage() {
           open={Boolean(passwordModalUser)}
           onOpenChange={(open) => !open && setPasswordModalUser(null)}
         >
-          <DialogContent className="sm:max-w-sm">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle className="text-base font-bold">
                 Đặt Lại Mật Khẩu ({passwordModalUser?.username})

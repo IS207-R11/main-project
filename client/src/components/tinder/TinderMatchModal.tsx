@@ -126,7 +126,7 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className={`sm:max-w-lg rounded-2xl border-2 bg-gradient-to-b ${glowStyle} bg-popover text-popover-foreground p-5 sm:p-7 shadow-2xl overflow-hidden`}
+        className={`rounded-2xl border-2 bg-gradient-to-b ${glowStyle} bg-popover text-popover-foreground p-5 sm:p-7 shadow-2xl overflow-hidden`}
       >
         <DialogHeader className="sr-only">
           <DialogTitle>

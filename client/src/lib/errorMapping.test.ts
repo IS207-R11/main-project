@@ -87,4 +87,19 @@ describe('errorMapping - formatApiError', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('Khi đăng ký tài khoản và nhập sai mật khẩu, luôn trả về "Mật khẩu sai"', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(
+      formatApiError({ message: 'The password field must be at least 8 characters.' }, 'Đăng ký')
+    ).toBe('Mật khẩu sai');
+
+    expect(
+      formatApiError({ errors: { password: ['The password must contain...'] } }, 'Đăng ký')
+    ).toBe('Mật khẩu sai');
+
+    consoleSpy.mockRestore();
+  });
 });
+

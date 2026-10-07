@@ -233,7 +233,7 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
         dragElastic={0.85}
         onDragEnd={handleDragEnd}
         whileDrag={{ cursor: "grabbing" }}
-        className={`absolute inset-x-0 mx-auto w-full max-w-[360px] sm:max-w-[400px] h-[510px] sm:h-[550px] select-none touch-none transform-gpu will-change-transform ${
+        className={`absolute inset-x-0 mx-auto w-full max-w-[385px] sm:max-w-[430px] h-[550px] sm:h-[595px] select-none touch-none transform-gpu will-change-transform ${
           isFront ? "cursor-grab" : "pointer-events-none"
         }`}
       >

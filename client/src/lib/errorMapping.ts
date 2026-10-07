@@ -130,9 +130,33 @@ export function normalizeErrorMessage(raw: unknown): string {
 }
 
 /**
+ * Check if the error contains password-related issues
+ */
+export function hasPasswordError(raw: unknown): boolean {
+  if (!raw) return false;
+  if (typeof raw === 'string') {
+    return /password|mật khẩu/i.test(raw);
+  }
+  if (raw instanceof Error) {
+    return /password|mật khẩu/i.test(raw.message);
+  }
+  if (typeof raw === 'object') {
+    const errObj = raw as ApiErrorResponse;
+    if (errObj.errors && typeof errObj.errors === 'object' && errObj.errors.password) {
+      return true;
+    }
+    if (errObj.message && /password|mật khẩu/i.test(errObj.message)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Format any API/UI error:
  * 1. Outputs the real error to console log.
  * 2. Returns the normalized Vietnamese message or "Đã có lỗi xảy ra!".
+ * Đối với đăng ký tài khoản mới: nếu có lỗi mật khẩu, luôn trả về "Mật khẩu sai".
  */
 export function formatApiError(err: unknown, context?: string): string {
   // Requirement: Lỗi thật sự thì xuất ra console log
@@ -140,6 +164,11 @@ export function formatApiError(err: unknown, context?: string): string {
     console.error(`[API Error - ${context}]:`, err);
   } else {
     console.error('[API Error]:', err);
+  }
+
+  // Khi user tạo mới tài khoản và nhập sai mật khẩu: luôn hiển thị "Mật khẩu sai"
+  if (context === 'Đăng ký' && hasPasswordError(err)) {
+    return 'Mật khẩu sai';
   }
 
   return normalizeErrorMessage(err);

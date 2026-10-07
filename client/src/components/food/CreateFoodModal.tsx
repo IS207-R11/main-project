@@ -232,7 +232,7 @@ export const CreateFoodModal: React.FC<CreateFoodModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-6 bg-card text-card-foreground border border-border shadow-2xl">
+      <DialogContent className="p-6 bg-card text-card-foreground border border-border shadow-2xl">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-xl font-extrabold text-foreground flex items-center gap-2">
             <FontAwesomeIcon icon={faUtensils} className="text-secondary" />

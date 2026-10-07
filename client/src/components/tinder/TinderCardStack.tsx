@@ -269,7 +269,7 @@ export const TinderCardStack: React.FC<TinderCardStackProps> = ({
       </AnimatePresence>
 
       {/* ================= CARD STACK CONTAINER ================= */}
-      <div className="relative w-full h-[510px] sm:h-[550px] flex items-center justify-center">
+      <div className="relative w-full h-[550px] sm:h-[595px] flex items-center justify-center">
         {!isDeckFinished ? (
           <div className="relative w-full h-full flex items-center justify-center">
             {/* Render cards from bottom to top so top card is on top */}

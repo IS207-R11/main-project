@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validatePassword, validateUsername, validateEmail } from './validation';
+import { validatePassword, getPasswordErrors, validateUsername, validateEmail } from './validation';
 
 describe('validation - validateUsername', () => {
   it('Bắt buộc: Báo lỗi khi username rỗng hoặc chỉ có khoảng trắng', () => {
@@ -89,3 +89,19 @@ describe('validation - validatePassword (Testing Matrix & Negative User Inputs)'
     expect(validatePassword('Secure#P4ssw0rd!')).toBeNull();
   });
 });
+
+describe('validation - getPasswordErrors (Danh sách lỗi đầy đủ)', () => {
+  it('Liệt kê đầy đủ các lỗi khi mật khẩu sai nhiều tiêu chí', () => {
+    const errors = getPasswordErrors('abc');
+    expect(errors).toContain('Mật khẩu phải có ít nhất 8 ký tự.');
+    expect(errors).toContain('Mật khẩu phải chứa ít nhất 1 chữ hoa (A-Z).');
+    expect(errors).toContain('Mật khẩu phải chứa ít nhất 1 chữ số (0-9).');
+    expect(errors).toContain('Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (!@#$%^&*...).');
+    expect(errors).not.toContain('Mật khẩu phải chứa ít nhất 1 chữ thường (a-z).');
+  });
+
+  it('Trả về mảng rỗng khi mật khẩu hợp lệ', () => {
+    expect(getPasswordErrors('Pass@word123')).toEqual([]);
+  });
+});
+

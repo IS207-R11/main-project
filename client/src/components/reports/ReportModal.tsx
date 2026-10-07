@@ -74,7 +74,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({ open, onOpenChange }) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-6 bg-popover text-popover-foreground border border-border shadow-2xl">
+      <DialogContent className="p-6 bg-popover text-popover-foreground border border-border shadow-2xl">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-xl font-extrabold text-foreground flex items-center gap-2">
             <FontAwesomeIcon icon={faCommentDots} className="text-secondary" />

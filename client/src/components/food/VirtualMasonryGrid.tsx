@@ -9,7 +9,7 @@ interface VirtualMasonryCardProps {
   food: FoodItem;
 }
 
-const CARD_HEIGHT = 315;
+const CARD_HEIGHT = 360;
 
 const VirtualMasonryCard: React.FC<VirtualMasonryCardProps> = ({ food }) => {
   const [isVisible, setIsVisible] = useState(true);
@@ -40,14 +40,14 @@ const VirtualMasonryCard: React.FC<VirtualMasonryCardProps> = ({ food }) => {
       style={{
         minHeight: `${CARD_HEIGHT}px`,
         contentVisibility: "auto",
-        containIntrinsicSize: `225px ${CARD_HEIGHT}px`,
+        containIntrinsicSize: `255px ${CARD_HEIGHT}px`,
       }}
     >
       {isVisible ? (
         <FoodFlashCard food={food} />
       ) : (
         <div
-          className="w-[210px] sm:w-[225px] rounded-2xl bg-muted/20 border border-border/30 animate-pulse"
+          className="w-[235px] sm:w-[255px] rounded-2xl bg-muted/20 border border-border/30 animate-pulse"
           style={{ height: `${CARD_HEIGHT}px` }}
         />
       )}
@@ -73,7 +73,7 @@ export const VirtualMasonryGrid: React.FC<VirtualMasonryGridProps> = ({
   if (!mounted) {
     return (
       <div
-        className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-items-center ${className}`}
+        className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 justify-items-center ${className}`}
       >
         {foods.slice(0, 10).map((food) => (
           <div key={food.id} className="flex justify-center w-full">
@@ -89,12 +89,12 @@ export const VirtualMasonryGrid: React.FC<VirtualMasonryGridProps> = ({
       <Masonry
         columns={{
           0: 1,
-          480: 2,
-          768: 3,
-          1024: 4,
-          1280: 5,
+          540: 2,
+          820: 3,
+          1100: 4,
+          1380: 5,
         }}
-        gap={16}
+        gap={18}
       >
         {foods.map((food) => (
           <VirtualMasonryCard key={food.id} food={food} />

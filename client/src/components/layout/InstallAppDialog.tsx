@@ -88,7 +88,7 @@ export const InstallAppDialog: React.FC<InstallAppDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-6 bg-popover text-popover-foreground border border-border shadow-2xl rounded-xl">
+      <DialogContent className="p-6 bg-popover text-popover-foreground border border-border shadow-2xl rounded-2xl">
         <DialogHeader className="text-center space-y-3">
           <div className="flex justify-center">
             <Image

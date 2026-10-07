@@ -12,6 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useGameSettings } from "@/context/GameSettingsContext";
 import { foodsApi } from "@/api";
 import { FoodOption } from "@/api/types";
@@ -95,20 +102,9 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto rounded-3xl p-6 bg-card text-card-foreground border border-border shadow-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl p-6 bg-card text-card-foreground border border-border shadow-2xl">
         <DialogHeader className="space-y-1.5 text-left pb-2 border-b border-border/60">
           <div className="flex items-center gap-2">
-            {isGacha ? (
-              <Badge className="bg-primary/15 text-primary border border-primary/25 rounded-full px-2.5 py-0.5 text-xs font-bold gap-1">
-                <Sparkles className="w-3 h-3" />
-                Vòng quay
-              </Badge>
-            ) : (
-              <Badge className="bg-rose-500/15 text-rose-500 border border-rose-500/25 rounded-full px-2.5 py-0.5 text-xs font-bold gap-1">
-                <Flame className="w-3 h-3" />
-                Quẹt món
-              </Badge>
-            )}
             <DialogTitle className="text-lg font-bold text-foreground">
               {isGacha ? "Tùy chỉnh vòng quay" : "Tùy chỉnh quẹt món"}
             </DialogTitle>
@@ -185,22 +181,27 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
               <label className="text-xs font-bold text-foreground">
                 Thứ tự bỏ qua món đã ăn
               </label>
-              <select
+              <Select
                 value={isGacha ? gachaSettings.typeOfExcludedEaten : tinderSettings.typeOfExcludedEaten}
-                onChange={(e) => {
-                  const val = e.target.value as "newest" | "oldest" | "random";
+                onValueChange={(val) => {
+                  if (!val) return;
+                  const v = val as "newest" | "oldest" | "random";
                   if (isGacha) {
-                    updateGachaSettings({ typeOfExcludedEaten: val });
+                    updateGachaSettings({ typeOfExcludedEaten: v });
                   } else {
-                    updateTinderSettings({ typeOfExcludedEaten: val });
+                    updateTinderSettings({ typeOfExcludedEaten: v });
                   }
                 }}
-                className="w-full h-9 bg-background border border-border text-foreground text-xs rounded-xl px-3 focus:ring-1 focus:ring-primary focus:outline-hidden cursor-pointer"
               >
-                <option value="newest">Mới ăn gần nhất</option>
-                <option value="oldest">Đã ăn từ lâu</option>
-                <option value="random">Chọn ngẫu nhiên</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Chọn thứ tự bỏ qua..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Mới ăn gần nhất</SelectItem>
+                  <SelectItem value="oldest">Đã ăn từ lâu</SelectItem>
+                  <SelectItem value="random">Chọn ngẫu nhiên</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
 

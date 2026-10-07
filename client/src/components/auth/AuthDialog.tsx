@@ -23,8 +23,9 @@ import {
   faArrowRightToBracket,
   faUserPlus,
   faMapMarkerAlt,
+  faCircleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
-import { validatePassword, validateUsername, validateEmail } from '@/lib/validation';
+import { validatePassword, getPasswordErrors, validateUsername, validateEmail } from '@/lib/validation';
 import { PasswordInput } from '@/components/ui/password-input';
 import { formatApiError } from '@/lib/errorMapping';
 
@@ -42,6 +43,7 @@ export const AuthDialog: React.FC = () => {
   const [regAddress, setRegAddress] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regPasswordErrors, setRegPasswordErrors] = useState<string[]>([]);
   const [regLoading, setRegLoading] = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -93,19 +95,15 @@ export const AuthDialog: React.FC = () => {
       return;
     }
 
-    if (!regPassword.trim()) {
-      toast.error('Vui lòng nhập mật khẩu');
+    const pwdErrors = getPasswordErrors(regPassword);
+    if (pwdErrors.length > 0) {
+      setRegPasswordErrors(pwdErrors);
+      toast.error('Mật khẩu sai');
       return;
     }
 
     if (regPassword !== regConfirmPassword) {
       toast.error('Mật khẩu xác nhận không khớp');
-      return;
-    }
-
-    const pwdError = validatePassword(regPassword);
-    if (pwdError) {
-      toast.error(pwdError);
       return;
     }
 
@@ -124,7 +122,12 @@ export const AuthDialog: React.FC = () => {
       setRegAddress('');
       setRegPassword('');
       setRegConfirmPassword('');
+      setRegPasswordErrors([]);
     } catch (err: unknown) {
+      const errObj = err as any;
+      if (errObj?.errors?.password && Array.isArray(errObj.errors.password)) {
+        setRegPasswordErrors(errObj.errors.password);
+      }
       const errorMsg = formatApiError(err, 'Đăng ký');
       toast.error(errorMsg);
     } finally {
@@ -134,7 +137,7 @@ export const AuthDialog: React.FC = () => {
 
   return (
     <Dialog open={authModalOpen} onOpenChange={(open) => !open && closeAuthModal()}>
-      <DialogContent className="sm:max-w-md p-6 bg-popover text-popover-foreground border border-border shadow-2xl">
+      <DialogContent className="p-6 bg-popover text-popover-foreground border border-border shadow-2xl">
         <DialogHeader className="text-center space-y-1">
           <DialogTitle className="text-2xl font-extrabold tracking-tight text-foreground">
             Tài Khoản Ăn Gì?
@@ -274,7 +277,7 @@ export const AuthDialog: React.FC = () => {
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
                   <span>Mật khẩu *</span>
@@ -282,13 +285,33 @@ export const AuthDialog: React.FC = () => {
                 <PasswordInput
                   placeholder="Tối thiểu 8 ký tự..."
                   value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRegPassword(val);
+                    if (regPasswordErrors.length > 0) {
+                      setRegPasswordErrors(getPasswordErrors(val));
+                    }
+                  }}
                   disabled={regLoading}
                   required
                 />
                 <p className="text-[10px] text-muted-foreground">
                   Ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
                 </p>
+
+                {regPasswordErrors.length > 0 && (
+                  <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs space-y-1.5 animate-in fade-in duration-200">
+                    <div className="font-semibold flex items-center gap-1.5 text-xs">
+                      <FontAwesomeIcon icon={faCircleExclamation} />
+                      <span>Mật khẩu chưa đạt yêu cầu:</span>
+                    </div>
+                    <ul className="list-disc list-inside space-y-0.5 text-[11px] font-medium pl-1">
+                      {regPasswordErrors.map((errMsg, idx) => (
+                        <li key={idx}>{errMsg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1">

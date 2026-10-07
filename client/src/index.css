@@ -122,11 +122,48 @@
   html {
     @apply font-sans scroll-smooth;
   }
+  html[data-base-ui-scroll-locked] {
+    overflow: hidden !important;
+    scrollbar-gutter: auto !important;
+  }
   body {
     background: linear-gradient(180deg, var(--theme-bg-start) 0%, var(--theme-bg-end) 100%);
     color: var(--foreground);
     min-height: 100vh;
     transition: background 0.6s ease-in-out, color 0.4s ease-in-out;
+  }
+  /* Scrollbar inside modal dialogs */
+  [data-slot="dialog-content"],
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(74, 44, 26, 0.3) transparent;
+  }
+  .dark [data-slot="dialog-content"],
+  .dark .custom-scrollbar {
+    scrollbar-color: rgba(255, 247, 237, 0.3) transparent;
+  }
+  [data-slot="dialog-content"]::-webkit-scrollbar,
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  [data-slot="dialog-content"]::-webkit-scrollbar-track,
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 8px 0;
+  }
+  [data-slot="dialog-content"]::-webkit-scrollbar-thumb,
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(74, 44, 26, 0.3);
+    border-radius: 9999px;
+  }
+  .dark [data-slot="dialog-content"]::-webkit-scrollbar-thumb,
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 247, 237, 0.3);
+  }
+  [data-slot="dialog-content"]::-webkit-scrollbar-thumb:hover,
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
   }
   h1, h2, h3, h4, h5, h6, .font-heading {
     font-family: var(--font-heading), 'Montserrat', sans-serif;

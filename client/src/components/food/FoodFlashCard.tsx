@@ -215,10 +215,10 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
 
   return (
     <div
-      className={`w-[210px] sm:w-[225px] h-[305px] sm:h-[315px] select-none group shrink-0 rounded-2xl border ${rarityStyle.border} ${rarityStyle.glow} bg-card text-card-foreground flex flex-col overflow-hidden shadow-md transition-all duration-300 hover:-translate-y-1 ${className}`}
+      className={`w-[235px] sm:w-[255px] h-[345px] sm:h-[360px] select-none group shrink-0 rounded-2xl border ${rarityStyle.border} ${rarityStyle.glow} bg-card text-card-foreground flex flex-col overflow-hidden shadow-md transition-all duration-300 hover:-translate-y-1 ${className}`}
     >
       {/* Dish Image Container */}
-      <div className="relative h-[125px] sm:h-[135px] w-full overflow-hidden bg-muted/80 shrink-0">
+      <div className="relative h-[145px] sm:h-[160px] w-full overflow-hidden bg-muted/80 shrink-0">
         <Image
           src={imageSrc}
           alt={food.name}
@@ -232,15 +232,15 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40" />
 
         {/* Top Badges Over Image */}
-        <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
+        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
           <div className="flex items-center gap-1.5">
             <Badge
-              className={`px-2 py-0.5 text-[9px] font-black rounded-full uppercase tracking-wider shadow-sm ${rarityStyle.badge}`}
+              className={`px-2.5 py-0.5 text-[9.5px] font-black rounded-full uppercase tracking-wider shadow-sm ${rarityStyle.badge}`}
             >
               {food.rarity}
             </Badge>
             {food.status === "PENDING" && (
-              <Badge className="bg-amber-500/90 text-white text-[9px] px-1.5 py-0.5 rounded-full shadow-sm">
+              <Badge className="bg-amber-500/90 text-white text-[9.5px] px-2 py-0.5 rounded-full shadow-sm">
                 Chờ duyệt
               </Badge>
             )}
@@ -249,17 +249,17 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
           {/* Status pill on image if marked */}
           <div className="flex items-center gap-1">
             {isFavorited && (
-              <span className="h-5 w-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px] shadow-sm animate-in fade-in zoom-in duration-200">
+              <span className="h-5.5 w-5.5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10.5px] shadow-sm animate-in fade-in zoom-in duration-200">
                 <FontAwesomeIcon icon={faHeart} />
               </span>
             )}
             {isHated && (
-              <span className="h-5 w-5 rounded-full bg-slate-700 text-white flex items-center justify-center text-[10px] shadow-sm animate-in fade-in zoom-in duration-200">
+              <span className="h-5.5 w-5.5 rounded-full bg-slate-700 text-white flex items-center justify-center text-[10.5px] shadow-sm animate-in fade-in zoom-in duration-200">
                 <FontAwesomeIcon icon={faThumbsDown} />
               </span>
             )}
             {isEaten && (
-              <span className="h-5 w-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] shadow-sm animate-in fade-in zoom-in duration-200">
+              <span className="h-5.5 w-5.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10.5px] shadow-sm animate-in fade-in zoom-in duration-200">
                 <FontAwesomeIcon icon={faUtensils} />
               </span>
             )}
@@ -268,23 +268,23 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
       </div>
 
       {/* Card Body */}
-      <div className="p-2.5 sm:p-3 flex-1 flex flex-col justify-between overflow-hidden gap-1.5">
-        <div className="space-y-0.5">
-          <h3 className="text-[13.5px] sm:text-[14px] font-bold text-foreground leading-tight truncate group-hover:text-secondary transition-colors">
+      <div className="p-3 sm:p-3.5 flex-1 flex flex-col justify-between overflow-hidden gap-2">
+        <div className="space-y-1">
+          <h3 className="text-[14.5px] sm:text-[15.5px] font-bold text-foreground leading-tight truncate group-hover:text-secondary transition-colors">
             {food.name}
           </h3>
 
-          <p className="text-[11px] text-muted-foreground line-clamp-1 leading-relaxed">
+          <p className="text-[11.5px] sm:text-xs text-muted-foreground text-justify leading-relaxed line-clamp-2">
             {food.description || "Món ngon hấp dẫn từ cộng đồng ẩm thực AnGi."}
           </p>
         </div>
 
         {/* Real Status / Engagement Row with mini Maps & YouTube shortcuts */}
-        <div className="flex items-center justify-between text-[9.5px] py-1 px-2 bg-muted/60 rounded-xl border border-border/50 font-medium">
+        <div className="flex items-center justify-between text-[10px] py-1.5 px-2.5 bg-muted/60 rounded-xl border border-border/50 font-medium">
           <span className="text-muted-foreground flex items-center gap-1">
             <FontAwesomeIcon
               icon={faCircleCheck}
-              className="text-secondary text-[8.5px]"
+              className="text-secondary text-[9px]"
             />
             <span>{food.status === "ACTIVE" ? "Đã duyệt" : "Chờ duyệt"}</span>
           </span>
@@ -298,13 +298,13 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="size-5 rounded-md bg-background hover:bg-muted border border-border/70 hover:border-emerald-500/60 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
+              className="size-5.5 rounded-md bg-background hover:bg-muted border border-border/70 hover:border-emerald-500/60 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
               title={`Tìm quán ${food.name} trên Google Maps`}
             >
               <Image
-                src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg"
+                src="other-images/googlemaps.webp"
                 alt="Maps"
-                className="size-3 object-contain"
+                className="size-3.5 object-contain"
               />
             </a>
 
@@ -316,17 +316,15 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="size-5 rounded-md bg-background hover:bg-muted border border-border/70 hover:border-red-500/60 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
+              className="size-5.5 rounded-md bg-background hover:bg-muted border border-border/70 hover:border-red-500/60 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
               title={`Xem công thức nấu ${food.name} trên YouTube`}
             >
               <Image
-                src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
+                src="other-images/youtube.webp"
                 alt="YouTube"
-                className="size-3 object-contain"
+                className="size-3.5 object-contain"
               />
             </a>
-
-            <span className="text-foreground font-bold text-[9px]">#{foodId}</span>
           </div>
         </div>
 
@@ -336,7 +334,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
           <button
             type="button"
             onClick={handleToggleFavorite}
-            className={`h-7 px-1.5 rounded-xl border flex items-center justify-center gap-1.5 text-[10px] font-bold transition-all cursor-pointer shadow-2xs ${
+            className={`h-7.5 sm:h-8 px-2 rounded-xl border flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all cursor-pointer shadow-2xs ${
               isFavorited
                 ? "bg-rose-500 text-white border-rose-500 shadow-rose-500/20 shadow-xs"
                 : "bg-background hover:bg-muted text-muted-foreground hover:text-rose-500 border-border"
@@ -345,7 +343,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
           >
             <FontAwesomeIcon
               icon={faHeart}
-              className={`text-[10px] ${
+              className={`text-[11px] ${
                 isFavorited ? "text-white" : "text-rose-500"
               }`}
             />
@@ -356,7 +354,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
           <button
             type="button"
             onClick={handleToggleHated}
-            className={`h-7 px-1.5 rounded-xl border flex items-center justify-center gap-1.5 text-[10px] font-bold transition-all cursor-pointer shadow-2xs ${
+            className={`h-7.5 sm:h-8 px-2 rounded-xl border flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all cursor-pointer shadow-2xs ${
               isHated
                 ? "bg-slate-700 dark:bg-slate-600 text-white border-slate-700 shadow-slate-700/20 shadow-xs"
                 : "bg-background hover:bg-muted text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300 border-border"
@@ -365,7 +363,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
           >
             <FontAwesomeIcon
               icon={faThumbsDown}
-              className={`text-[10px] ${
+              className={`text-[11px] ${
                 isHated ? "text-white" : "text-muted-foreground"
               }`}
             />
@@ -376,7 +374,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
           <button
             type="button"
             onClick={handleRecordEaten}
-            className={`h-7 px-1.5 rounded-xl border flex items-center justify-center gap-1.5 text-[10px] font-bold transition-all cursor-pointer shadow-2xs ${
+            className={`h-7.5 sm:h-8 px-2 rounded-xl border flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all cursor-pointer shadow-2xs ${
               isEaten
                 ? "bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/20 shadow-xs"
                 : "bg-background hover:bg-muted text-muted-foreground hover:text-emerald-600 border-border"
@@ -385,7 +383,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
           >
             <FontAwesomeIcon
               icon={faUtensils}
-              className={`text-[10px] ${
+              className={`text-[11px] ${
                 isEaten ? "text-white" : "text-emerald-600"
               }`}
             />

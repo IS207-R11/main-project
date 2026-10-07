@@ -31,7 +31,7 @@ export const Footer: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pr-0 md:pr-6">
-                <strong>ĂN GÌ?</strong> bắt đầu từ một câu hỏi rất quen thuộc: “Hôm nay ăn gì?” Một câu hỏi nhỏ nhưng đôi khi lại khiến chúng ta mất rất nhiều thời gian để lựa chọn. Vì vậy, <strong>ĂN GÌ?</strong> ra đời để biến những phút phân vân ấy thành một hành trình khám phá đầy thú vị. Mỗi người có một khẩu vị và thói quen ăn uống riêng. <strong>ĂN GÌ?</strong> dựa trên những sở thích và lịch sử ăn uống đó để đưa ra những gợi ý phù hợp, để mỗi lần bấm “Gợi ý” đều có thể mở ra một lựa chọn mới.
+                <strong>ĂN GÌ?</strong> bắt đầu từ một câu hỏi rất quen thuộc: “Hôm nay ăn gì?” Một câu hỏi nhỏ nhưng đôi khi lại khiến chúng ta mất rất nhiều thời gian để lựa chọn. Vì vậy, <strong>ĂN GÌ?</strong> ra đời để biến những phút phân vân ấy thành một hành trình khám phá đầy thú vị. Mỗi người có một khẩu vị và thói quen ăn uống riêng. <strong>ĂN GÌ?</strong> dựa trên những sở thích và lịch sử ăn uống đó để đưa ra những gợi ý phù hợp.
               </p>
               <div className="inline-flex items-center gap-2 text-[11px] font-bold text-foreground bg-muted/80 px-3.5 py-1.5 rounded-full border border-border/60">
                 <FontAwesomeIcon icon={faStar} className="text-secondary text-xs" />
@@ -100,9 +100,8 @@ export const Footer: React.FC = () => {
         <div className="pt-6 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between text-[11px] text-muted-foreground gap-3">
           <p>© 2026 Ăn gì? Tất cả các quyền được bảo lưu.</p>
           <div className="flex items-center gap-1.5">
-            <span>Đồng hành cùng bữa ăn ngon</span>
+            <span>Đồng hành cùng bữa ăn ngon mỗi ngày</span>
             <FontAwesomeIcon icon={faHeart} className="text-destructive text-xs" />
-            <span>mỗi ngày</span>
           </div>
         </div>
         </div>

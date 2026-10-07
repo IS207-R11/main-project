@@ -137,41 +137,6 @@ export const GachaGame: React.FC<GachaGameProps> = () => {
             <FoodFlashCard food={mapFoodCardToFoodItem(winnerFood)} />
           </div>
 
-          {/* Detailed Winner Data Showcase */}
-          <div className="p-5 rounded-3xl bg-card border border-border shadow-sm space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Dữ Liệu Chi Tiết Của Món Ăn
-            </h4>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="p-3 bg-muted/40 rounded-2xl border border-border/50">
-                <div className="text-[10px] text-muted-foreground uppercase font-bold">Mã món</div>
-                <div className="text-sm font-black text-foreground">#{winnerFood.food_id}</div>
-              </div>
-              <div className="p-3 bg-secondary/10 rounded-2xl border border-secondary/20">
-                <div className="text-[10px] text-secondary uppercase font-bold flex items-center justify-center gap-1">
-                  Độ hiếm
-                </div>
-                <div className="text-sm font-black text-foreground">
-                  {winnerFood.food_rank}
-                </div>
-              </div>
-              <div className="p-3 bg-muted/40 rounded-2xl border border-border/50">
-                <div className="text-[10px] text-muted-foreground uppercase font-bold flex items-center justify-center gap-1">
-                  <FontAwesomeIcon icon={faClock} /> Trạng thái
-                </div>
-                <Badge variant={winnerFood.status === "ACTIVE" ? "default" : "secondary"}>
-                  {winnerFood.status}
-                </Badge>
-              </div>
-            </div>
-
-            {winnerFood.description && (
-              <p className="text-xs text-muted-foreground pt-1 italic">
-                &ldquo;{winnerFood.description}&rdquo;
-              </p>
-            )}
-          </div>
-
           <div className="text-center pt-2">
             <Button
               variant="outline"

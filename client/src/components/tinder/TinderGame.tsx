@@ -112,7 +112,7 @@ export const TinderGame: React.FC<TinderGameProps> = ({
               whileHover={!isLoading && allFoods.length > 0 ? { scale: 1.02, y: -4 } : {}}
               whileTap={!isLoading && allFoods.length > 0 ? { scale: 0.98 } : {}}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="relative w-64 sm:w-72 h-[340px] sm:h-[370px] rounded-3xl cursor-pointer transition-all duration-300 group"
+              className="relative w-72 sm:w-80 h-[380px] sm:h-[420px] rounded-3xl cursor-pointer transition-all duration-300 group"
             >
               {/* Ambient Glow */}
               <div className="absolute -inset-3 rounded-3xl bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 opacity-30 blur-xl group-hover:opacity-60 transition-opacity duration-500 -z-10 animate-pulse" />
@@ -126,10 +126,10 @@ export const TinderGame: React.FC<TinderGameProps> = ({
                 </div>
 
                 <div className="space-y-3 flex flex-col items-center justify-center my-auto">
-                  <div className="size-20 sm:size-24 rounded-full bg-gradient-to-tr from-rose-500/20 via-orange-500/20 to-amber-500/20 flex items-center justify-center border border-rose-500/30 text-rose-500 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                  <div className="size-24 sm:size-28 rounded-full bg-gradient-to-tr from-rose-500/20 via-orange-500/20 to-amber-500/20 flex items-center justify-center border border-rose-500/30 text-rose-500 shadow-inner group-hover:scale-105 transition-transform duration-300">
                     <FontAwesomeIcon
                       icon={faFire}
-                      className="text-4xl sm:text-5xl text-rose-500 drop-shadow-md animate-bounce"
+                      className="text-5xl sm:text-6xl text-rose-500 drop-shadow-md animate-bounce"
                     />
                   </div>
 
@@ -175,10 +175,6 @@ export const TinderGame: React.FC<TinderGameProps> = ({
                 <FontAwesomeIcon icon={faFire} className="text-yellow-200 text-lg animate-pulse" />
                 <span>{isLoading ? "Đang Tải Món..." : "Quẹt Ngay!"}</span>
               </Button>
-              <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
-                <FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[10px]" />
-                Nhấn để bắt đầu quẹt món ăn hôm nay
-              </span>
             </motion.div>
           </motion.div>
         ) : (
