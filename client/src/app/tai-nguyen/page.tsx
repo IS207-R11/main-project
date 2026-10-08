@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function ResourcesPage() {
   return (
-    <div className="min-h-[calc(100vh-4rem)] pb-20 transition-colors duration-500">
+    <div className="min-h-[calc(100vh-4rem)] pb-20 transition-colors duration-500 overflow-x-clip">
       {/* ================= PAGE HEADER ================= */}
       <section className="border-b border-border/80 bg-card/75 backdrop-blur-md py-10 px-4 sm:px-6">
         <div className="container mx-auto max-w-6xl text-center space-y-3">

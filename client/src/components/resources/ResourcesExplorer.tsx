@@ -156,7 +156,13 @@ export const ResourcesExplorer: React.FC = () => {
     fetchFirstPage();
   }, [fetchFirstPage]);
 
-  // Infinite scroll listener using IntersectionObserver on sentinel
+  // Calculate index of sentinel item (the 10th item before the end of the batch, since pageSize is 20)
+  const sentinelIndex =
+    hasMore && foods.length > 0
+      ? Math.max(0, foods.length >= 10 ? foods.length - 10 : foods.length - 1)
+      : -1;
+
+  // Infinite scroll listener using IntersectionObserver on 10th food item sentinel
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || !hasMore || initialLoading || loadingMore) return;
@@ -168,14 +174,14 @@ export const ResourcesExplorer: React.FC = () => {
         }
       },
       {
-        rootMargin: "500px 0px", // Trigger when 500px from the bottom
+        rootMargin: "300px 0px", // Trigger when approaching the 10th item
         threshold: 0,
       }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, initialLoading, loadingMore, loadMore]);
+  }, [hasMore, initialLoading, loadingMore, loadMore, foods.length, sentinelIndex]);
 
   const handleResetFilters = () => {
     setSearchQuery("");
@@ -343,31 +349,35 @@ export const ResourcesExplorer: React.FC = () => {
 
       {/* ================= VIRTUAL MASONRY FOOD FLASHCARDS GRID ================= */}
       {initialLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 justify-items-center">
-          {Array.from({ length: 10 }).map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 min-[880px]:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6 justify-items-center w-full">
+          {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="w-full max-w-[255px] h-[360px] rounded-2xl bg-card border border-border p-3.5 flex flex-col justify-between"
+              className="w-full max-w-[260px] h-[345px] sm:h-[360px] rounded-3xl bg-card border border-border p-3.5 flex flex-col justify-between shadow-xs"
             >
-              <Skeleton className="w-full h-36 sm:h-40 rounded-xl" />
+              <Skeleton className="w-full h-[145px] sm:h-[160px] rounded-2xl" />
               <div className="space-y-2 py-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-2/3" />
+                <Skeleton className="h-4 w-3/4 rounded-md" />
+                <Skeleton className="h-3 w-full rounded-md" />
+                <Skeleton className="h-3 w-2/3 rounded-md" />
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-border/40">
                 <Skeleton className="h-4 w-12 rounded-full" />
-                <Skeleton className="h-6 w-16 rounded-full" />
+                <div className="flex gap-1.5">
+                  <Skeleton className="h-6 w-6 rounded-md" />
+                  <Skeleton className="h-6 w-6 rounded-md" />
+                </div>
               </div>
             </div>
           ))}
         </div>
       ) : foods.length > 0 ? (
-        <div className="space-y-6">
-          <VirtualMasonryGrid foods={foods} />
-
-          {/* Infinite Scroll Trigger Sentinel */}
-          <div ref={sentinelRef} className="h-4 w-full pointer-events-none" />
+        <div className="space-y-6 w-full">
+          <VirtualMasonryGrid
+            foods={foods}
+            sentinelRef={sentinelRef}
+            sentinelIndex={sentinelIndex}
+          />
 
           {/* Loading More Indicator */}
           {loadingMore && (

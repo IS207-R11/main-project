@@ -250,7 +250,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
 
   return (
     <div
-      className={`w-[235px] sm:w-[255px] h-[345px] sm:h-[360px] select-none group shrink-0 perspective-1000 ${className}`}
+      className={`w-full max-w-[260px] h-[345px] sm:h-[360px] select-none group perspective-1000 ${className}`}
     >
       <div
         className={`relative w-full h-full duration-500 preserve-3d transition-transform ease-out rounded-3xl transform-gpu ${
