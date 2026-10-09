@@ -1,0 +1,72 @@
+name: CI server
+
+on:
+  pull_request:
+    paths:
+      - "server/**"
+      - ".github/workflows/ci-server.yml" # sửa workflow này cũng chạy lại để kiểm tra
+
+# Huỷ run cũ của cùng PR khi có commit mới
+concurrency:
+  group: ci-server-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      # PHP 8.3 + extension giống Dockerfile (sqlite thêm để chạy test)
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, zip, bcmath, gd, exif, pcntl, pdo_mysql, pdo_pgsql, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+
+      - name: Get Composer cache dir
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('server/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      # Cài cả dev dependency vì cần phpunit/pint
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Prepare env
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Lint (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Run tests
+        run: php artisan test
+
+  # Đảm bảo Dockerfile vẫn build được (không push)
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
