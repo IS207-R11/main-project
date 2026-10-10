@@ -8,6 +8,7 @@ import {
   faLock,
   faDatabase,
   faKey,
+  faShieldHalved,
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 
@@ -82,7 +83,10 @@ export default function PrivacyPolicyPage() {
         </div>
 
         <div className="p-6 rounded-3xl bg-card border border-border shadow-xs space-y-3">
-          <h3 className="text-foreground font-bold text-base">4. Bảo Mật Truyền Thông Tin</h3>
+          <div className="flex items-center gap-2 text-foreground font-bold text-base">
+            <FontAwesomeIcon icon={faShieldHalved} className="text-emerald-500" />
+            <span>4. Bảo Mật Truyền Thông Tin</span>
+          </div>
           <p>
             Mọi kết nối giữa trình duyệt của bạn và hệ thống máy chủ Ăn Gì đều được bảo vệ bởi giao thức HTTPS với cơ chế mã hóa truyền tải an toàn.
           </p>

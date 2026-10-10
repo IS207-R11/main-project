@@ -12,7 +12,8 @@ import {
 import { foodsApi } from "@/api";
 import { FoodCard } from "@/api/types";
 import { Rarity } from "@/types/food";
-import { mapFoodCardToFoodItem } from "@/lib/foodAdapter";
+import { mapFoodCardToFoodItem, stripFoodCode } from "@/lib/foodAdapter";
+import { resolveEligibleFoodIds } from "@/lib/foodFilter";
 import { BoosterPack, RevealAnimation, GachaVortex } from "@/components/gacha";
 import { FoodFlashCard } from "@/components/food/FoodFlashCard";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,13 @@ export const GachaGame: React.FC<GachaGameProps> = () => {
       const minVortexDuration = 1600;
       const vortexTimer = new Promise((resolve) => setTimeout(resolve, minVortexDuration));
 
+      const eligibleFoodIds = await resolveEligibleFoodIds({
+        dietary: gachaSettings.dietary,
+        allergies: gachaSettings.allergies,
+        mealSession: gachaSettings.mealSession,
+        foodSet: gachaSettings.foodSet,
+      });
+
       const [res] = await Promise.all([
         foodsApi.gacha({
           numberOfExcludedEaten:
@@ -52,8 +60,7 @@ export const GachaGame: React.FC<GachaGameProps> = () => {
               : undefined,
           typeOfExcludedEaten: gachaSettings.typeOfExcludedEaten,
           excludedGachaSet: gachaSettings.excludedGachaSet,
-          foodSet:
-            gachaSettings.foodSet.length > 0 ? gachaSettings.foodSet : undefined,
+          foodSet: eligibleFoodIds,
         }),
         vortexTimer,
       ]);
@@ -111,7 +118,7 @@ export const GachaGame: React.FC<GachaGameProps> = () => {
       {gachaState === "opening" && (
         <RevealAnimation
           highestRarity={currentRarity}
-          foodName={winnerFood?.name}
+          foodName={stripFoodCode(winnerFood?.name || "")}
           onFinish={handleRevealFinished}
         />
       )}
@@ -168,8 +175,11 @@ export const GachaGame: React.FC<GachaGameProps> = () => {
           </div>
 
           {/* Flashcard presentation */}
-          <div className="flex justify-center">
-            <FoodFlashCard food={mapFoodCardToFoodItem(winnerFood)} />
+          <div className="flex justify-center py-2">
+            <FoodFlashCard
+              food={mapFoodCardToFoodItem(winnerFood)}
+              size="lg"
+            />
           </div>
 
           <div className="text-center pt-2">

@@ -8,6 +8,7 @@ import { UserFoodItem, EatenFood } from '@/api/types';
 import { validatePassword } from '@/lib/validation';
 import { PasswordInput } from '@/components/ui/password-input';
 import { formatApiError } from '@/lib/errorMapping';
+import { stripFoodCode } from '@/lib/foodAdapter';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import {
   Dialog,
@@ -21,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Spinner } from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Image } from '@/components/ui/image';
@@ -36,7 +38,25 @@ import {
   faMapMarkerAlt,
   faUtensils,
   faClock,
+  faGear,
+  faRotate,
+  faCheck,
 } from '@fortawesome/free-solid-svg-icons';
+
+const AUTO_RESET_KEY = 'an_gi_auto_reset_eaten_config';
+
+export interface AutoResetConfig {
+  enabled: boolean;
+  days: number;
+}
+
+const parseDate = (d?: string | null): number => {
+  if (!d) return 0;
+  const parsed = new Date(d).getTime();
+  if (!isNaN(parsed)) return parsed;
+  const isoFallback = new Date(d.replace(' ', 'T')).getTime();
+  return isNaN(isoFallback) ? 0 : isoFallback;
+};
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading: authLoading, openAuthModal, refreshUser, logout } =
@@ -64,6 +84,17 @@ export default function ProfilePage() {
     note: string;
   } | null>(null);
 
+  // Auto Reset Eaten Foods State
+  const [autoResetConfig, setAutoResetConfig] = useState<AutoResetConfig>({
+    enabled: false,
+    days: 7,
+  });
+  const [autoResetEnabled, setAutoResetEnabled] = useState(false);
+  const [autoResetDays, setAutoResetDays] = useState(7);
+  const [showAutoResetDialog, setShowAutoResetDialog] = useState(false);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
+  const [clearingAll, setClearingAll] = useState(false);
+
   // Security password state
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -79,7 +110,24 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  // Load preferences (Favorites, Hated, Eaten)
+  // Load auto reset configuration from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(AUTO_RESET_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.enabled === 'boolean' && typeof parsed.days === 'number') {
+          setAutoResetConfig(parsed);
+          setAutoResetEnabled(parsed.enabled);
+          setAutoResetDays(parsed.days);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse auto-reset config from localStorage', e);
+    }
+  }, []);
+
+  // Load preferences (Favorites, Hated, Eaten) with Auto-Reset Expiration Check
   const loadPreferences = useCallback(async () => {
     if (!user?.user_id) return;
     try {
@@ -91,21 +139,49 @@ export default function ProfilePage() {
       ]);
       if (favRes?.data) setFavorites(favRes.data);
       if (hatedRes?.data) setHated(hatedRes.data);
-      if (eatenRes?.data) setEatenFoods(eatenRes.data);
+
+      let eatenList = eatenRes?.data || [];
+
+      // Check auto-reset expiration if enabled
+      let currentAutoResetConfig: AutoResetConfig = { enabled: false, days: 7 };
+      try {
+        const saved = localStorage.getItem(AUTO_RESET_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (typeof parsed.enabled === 'boolean' && typeof parsed.days === 'number') {
+            currentAutoResetConfig = parsed;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      if (currentAutoResetConfig.enabled && currentAutoResetConfig.days > 0 && eatenList.length > 0) {
+        const cutoffTime = Date.now() - currentAutoResetConfig.days * 24 * 60 * 60 * 1000;
+        const expiredItems = eatenList.filter((item) => {
+          const t = parseDate(item.created_at);
+          return t > 0 && t < cutoffTime;
+        });
+
+        if (expiredItems.length > 0) {
+          await Promise.allSettled(
+            expiredItems.map((item) => foodsApi.deleteEaten(item.eaten_id))
+          );
+          const expiredIds = new Set(expiredItems.map((i) => i.eaten_id));
+          eatenList = eatenList.filter((item) => !expiredIds.has(item.eaten_id));
+          toast.info(
+            `Đã tự động reset ${expiredItems.length} món ăn đã ăn quá ${currentAutoResetConfig.days} ngày.`
+          );
+        }
+      }
+
+      setEatenFoods(eatenList);
     } catch (e) {
       console.warn('Failed to load food preferences/eaten:', e);
     } finally {
       setLoadingPref(false);
     }
   }, [user]);
-
-  const parseDate = (d?: string | null): number => {
-    if (!d) return 0;
-    const parsed = new Date(d).getTime();
-    if (!isNaN(parsed)) return parsed;
-    const isoFallback = new Date(d.replace(' ', 'T')).getTime();
-    return isNaN(isoFallback) ? 0 : isoFallback;
-  };
 
   // Sắp xếp danh mục món ăn đã ăn giảm dần theo created_at
   const sortedEatenFoods = useMemo(() => {
@@ -355,17 +431,168 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSaveAutoResetConfig = async (enabled: boolean, days: number) => {
+    const validDays = Math.max(1, Math.min(365, days || 7));
+    const newConfig: AutoResetConfig = { enabled, days: validDays };
+    setAutoResetConfig(newConfig);
+    try {
+      localStorage.setItem(AUTO_RESET_KEY, JSON.stringify(newConfig));
+      if (enabled) {
+        toast.success(`Đã bật tự động reset món đã ăn sau mỗi ${validDays} ngày!`);
+        // Perform cleanup if there are expired foods
+        const cutoff = Date.now() - validDays * 24 * 60 * 60 * 1000;
+        const expiredItems = eatenFoods.filter((item) => {
+          const t = parseDate(item.created_at);
+          return t > 0 && t < cutoff;
+        });
+        if (expiredItems.length > 0) {
+          await Promise.allSettled(
+            expiredItems.map((item) => foodsApi.deleteEaten(item.eaten_id))
+          );
+          const expiredIds = new Set(expiredItems.map((i) => i.eaten_id));
+          setEatenFoods((prev) => prev.filter((i) => !expiredIds.has(i.eaten_id)));
+          toast.info(`Đã dọn dẹp ${expiredItems.length} món ăn quá hạn.`);
+        }
+      } else {
+        toast.info('Đã tắt tính năng tự động reset món đã ăn');
+      }
+      setShowAutoResetDialog(false);
+    } catch (e) {
+      console.error('Failed to save auto reset config', e);
+      toast.error('Không thể lưu cấu hình tự động reset');
+    }
+  };
+
+  const handleManualCleanup = async (days: number) => {
+    if (!user?.user_id || eatenFoods.length === 0) return;
+    const validDays = Math.max(1, days || 7);
+    const cutoff = Date.now() - validDays * 24 * 60 * 60 * 1000;
+    const expiredItems = eatenFoods.filter((item) => {
+      const t = parseDate(item.created_at);
+      return t > 0 && t < cutoff;
+    });
+
+    if (expiredItems.length === 0) {
+      toast.info(`Không có món nào đã ăn cách đây hơn ${validDays} ngày.`);
+      return;
+    }
+
+    try {
+      setLoadingPref(true);
+      await Promise.allSettled(
+        expiredItems.map((item) => foodsApi.deleteEaten(item.eaten_id))
+      );
+      const expiredIds = new Set(expiredItems.map((i) => i.eaten_id));
+      setEatenFoods((prev) => prev.filter((i) => !expiredIds.has(i.eaten_id)));
+      toast.success(`Đã dọn dẹp ${expiredItems.length} món ăn đã ăn quá ${validDays} ngày.`);
+      setShowAutoResetDialog(false);
+    } catch (err) {
+      console.error('Lỗi khi dọn dẹp món đã ăn:', err);
+      toast.error('Lỗi khi dọn dẹp món đã ăn');
+    } finally {
+      setLoadingPref(false);
+    }
+  };
+
+  const handleClearAllEaten = async () => {
+    if (!user?.user_id || eatenFoods.length === 0) return;
+    try {
+      setClearingAll(true);
+      await Promise.allSettled(
+        eatenFoods.map((item) => foodsApi.deleteEaten(item.eaten_id))
+      );
+      setEatenFoods([]);
+      toast.success('Đã xóa toàn bộ danh mục món ăn đã ăn!');
+      setShowClearAllDialog(false);
+    } catch (err) {
+      console.error('Lỗi khi xóa tất cả món đã ăn:', err);
+      toast.error('Lỗi khi xóa tất cả món đã ăn');
+    } finally {
+      setClearingAll(false);
+    }
+  };
+
   const renderEatenCard = (isFullWidth = true) => (
     <Card className={`rounded-2xl border-border bg-card shadow-md flex flex-col ${isFullWidth ? 'w-full' : ''}`}>
-      <CardHeader>
-        <CardTitle className="text-base font-bold flex items-center gap-2 text-amber-500">
-          <FontAwesomeIcon icon={faUtensils} />
-          <span>Danh Mục Món Ăn Đã Ăn ({sortedEatenFoods.length})</span>
-        </CardTitle>
-        <CardDescription className="text-xs text-muted-foreground">
-          Danh sách món ăn bạn đã thưởng thức, sắp xếp giảm dần theo thời gian tạo gần nhất
-        </CardDescription>
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
+        <div>
+          <CardTitle className="text-base font-bold flex items-center gap-2 text-amber-500">
+            <FontAwesomeIcon icon={faUtensils} />
+            <span>Danh Mục Món Ăn Đã Ăn ({sortedEatenFoods.length})</span>
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground mt-0.5">
+            Danh sách món ăn bạn đã thưởng thức, sắp xếp giảm dần theo thời gian tạo gần nhất
+          </CardDescription>
+        </div>
+
+        {/* Action buttons: Auto-Reset Settings & Clear All */}
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setAutoResetEnabled(autoResetConfig.enabled);
+              setAutoResetDays(autoResetConfig.days);
+              setShowAutoResetDialog(true);
+            }}
+            className="text-xs font-semibold h-8 rounded-xl gap-1.5 border-border hover:bg-muted/80 shadow-xs cursor-pointer"
+            title="Cài đặt mốc thời gian tự động reset món đã ăn"
+          >
+            <FontAwesomeIcon
+              icon={faClock}
+              className={autoResetConfig.enabled ? 'text-primary' : 'text-muted-foreground'}
+            />
+            <span>Hẹn Giờ Reset</span>
+            {autoResetConfig.enabled && (
+              <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4 ml-0.5 bg-primary text-primary-foreground font-bold">
+                {autoResetConfig.days} ngày
+              </Badge>
+            )}
+          </Button>
+
+          {sortedEatenFoods.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowClearAllDialog(true)}
+              className="text-xs font-semibold h-8 rounded-xl gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50 shadow-xs cursor-pointer"
+              title="Xóa tất cả món ăn đã ăn"
+            >
+              <FontAwesomeIcon icon={faTrashCan} className="text-[11px]" />
+              <span>Xóa Hết</span>
+            </Button>
+          )}
+        </div>
       </CardHeader>
+
+      {/* Auto Reset Status Indicator Banner */}
+      {autoResetConfig.enabled && (
+        <div className="mx-6 mb-3 px-3.5 py-2.5 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-foreground font-medium">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            <span>
+              Tự động reset đang <strong>BẬT</strong>: Món ăn cũ hơn <strong>{autoResetConfig.days} ngày</strong> sẽ tự động được xóa.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setAutoResetEnabled(autoResetConfig.enabled);
+              setAutoResetDays(autoResetConfig.days);
+              setShowAutoResetDialog(true);
+            }}
+            className="text-[11px] text-primary hover:underline font-bold shrink-0 cursor-pointer"
+          >
+            Chỉnh sửa
+          </button>
+        </div>
+      )}
+
       <CardContent className="space-y-3 flex-1">
         {loadingPref ? (
           <div className="space-y-2">
@@ -437,7 +664,7 @@ export default function ProfilePage() {
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-foreground text-sm truncate">
-                          {item.food?.name || `Món #${item.food_id}`}
+                          {stripFoodCode(item.food?.name || '') || `Món #${item.food_id}`}
                         </span>
                         {item.food?.food_rank && (
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-bold">
@@ -686,7 +913,7 @@ export default function ProfilePage() {
                         >
                           <div className="space-y-0.5">
                             <span className="font-bold text-foreground block">
-                              {item.name || `Món #${item.food_id}`}
+                              {stripFoodCode(item.name || '') || `Món #${item.food_id}`}
                             </span>
                             {item.note && (
                               <p className="text-muted-foreground italic">&ldquo;{item.note}&rdquo;</p>
@@ -778,7 +1005,7 @@ export default function ProfilePage() {
                         >
                           <div className="space-y-0.5">
                             <span className="font-bold text-foreground block">
-                              {item.name || `Món #${item.food_id}`}
+                              {stripFoodCode(item.name || '') || `Món #${item.food_id}`}
                             </span>
                             {item.note && (
                               <p className="text-muted-foreground italic">&ldquo;{item.note}&rdquo;</p>
@@ -888,9 +1115,9 @@ export default function ProfilePage() {
                   Sau khi xóa tài khoản, tất cả dữ liệu cá nhân, món ăn yêu thích và lịch sử ăn uống sẽ bị xóa vĩnh viễn.
                 </p>
                 <Button
-                  variant="destructive"
+                  type="button"
                   onClick={handleDeleteAccount}
-                  className="font-bold gap-2 text-xs shrink-0"
+                  className="font-bold gap-2 text-xs shrink-0 bg-red-600 hover:bg-red-700 text-white shadow-md rounded-2xl h-10 px-4 cursor-pointer"
                 >
                   <FontAwesomeIcon icon={faTrashCan} />
                   <span>Xóa Vĩnh Viễn Tài Khoản</span>
@@ -945,6 +1172,179 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Cài đặt Tự Động Reset Món Đã Ăn */}
+        <Dialog open={showAutoResetDialog} onOpenChange={setShowAutoResetDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2 text-foreground">
+                <div className="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <FontAwesomeIcon icon={faClock} className="text-sm" />
+                </div>
+                <span>Tự Động Reset Món Đã Ăn</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Đặt mốc thời gian để hệ thống tự động xóa các món ăn đã thưởng thức quá hạn, giúp danh sách luôn mới mẻ.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Toggle Switch */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-muted/40">
+                <div className="space-y-0.5">
+                  <label htmlFor="auto-reset-toggle" className="text-xs font-bold text-foreground block cursor-pointer">
+                    Bật tự động dọn dẹp
+                  </label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Tự động xóa các món ăn đã ăn vượt quá mốc thời gian quy định.
+                  </p>
+                </div>
+                <Switch
+                  id="auto-reset-toggle"
+                  checked={autoResetEnabled}
+                  onCheckedChange={(checked) => setAutoResetEnabled(checked)}
+                />
+              </div>
+
+              {/* Time thresholds selection */}
+              <div className={`space-y-3 transition-opacity ${autoResetEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+                <label className="text-xs font-semibold text-foreground block">
+                  Chọn chu kỳ reset:
+                </label>
+
+                {/* Preset Pills */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: '1 Ngày (24h)', value: 1 },
+                    { label: '3 Ngày', value: 3 },
+                    { label: '7 Ngày (1 tuần)', value: 7 },
+                    { label: '14 Ngày (2 tuần)', value: 14 },
+                    { label: '30 Ngày (1 tháng)', value: 30 },
+                    { label: '60 Ngày (2 tháng)', value: 60 },
+                  ].map((preset) => {
+                    const isSelected = autoResetDays === preset.value;
+                    return (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => setAutoResetDays(preset.value)}
+                        className={`px-2 py-2 text-xs font-semibold rounded-xl border transition-all text-center cursor-pointer ${
+                          isSelected
+                            ? 'border-primary bg-primary/10 text-primary font-bold shadow-xs'
+                            : 'border-border bg-card hover:bg-muted/60 text-foreground'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom days input */}
+                <div className="pt-2 space-y-1.5">
+                  <label className="text-xs text-muted-foreground">
+                    Hoặc nhập số ngày tùy chỉnh:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={autoResetDays}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setAutoResetDays(isNaN(val) ? 1 : Math.max(1, Math.min(365, val)));
+                      }}
+                      className="w-28 text-center font-bold text-sm"
+                    />
+                    <span className="text-xs font-medium text-muted-foreground">ngày</span>
+                  </div>
+                </div>
+
+                {/* Manual cleanup action button inside dialog */}
+                <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    Muốn xóa ngay các món ăn cũ hơn {autoResetDays} ngày?
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleManualCleanup(autoResetDays)}
+                    className="text-xs font-medium h-7 px-2.5 rounded-lg border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 cursor-pointer shrink-0"
+                  >
+                    <FontAwesomeIcon icon={faRotate} className="text-[10px] mr-1" />
+                    Dọn Dẹp Ngay
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAutoResetDialog(false)}
+                className="rounded-xl cursor-pointer"
+              >
+                Hủy
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleSaveAutoResetConfig(autoResetEnabled, autoResetDays)}
+                className="rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
+              >
+                <FontAwesomeIcon icon={faCheck} className="text-xs mr-1" />
+                Lưu Cấu Hình
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Xác Nhận Xóa Tất Cả Món Đã Ăn */}
+        <Dialog open={showClearAllDialog} onOpenChange={setShowClearAllDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2 text-destructive">
+                <div className="size-8 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center">
+                  <FontAwesomeIcon icon={faTrashCan} className="text-sm" />
+                </div>
+                <span>Xóa Toàn Bộ Danh Mục Đã Ăn?</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Thao tác này sẽ xóa vĩnh viễn tất cả <strong>{sortedEatenFoods.length} món ăn</strong> khỏi lịch sử đã ăn của bạn. Hành động này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={clearingAll}
+                onClick={() => setShowClearAllDialog(false)}
+                className="rounded-xl cursor-pointer"
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={clearingAll}
+                onClick={handleClearAllEaten}
+                className="rounded-xl font-bold gap-1.5 cursor-pointer"
+              >
+                {clearingAll ? (
+                  <Spinner />
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faTrashCan} className="text-xs" />
+                    <span>Xác Nhận Xóa Hết</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

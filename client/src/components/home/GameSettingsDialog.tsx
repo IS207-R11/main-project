@@ -22,7 +22,24 @@ import {
 import { useGameSettings } from "@/context/GameSettingsContext";
 import { foodsApi } from "@/api";
 import { FoodOption } from "@/api/types";
-import { RotateCcw, Check, Sparkles, Flame, Search } from "lucide-react";
+import { stripFoodCode } from "@/lib/foodAdapter";
+import {
+  RotateCcw,
+  Check,
+  Search,
+  Salad,
+  Clock,
+  ShieldAlert,
+  SlidersHorizontal,
+} from "lucide-react";
+import {
+  ALLERGY_OPTIONS,
+  MEAL_SESSION_OPTIONS,
+  AllergyType,
+  DietaryType,
+  MealSessionType,
+  isFoodMatchingFilter,
+} from "@/lib/foodFilter";
 
 interface GameSettingsDialogProps {
   open: boolean;
@@ -52,13 +69,14 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
   useEffect(() => {
     if (open && availableFoods.length === 0) {
       foodsApi
-        .list({ pageSize: 60 })
+        .list({ pageSize: 100 })
         .then((res) => {
           if (res.data) {
             setAvailableFoods(
               res.data.map((f) => ({
                 food_id: f.food_id,
-                name: f.name,
+                name: stripFoodCode(f.name) || f.name,
+                description: f.description,
               }))
             );
           }
@@ -68,6 +86,38 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
   }, [open, availableFoods.length]);
 
   const isGacha = activeTab === "gacha";
+
+  const currentDietary: DietaryType = (isGacha ? gachaSettings.dietary : tinderSettings.dietary) || "all";
+  const currentAllergies: string[] = (isGacha ? gachaSettings.allergies : tinderSettings.allergies) || [];
+  const currentMealSession: MealSessionType = (isGacha ? gachaSettings.mealSession : tinderSettings.mealSession) || "all";
+  const selectedFoodSet = isGacha ? gachaSettings.foodSet : tinderSettings.foodSet;
+
+  const setDietary = (diet: DietaryType) => {
+    if (isGacha) {
+      updateGachaSettings({ dietary: diet });
+    } else {
+      updateTinderSettings({ dietary: diet });
+    }
+  };
+
+  const setMealSession = (session: MealSessionType) => {
+    if (isGacha) {
+      updateGachaSettings({ mealSession: session });
+    } else {
+      updateTinderSettings({ mealSession: session });
+    }
+  };
+
+  const toggleAllergy = (allergy: AllergyType) => {
+    const next = currentAllergies.includes(allergy)
+      ? currentAllergies.filter((a) => a !== allergy)
+      : [...currentAllergies, allergy];
+    if (isGacha) {
+      updateGachaSettings({ allergies: next });
+    } else {
+      updateTinderSettings({ allergies: next });
+    }
+  };
 
   // Toggle food selection in foodSet
   const toggleFoodInSet = (foodId: number) => {
@@ -94,7 +144,15 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
     }
   };
 
-  const selectedFoodSet = isGacha ? gachaSettings.foodSet : tinderSettings.foodSet;
+  const matchingFoodsCount = availableFoods.length > 0
+    ? availableFoods.filter((f) =>
+        isFoodMatchingFilter(f, {
+          dietary: currentDietary,
+          allergies: currentAllergies,
+          mealSession: currentMealSession,
+        })
+      ).length
+    : 0;
 
   const filteredFoods = availableFoods.filter((f) =>
     f.name.toLowerCase().includes(foodSearch.toLowerCase())
@@ -104,18 +162,145 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl p-6 bg-card text-card-foreground border border-border shadow-2xl">
         <DialogHeader className="space-y-1.5 text-left pb-2 border-b border-border/60">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-bold text-foreground">
               {isGacha ? "Tùy chỉnh vòng quay" : "Tùy chỉnh quẹt món"}
             </DialogTitle>
+            {availableFoods.length > 0 && (
+              <Badge className="bg-primary/15 text-primary border-primary/30 text-xs px-2.5 py-0.5 font-bold">
+                Phù hợp: {matchingFoodsCount} món
+              </Badge>
+            )}
           </div>
           <DialogDescription className="text-xs text-muted-foreground">
-            Cài đặt được lưu tự động trên thiết bị của bạn.
+            Lọc chế độ ăn, dị ứng, khung giờ bữa ăn để gợi ý món ăn chuẩn xác nhất.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-3">
-          {/* 1. Tinder Only: Số lượng món mỗi lượt quẹt */}
+          {/* ================= 1. BỘ LỌC CHẾ ĐỘ ĂN (CHAY / MẶN) ================= */}
+          <div className="space-y-2 p-3.5 rounded-2xl bg-muted/40 border border-border/50">
+            <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <Salad className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Chế độ ăn uống</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setDietary("all")}
+                className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  currentDietary === "all"
+                    ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                    : "bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                🍽️ Tất cả
+              </button>
+              <button
+                type="button"
+                onClick={() => setDietary("veg")}
+                className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  currentDietary === "veg"
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                    : "bg-background border-border text-muted-foreground hover:text-emerald-600 hover:bg-muted"
+                }`}
+              >
+                🥗 Ăn Chay
+              </button>
+              <button
+                type="button"
+                onClick={() => setDietary("meat")}
+                className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  currentDietary === "meat"
+                    ? "bg-orange-600 text-white border-orange-600 shadow-xs"
+                    : "bg-background border-border text-muted-foreground hover:text-orange-600 hover:bg-muted"
+                }`}
+              >
+                🍖 Ăn Mặn
+              </button>
+            </div>
+          </div>
+
+          {/* ================= 2. BỘ LỌC KHUNG GIỜ & BỮA ĂN ================= */}
+          <div className="space-y-2 p-3.5 rounded-2xl bg-muted/40 border border-border/50">
+            <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-secondary" />
+              <span>Khung giờ / Bữa ăn trong ngày</span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {MEAL_SESSION_OPTIONS.map((item) => {
+                const isSelected = currentMealSession === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setMealSession(item.id)}
+                    className={`p-2 rounded-xl text-left border transition-all cursor-pointer flex flex-col gap-0.5 ${
+                      isSelected
+                        ? "bg-secondary/15 border-secondary text-foreground font-bold shadow-2xs"
+                        : "bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <span className="text-xs flex items-center gap-1 font-bold">
+                      <span>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </span>
+                    <span className="text-[10px] text-muted-foreground line-clamp-1">
+                      {item.desc}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ================= 3. BỘ LỌC DỊ ỨNG & LOẠI TRỪ ================= */}
+          <div className="space-y-2 p-3.5 rounded-2xl bg-muted/40 border border-border/50">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                <span>Dị ứng & Loại trừ nguyên liệu</span>
+              </label>
+              {currentAllergies.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isGacha) updateGachaSettings({ allergies: [] });
+                    else updateTinderSettings({ allergies: [] });
+                  }}
+                  className="text-[11px] text-muted-foreground hover:text-destructive cursor-pointer"
+                >
+                  Xóa bỏ lọc ({currentAllergies.length})
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {ALLERGY_OPTIONS.map((opt) => {
+                const isExcluded = currentAllergies.includes(opt.id);
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => toggleAllergy(opt.id)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isExcluded
+                        ? "bg-rose-500 text-white border-rose-500 font-bold shadow-2xs"
+                        : "bg-background border-border text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <span>{opt.icon}</span>
+                    <span>{opt.label}</span>
+                    {isExcluded && <Check className="w-3 h-3 ml-0.5" />}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10.5px] text-muted-foreground">
+              Chọn các thành phần bạn bị dị ứng hoặc không muốn ăn để tự động loại bỏ.
+            </p>
+          </div>
+
+          {/* ================= 4. TINDER SỐ LƯỢNG MÓN ================= */}
           {!isGacha && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -143,7 +328,7 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
             </div>
           )}
 
-          {/* 2. Bỏ qua món đã ăn gần đây */}
+          {/* ================= 5. BỎ QUA MÓN ĐÃ ĂN ================= */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-foreground">
@@ -175,7 +360,7 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
             </p>
           </div>
 
-          {/* 3. Cách chọn món đã ăn để ẩn (nếu số lượng > 0) */}
+          {/* 6. Cách chọn món đã ăn để ẩn (nếu số lượng > 0) */}
           {(isGacha ? gachaSettings.numberOfExcludedEaten : tinderSettings.numberOfExcludedEaten) > 0 && (
             <div className="space-y-1.5 animate-in fade-in duration-200">
               <label className="text-xs font-bold text-foreground">
@@ -194,7 +379,13 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
                 }}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Chọn thứ tự bỏ qua..." />
+                  <SelectValue placeholder="Chọn thứ tự bỏ qua...">
+                    {((isGacha ? gachaSettings.typeOfExcludedEaten : tinderSettings.typeOfExcludedEaten) === "newest"
+                      ? "Mới ăn gần nhất"
+                      : (isGacha ? gachaSettings.typeOfExcludedEaten : tinderSettings.typeOfExcludedEaten) === "oldest"
+                      ? "Đã ăn từ lâu"
+                      : "Chọn ngẫu nhiên")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="newest">Mới ăn gần nhất</SelectItem>
@@ -205,7 +396,7 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
             </div>
           )}
 
-          {/* 4. Ẩn món từng quay trúng */}
+          {/* ================= 7. ẨN MÓN TỪNG QUAY TRÚNG ================= */}
           <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/40 border border-border/50">
             <input
               id="excludeGachaToggle"
@@ -231,7 +422,7 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
             </label>
           </div>
 
-          {/* 5. Giới hạn danh sách món cụ thể */}
+          {/* ================= 8. GIỚI HẠN MÓN CỤ THỂ ================= */}
           <div className="space-y-2 pt-1 border-t border-border/50">
             <div className="flex items-center justify-between">
               <div>
@@ -335,3 +526,4 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
     </Dialog>
   );
 };
+

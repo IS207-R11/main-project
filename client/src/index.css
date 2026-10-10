@@ -81,30 +81,30 @@
 .dark,
 [data-theme="dark"],
 [data-time-theme="night"] {
-  --theme-bg-start: #5c2a1e;
-  --theme-bg-end: #2e0f0c;
-  --theme-text: #fff7ed;
+  --theme-bg-start: #111827;
+  --theme-bg-end: #030712;
+  --theme-text: #f8fafc;
   --theme-secondary: #f4a261;
   --theme-cta: #ff9f1c;
-  --theme-cta-text: #2e0f0c;
-  --theme-nav: rgba(46, 15, 12, 0.88);
+  --theme-cta-text: #030712;
+  --theme-nav: rgba(17, 24, 39, 0.88);
   --theme-border: rgba(244, 162, 97, 0.18);
 
-  --background: #2e0f0c;
-  --foreground: #fff7ed;
-  --card: rgba(46, 15, 12, 0.82);
-  --card-foreground: #fff7ed;
-  --popover: #2e0f0c;
-  --popover-foreground: #fff7ed;
+  --background: #030712;
+  --foreground: #f8fafc;
+  --card: rgba(17, 24, 39, 0.82);
+  --card-foreground: #f8fafc;
+  --popover: #111827;
+  --popover-foreground: #f8fafc;
   --primary: #ff9f1c;
-  --primary-foreground: #2e0f0c;
+  --primary-foreground: #030712;
   --secondary: #f4a261;
-  --secondary-foreground: #2e0f0c;
-  --muted: rgba(255, 247, 237, 0.10);
-  --muted-foreground: rgba(255, 247, 237, 0.72);
+  --secondary-foreground: #030712;
+  --muted: rgba(248, 250, 252, 0.08);
+  --muted-foreground: rgba(248, 250, 252, 0.72);
   --accent: rgba(244, 162, 97, 0.22);
-  --accent-foreground: #fff7ed;
-  --destructive: #e63946;
+  --accent-foreground: #f8fafc;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: rgba(244, 162, 97, 0.18);
   --input: rgba(244, 162, 97, 0.18);
@@ -112,7 +112,7 @@
   --radius: 0.875rem;
 
   --badge-glow: rgba(255, 159, 28, 0.3);
-  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.35);
+  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.55), 0 8px 10px -6px rgba(0, 0, 0, 0.45);
 }
 
 @layer base {
@@ -330,4 +330,27 @@
 .animate-vortex-shimmer {
   background-size: 200% auto;
   animation: vortex-shimmer 2.5s linear infinite;
+}
+
+/* =========================================================================
+   REACT TOASTIFY CUSTOM TYPOGRAPHY & AESTHETICS
+   ========================================================================= */
+.Toastify__toast-container {
+  font-family: var(--font-sans), 'Montserrat', system-ui, -apple-system, sans-serif !important;
+  z-index: 99999 !important;
+}
+
+.Toastify__toast {
+  font-family: var(--font-sans), 'Montserrat', system-ui, -apple-system, sans-serif !important;
+  border-radius: 1rem !important;
+  font-weight: 600 !important;
+  font-size: 0.8125rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.12) !important;
+}
+
+.Toastify__toast-body {
+  font-family: var(--font-sans), 'Montserrat', system-ui, -apple-system, sans-serif !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
+  letter-spacing: -0.01em !important;
 }

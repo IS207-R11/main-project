@@ -1,16 +1,27 @@
 import { FoodCard } from '@/api/types/foods';
 import { FoodItem, Rarity } from '@/types/food';
 
+export function stripFoodCode(name: string): string {
+  if (!name) return '';
+  return name
+    .replace(/\s*\(#?[0-9a-zA-Z_-]+\)/gi, '')
+    .replace(/\s*#[0-9a-zA-Z_-]+/gi, '')
+    .replace(/\s+(?=[a-zA-Z0-9]*[0-9])[0-9a-zA-Z]{4,}$/gi, '')
+    .replace(/\s+[0-9a-fA-F]{10,}$/gi, '')
+    .trim();
+}
+
 export function mapFoodCardToFoodItem(card: FoodCard): FoodItem {
   // Use food_rank directly from V_FOODS_RANKED (defaults to 'C' if absent)
   const rank: Rarity = (card.food_rank as Rarity) || 'C';
   const imagePath = card.image_url?.trim() || '/logos/main-logo.png';
   const desc = card.description || '';
+  const cleanName = stripFoodCode(card.name) || card.name;
 
   return {
     id: card.food_id,
     food_id: card.food_id,
-    name: card.name,
+    name: cleanName,
     description: desc,
     sub: desc,
     image_url: card.image_url,

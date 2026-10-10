@@ -64,6 +64,7 @@ export const TinderCardStack: React.FC<TinderCardStackProps> = ({
         setMatchedFood(food);
         setIsSuperMatch(direction === "up");
         setIsModalOpen(true);
+        setCurrentIndex((prev) => prev + 1);
         return;
       }
 
@@ -185,7 +186,7 @@ export const TinderCardStack: React.FC<TinderCardStackProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-col items-center justify-between w-full max-w-lg mx-auto min-h-[580px] sm:min-h-[640px] px-2"
+      className="relative flex flex-col items-center justify-between w-full max-w-lg mx-auto min-h-[550px] sm:min-h-[610px] px-2"
     >
       {/* ================= TOP TINDER HEADER & STATUS BAR ================= */}
       <div className="w-full flex items-center justify-between px-2 sm:px-4 py-2 text-xs font-bold">
@@ -273,7 +274,7 @@ export const TinderCardStack: React.FC<TinderCardStackProps> = ({
       </AnimatePresence>
 
       {/* ================= CARD STACK CONTAINER ================= */}
-      <div className="relative w-full h-[550px] sm:h-[595px] flex items-center justify-center">
+      <div className="relative w-full h-[520px] sm:h-[560px] flex items-center justify-center">
         {!isDeckFinished ? (
           <div className="relative w-full h-full flex items-center justify-center">
             {/* Render cards from bottom to top so top card is on top */}

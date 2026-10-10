@@ -2,12 +2,16 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ExclusionType } from "@/api/types";
+import type { DietaryType, MealSessionType } from "@/lib/foodFilter";
 
 export interface GachaSettings {
   numberOfExcludedEaten: number;
   typeOfExcludedEaten: ExclusionType;
   excludedGachaSet: boolean;
   foodSet: number[];
+  dietary?: DietaryType;
+  allergies?: string[];
+  mealSession?: MealSessionType;
 }
 
 export interface TinderSettings {
@@ -16,6 +20,9 @@ export interface TinderSettings {
   typeOfExcludedEaten: ExclusionType;
   excludedGachaSet: boolean;
   foodSet: number[];
+  dietary?: DietaryType;
+  allergies?: string[];
+  mealSession?: MealSessionType;
 }
 
 export const DEFAULT_GACHA_SETTINGS: GachaSettings = {
@@ -23,6 +30,9 @@ export const DEFAULT_GACHA_SETTINGS: GachaSettings = {
   typeOfExcludedEaten: "newest",
   excludedGachaSet: false,
   foodSet: [],
+  dietary: "all",
+  allergies: [],
+  mealSession: "all",
 };
 
 export const DEFAULT_TINDER_SETTINGS: TinderSettings = {
@@ -31,6 +41,9 @@ export const DEFAULT_TINDER_SETTINGS: TinderSettings = {
   typeOfExcludedEaten: "newest",
   excludedGachaSet: false,
   foodSet: [],
+  dietary: "all",
+  allergies: [],
+  mealSession: "all",
 };
 
 const GACHA_KEY = "an_gi_gacha_settings_v1";
@@ -62,6 +75,9 @@ export const GameSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           ...parsed,
           numberOfExcludedEaten: Math.max(0, Number(parsed.numberOfExcludedEaten) || 0),
           foodSet: Array.isArray(parsed.foodSet) ? parsed.foodSet : [],
+          dietary: ["all", "veg", "meat"].includes(parsed.dietary) ? parsed.dietary : "all",
+          allergies: Array.isArray(parsed.allergies) ? parsed.allergies : [],
+          mealSession: ["all", "breakfast", "lunch", "dinner", "snack", "dessert"].includes(parsed.mealSession) ? parsed.mealSession : "all",
         });
       }
 
@@ -74,6 +90,9 @@ export const GameSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           numberOfResult: Math.max(1, Math.min(50, Number(parsed.numberOfResult) || 15)),
           numberOfExcludedEaten: Math.max(0, Number(parsed.numberOfExcludedEaten) || 0),
           foodSet: Array.isArray(parsed.foodSet) ? parsed.foodSet : [],
+          dietary: ["all", "veg", "meat"].includes(parsed.dietary) ? parsed.dietary : "all",
+          allergies: Array.isArray(parsed.allergies) ? parsed.allergies : [],
+          mealSession: ["all", "breakfast", "lunch", "dinner", "snack", "dessert"].includes(parsed.mealSession) ? parsed.mealSession : "all",
         });
       }
     } catch (e) {

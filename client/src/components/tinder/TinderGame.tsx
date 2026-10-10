@@ -8,6 +8,7 @@ import { SlidersHorizontal } from "lucide-react";
 import type { FoodItem } from "@/types/food";
 import { foodsApi } from "@/api";
 import { mapFoodCardToFoodItem } from "@/lib/foodAdapter";
+import { resolveEligibleFoodIds } from "@/lib/foodFilter";
 import { useGameSettings } from "@/context/GameSettingsContext";
 import { TinderCardStack } from "@/components/tinder/TinderCardStack";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,13 @@ export const TinderGame: React.FC<TinderGameProps> = ({
     if (propFoods && propFoods.length > 0) return;
     try {
       setIsLoading(true);
+      const eligibleFoodIds = await resolveEligibleFoodIds({
+        dietary: tinderSettings.dietary,
+        allergies: tinderSettings.allergies,
+        mealSession: tinderSettings.mealSession,
+        foodSet: tinderSettings.foodSet,
+      });
+
       const res = await foodsApi.tinder({
         numberOfResult: tinderSettings.numberOfResult,
         numberOfExcludedEaten:
@@ -39,8 +47,7 @@ export const TinderGame: React.FC<TinderGameProps> = ({
             : undefined,
         typeOfExcludedEaten: tinderSettings.typeOfExcludedEaten,
         excludedGachaSet: tinderSettings.excludedGachaSet,
-        foodSet:
-          tinderSettings.foodSet.length > 0 ? tinderSettings.foodSet : undefined,
+        foodSet: eligibleFoodIds,
       });
       if (res.data) {
         setApiFoods(res.data.map(mapFoodCardToFoodItem));
@@ -63,7 +70,10 @@ export const TinderGame: React.FC<TinderGameProps> = ({
   const hasCustomSettings =
     tinderSettings.numberOfExcludedEaten > 0 ||
     tinderSettings.excludedGachaSet ||
-    tinderSettings.foodSet.length > 0;
+    tinderSettings.foodSet.length > 0 ||
+    (tinderSettings.dietary && tinderSettings.dietary !== "all") ||
+    (tinderSettings.allergies && tinderSettings.allergies.length > 0) ||
+    (tinderSettings.mealSession && tinderSettings.mealSession !== "all");
 
   // Generate randomized deck and start Tinder swiping
   const handleStartTinder = useCallback(() => {

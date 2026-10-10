@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { tinderSounds } from "@/lib/tinderSound";
 import { FoodCardBack } from "@/components/food/FoodCardBack";
 import { getCardRarityStyle } from "@/components/food/rarityStyles";
+import { stripFoodCode } from "@/lib/foodAdapter";
 
 export interface TinderCardHandle {
   swipe: (direction: "left" | "right" | "up") => Promise<void>;
@@ -72,6 +73,7 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
     const imageSrc = imgError || !food.imagePath
       ? "/logos/main-logo.png"
       : food.imagePath;
+    const cleanName = stripFoodCode(food.name) || food.name;
 
     // Stack styling (depth & scale)
     const stackScale = Math.max(0.88, 1 - stackIndex * 0.05);
@@ -188,7 +190,7 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
           opacity: isFront ? cardOpacity : stackOpacity,
           scale: stackScale,
           translateY: stackTranslateY,
-          zIndex: 50 - stackIndex,
+          zIndex: 30 - stackIndex,
         }}
         animate={{
           scale: stackScale,
@@ -203,7 +205,7 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
         dragElastic={0.85}
         onDragEnd={handleDragEnd}
         whileDrag={{ cursor: "grabbing" }}
-        className={`absolute inset-x-0 mx-auto w-full max-w-[385px] sm:max-w-[430px] h-[550px] sm:h-[595px] select-none touch-none transform-gpu will-change-transform ${
+        className={`absolute inset-x-0 mx-auto w-full max-w-[360px] sm:max-w-[400px] h-[520px] sm:h-[560px] select-none touch-none transform-gpu will-change-transform ${
           isFront ? "cursor-grab" : "pointer-events-none"
         }`}
       >
@@ -263,11 +265,11 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                 </>
               )}
 
-              {/* Food Image with Cinematic Gradient */}
+              {/* Food Image (Crystal Clear without dark bottom gradient) */}
               <div className="relative h-[62%] sm:h-[64%] w-full overflow-hidden bg-muted/80 shrink-0">
                 <Image
                   src={imageSrc}
-                  alt={food.name}
+                  alt={cleanName}
                   fill
                   priority={isFront}
                   unoptimized
@@ -276,7 +278,6 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                   onError={() => setImgError(true)}
                   className="h-full w-full object-cover transition-transform duration-700 select-none"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-black/30 to-black/50" />
 
                 {/* Top Floating Badges */}
                 <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between z-10">
@@ -300,7 +301,7 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <h2 className="text-xl sm:text-2xl font-black text-foreground leading-tight tracking-tight line-clamp-1">
-                      {food.name}
+                      {cleanName}
                     </h2>
                     <Button
                       type="button"
@@ -320,84 +321,55 @@ export const TinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
                   </p>
                 </div>
 
-                {/* Real Attributes Row */}
-                <div className="grid grid-cols-3 gap-1.5 py-1.5 px-2 bg-muted/60 rounded-2xl border border-border/50 text-center">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground font-medium">Độ Hiếm</span>
-                    <span className="text-xs font-black text-foreground">
-                      {food.rarity}
-                    </span>
-                  </div>
-                  <div className="flex flex-col border-x border-border/50">
-                    <span className="text-[10px] text-muted-foreground font-medium">Trạng Thái</span>
-                    <span className="text-xs font-black text-secondary">
-                      {food.status === "ACTIVE" ? "Khả dụng" : food.status}
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground font-medium">Mã Món</span>
-                    <span className="text-xs font-black text-foreground">
-                      #{food.food_id || food.id}
-                    </span>
-                  </div>
-                </div>
-
                 {/* External Links: Google Maps & YouTube */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <a
-                    href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${food.name}`)}`}
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${cleanName}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
-                    className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-emerald-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-emerald-500 transition-all shadow-2xs group/btn cursor-pointer"
-                    title={`Tìm quán ${food.name} trên Google Maps`}
+                    className="h-9 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-emerald-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-emerald-500 transition-all shadow-2xs group/btn cursor-pointer"
+                    title={`Tìm quán ${cleanName} trên Google Maps`}
                   >
-                    <Image
-                      src="other-images/googlemaps.webp"
-                      alt="Maps"
+                    <img
+                      src="/other-images/googlemaps.webp"
+                      alt="Google Maps"
                       className="w-4 h-4 object-contain shrink-0"
+                      loading="lazy"
                     />
-                    <span className="truncate">Maps</span>
+                    <span className="truncate">Tìm Quán</span>
                   </a>
 
                   <a
-                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`Công thức làm ${food.name}`)}`}
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`Công thức làm ${cleanName}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
-                    className="h-8 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
-                    title={`Xem công thức nấu ${food.name} trên YouTube`}
+                    className="h-9 px-3 rounded-xl bg-background hover:bg-muted border border-border hover:border-red-500/50 flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:text-red-500 transition-all shadow-2xs group/btn cursor-pointer"
+                    title={`Xem công thức nấu ${cleanName} trên YouTube`}
                   >
-                    <Image
-                      src="other-images/youtube.webp"
-                      alt="Công thức"
+                    <img
+                      src="/other-images/youtube.webp"
+                      alt="YouTube"
                       className="w-4 h-4 object-contain shrink-0"
+                      loading="lazy"
                     />
-                    <span className="truncate">Công thức</span>
+                    <span className="truncate">Công Thức</span>
                   </a>
-                </div>
-
-                {/* Swipe Guidance Helper Text */}
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1 font-medium">
-                  <span className="flex items-center gap-1 text-rose-500 font-semibold">
-                    <FontAwesomeIcon icon={faXmark} className="text-xs" /> Quẹt trái: Bỏ qua
-                  </span>
-                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                    Quẹt phải: Chốt ngay <FontAwesomeIcon icon={faHeart} className="text-xs" />
-                  </span>
                 </div>
               </div>
             </div>
 
-            {/* ================= BACK SIDE (COLLECTIBLE CARD BACK - LOGO ONLY) ================= */}
+            {/* ================= BACK SIDE (DETAILED FOOD INFO) ================= */}
             <div
               className={`absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-3xl overflow-hidden ${
                 !isFlipped ? "pointer-events-none" : "pointer-events-auto"
               }`}
             >
               <FoodCardBack
+                food={food}
                 rarity={food.rarity}
                 onFlip={toggleFlip}
                 size="lg"

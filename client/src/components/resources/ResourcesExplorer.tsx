@@ -29,6 +29,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const statusLabels: Record<string, string> = {
+  ALL: "Tất cả",
+  ACTIVE: "Đang hoạt động",
+  PENDING: "Đang chờ duyệt",
+  DISABLED: "Đang ngưng",
+};
+
+const rarityLabels: Record<string, string> = {
+  all: "Tất Cả Độ Hiếm",
+  SSR: "👑 SSR - Thượng Hạng",
+  SR: "💜 SR - Đặc Sắc",
+  UC: "💎 UC - Trung Cấp",
+  C: "🍀 C - Phổ Biến",
+};
+
+const sortLabels: Record<string, string> = {
+  name: "Tên (A - Z)",
+  rarity_desc: "Độ Hiếm Cao Nhất",
+  newest: "Mới Nhất",
+};
+
 type SortOption = "name" | "rarity_desc" | "newest";
 
 export const ResourcesExplorer: React.FC = () => {
@@ -263,7 +284,9 @@ export const ResourcesExplorer: React.FC = () => {
               onValueChange={(val) => val && setSelectedStatus(val as "ALL" | FoodStatus)}
             >
               <SelectTrigger className="w-full rounded-2xl">
-                <SelectValue placeholder="Chọn trạng thái" />
+                <SelectValue placeholder="Chọn trạng thái">
+                  {statusLabels[selectedStatus] || "Tất cả"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Tất cả</SelectItem>
@@ -288,7 +311,9 @@ export const ResourcesExplorer: React.FC = () => {
               onValueChange={(val) => val && setSelectedRarity(val as "all" | Rarity)}
             >
               <SelectTrigger className="w-full rounded-2xl">
-                <SelectValue placeholder="Chọn độ hiếm" />
+                <SelectValue placeholder="Chọn độ hiếm">
+                  {rarityLabels[selectedRarity] || "Tất Cả Độ Hiếm"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất Cả Độ Hiếm</SelectItem>
@@ -314,7 +339,9 @@ export const ResourcesExplorer: React.FC = () => {
               onValueChange={(val) => val && setSortBy(val as SortOption)}
             >
               <SelectTrigger className="w-full rounded-2xl">
-                <SelectValue placeholder="Sắp xếp" />
+                <SelectValue placeholder="Sắp xếp">
+                  {sortLabels[sortBy] || "Tên (A - Z)"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="name">Tên (A - Z)</SelectItem>
@@ -349,7 +376,7 @@ export const ResourcesExplorer: React.FC = () => {
 
       {/* ================= VIRTUAL MASONRY FOOD FLASHCARDS GRID ================= */}
       {initialLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 min-[880px]:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6 justify-items-center w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center w-full">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}

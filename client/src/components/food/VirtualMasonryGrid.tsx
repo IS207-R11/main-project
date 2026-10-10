@@ -53,7 +53,7 @@ export const VirtualMasonryGrid: React.FC<VirtualMasonryGridProps> = React.memo(
   ({ foods, className = "", sentinelRef, sentinelIndex }) => {
     return (
       <div
-        className={`grid grid-cols-1 sm:grid-cols-2 min-[880px]:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6 justify-items-center w-full ${className}`}
+        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7 justify-items-center w-full ${className}`}
       >
         {foods.map((food, index) => (
           <VirtualGridCard

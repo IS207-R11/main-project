@@ -41,7 +41,7 @@ describe('TinderCard Component (3D Flip & Multi-Rarity Matrix)', () => {
     expect(screen.getAllByTitle(/Tìm quán Bò Wagyu Nướng Đá trên Google Maps/i).length).toBeGreaterThan(0);
   });
 
-  it('2. Lật thẻ 3D: Click Lật thẻ chuyển sang mặt sau chỉ hiển thị logo không hiển thị chi tiết món ăn', async () => {
+  it('2. Lật thẻ 3D: Click Lật thẻ chuyển sang mặt sau hiển thị chi tiết món ăn', async () => {
     render(
       <TinderCard
         food={mockFoodSSR}
@@ -55,11 +55,11 @@ describe('TinderCard Component (3D Flip & Multi-Rarity Matrix)', () => {
     const flipBtn = screen.getByTitle('Lật thẻ');
     fireEvent.click(flipBtn);
 
-    // Mặt sau hiển thị: logo Ăn Gì và nút lật lại, KHÔNG hiển thị chi tiết món ăn
+    // Mặt sau hiển thị: Thông tin món ăn và nút lật lại
     await waitFor(() => {
-      expect(screen.getByAltText('AnGi Logo')).toBeInTheDocument();
+      expect(screen.getByText('Thông Tin Món Ăn')).toBeInTheDocument();
       expect(screen.getByText('Lật lại mặt trước')).toBeInTheDocument();
-      expect(screen.queryByText('Chi Tiết Món Ăn')).not.toBeInTheDocument();
+      expect(screen.getAllByText('Bò Wagyu Nướng Đá').length).toBeGreaterThan(0);
     });
 
     // Lật lại mặt trước

@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { stripFoodCode } from "@/lib/foodAdapter";
 
 interface TinderMatchModalProps {
   food: FoodItem | null;
@@ -98,11 +99,12 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
 
   const handleShare = useCallback(() => {
     if (!food) return;
-    const text = `🎉 Tôi vừa chốt món "${food.name}" cho bữa hôm nay trên Ứng Dụng Ăn Gì!`;
+    const cleanName = stripFoodCode(food.name);
+    const text = `🎉 Tôi vừa chốt món "${cleanName}" cho bữa hôm nay trên Ứng Dụng Ăn Gì!`;
     if (navigator.share) {
       navigator
         .share({
-          title: `Ăn gì hôm nay: ${food.name}`,
+          title: `Ăn gì hôm nay: ${cleanName}`,
           text,
           url: window.location.href,
         })
@@ -122,6 +124,7 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
   const imageSrc = imgError || !food.imagePath
     ? "/logos/main-logo.png"
     : food.imagePath;
+  const cleanDisplayName = stripFoodCode(food.name);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -130,7 +133,7 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
       >
         <DialogHeader className="sr-only">
           <DialogTitle>
-            {isSuperMatch ? "SUPER MATCH!" : "IT'S A MATCH!"} - {food.name}
+            {isSuperMatch ? "SUPER MATCH!" : "IT'S A MATCH!"} - {cleanDisplayName}
           </DialogTitle>
           <DialogDescription>
             {food.description}
@@ -164,14 +167,13 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
             <div className="relative h-48 sm:h-56 w-full overflow-hidden bg-muted">
               <Image
                 src={imageSrc}
-                alt={food.name}
+                alt={cleanDisplayName}
                 fill
                 unoptimized
                 sizes="(max-width: 640px) 100vw, 500px"
                 onError={() => setImgError(true)}
                 className="h-full w-full object-cover select-none"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
               {/* Rarity & Status over image */}
               <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
@@ -185,57 +187,25 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
                 )}
               </div>
 
-              {/* Dish Name & Price at bottom of image */}
+              {/* Dish Name & Rarity at bottom of image */}
               <div className="absolute bottom-3 left-3 right-3 text-white">
                 <div className="flex items-end justify-between gap-2">
                   <div>
                     <h3 className="text-xl sm:text-2xl font-black drop-shadow-md leading-tight">
-                      {food.name}
+                      {cleanDisplayName}
                     </h3>
                     <p className="text-xs text-amber-300 font-semibold drop-shadow-sm mt-0.5">
-                      #{food.food_id || food.id} • {food.rarity}
+                      Độ hiếm: {food.rarity}
                     </p>
                   </div>
-                  <Badge className="shrink-0 bg-primary text-primary-foreground font-black px-2.5 py-1 rounded-full text-xs shadow-md">
-                    {food.status === "ACTIVE" ? "Đã duyệt" : food.status}
-                  </Badge>
                 </div>
               </div>
             </div>
 
-            {/* Real Details in Modal */}
+            {/* Description Details in Modal */}
             <div className="p-4 space-y-3">
-              {/* Real Details Grid */}
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
-                  <span className="text-[10px] text-muted-foreground block font-medium">
-                    Mã Món
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-foreground">
-                    #{food.food_id || food.id}
-                  </span>
-                </div>
-                <div className="p-2 rounded-xl bg-secondary/15 border border-secondary/30">
-                  <span className="text-[10px] text-secondary block font-bold">
-                    Độ Hiếm
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-foreground">
-                    {food.food_rank || food.rarity}
-                  </span>
-                </div>
-                <div className="p-2 rounded-xl bg-muted/60 border border-border/40">
-                  <span className="text-[10px] text-muted-foreground block font-medium">
-                    Trạng Thái
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-foreground">
-                    {food.status === "ACTIVE" ? "Khả dụng" : food.status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Description preview */}
-              <div className="text-xs text-muted-foreground leading-relaxed bg-muted/30 p-3 rounded-2xl border border-border/40">
-                <span className="font-bold text-foreground block mb-0.5">Mô tả:</span>
+              <div className="text-xs sm:text-sm text-muted-foreground leading-relaxed bg-muted/40 p-3.5 rounded-2xl border border-border/40">
+                <span className="font-bold text-foreground block mb-1">Mô tả món ăn:</span>
                 {food.description && food.description.trim() !== ""
                   ? food.description
                   : "Món ăn ngon và hấp dẫn từ thực đơn hệ thống Ăn Gì."}
@@ -245,14 +215,19 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
 
           {/* Action Buttons */}
           <div className="space-y-2.5">
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5 items-stretch">
               <a
-                href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${food.name}`)}`}
+                href={`https://www.google.com/maps/search/${encodeURIComponent(`Quán ${cleanDisplayName}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-2xl text-xs font-bold gap-1.5 py-2.5 border border-border bg-card hover:bg-muted text-foreground flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                className="h-11 w-full rounded-2xl text-xs font-bold gap-2 px-3 border border-border bg-card hover:bg-muted text-foreground inline-flex items-center justify-center transition-all cursor-pointer shadow-2xs"
               >
-                <FontAwesomeIcon icon={faMapLocationDot} className="text-xs text-emerald-500" />
+                <img
+                  src="/other-images/googlemaps.webp"
+                  alt="Google Maps"
+                  className="w-4 h-4 object-contain shrink-0"
+                  loading="lazy"
+                />
                 <span>Tìm Quán Ăn</span>
               </a>
 
@@ -260,32 +235,32 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
                 type="button"
                 variant="outline"
                 onClick={handleShare}
-                className="rounded-2xl text-xs font-bold gap-1.5 py-2.5 border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer"
+                className="h-11 w-full rounded-2xl text-xs font-bold gap-2 px-3 border border-border bg-card hover:bg-muted text-foreground inline-flex items-center justify-center transition-all cursor-pointer shadow-2xs"
               >
-                <FontAwesomeIcon icon={faShareNodes} className="text-xs text-secondary" />
+                <FontAwesomeIcon icon={faShareNodes} className="text-sm text-secondary" />
                 <span>{copied ? "Đã Sao Chép!" : "Chia Sẻ Món"}</span>
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5 items-stretch">
               <Button
                 type="button"
-                variant="default"
-                onClick={onRestart}
-                className="rounded-2xl text-xs font-bold gap-1.5 py-2.5 bg-primary text-primary-foreground hover:brightness-105 shadow-md cursor-pointer"
+                variant="outline"
+                onClick={onChangeFilter}
+                className="h-11 w-full rounded-2xl text-xs font-bold gap-2 px-3 border border-border bg-card/70 hover:bg-muted text-foreground hover:text-foreground inline-flex items-center justify-center transition-all cursor-pointer shadow-2xs"
               >
-                <FontAwesomeIcon icon={faRotate} className="text-xs" />
-                <span>Chơi Lại / Quẹt Tiếp</span>
+                <FontAwesomeIcon icon={faArrowLeft} className="text-sm" />
+                <span>Quay Lại</span>
               </Button>
 
               <Button
                 type="button"
-                variant="ghost"
-                onClick={onChangeFilter}
-                className="rounded-2xl text-xs font-bold gap-1.5 py-2.5 text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                variant="default"
+                onClick={onRestart}
+                className="h-11 w-full rounded-2xl text-xs font-bold gap-2 px-3 bg-primary text-primary-foreground hover:brightness-105 shadow-md inline-flex items-center justify-center cursor-pointer"
               >
-                <FontAwesomeIcon icon={faArrowLeft} className="text-xs" />
-                <span>Quay Lại</span>
+                <FontAwesomeIcon icon={faRotate} className="text-sm" />
+                <span>Chơi Lại / Quẹt Tiếp</span>
               </Button>
             </div>
           </div>

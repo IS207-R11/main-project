@@ -19,10 +19,12 @@ import { foodsApi } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import { FoodCardBack } from "./FoodCardBack";
 import { getCardRarityStyle } from "./rarityStyles";
+import { stripFoodCode } from "@/lib/foodAdapter";
 
 export interface FoodFlashCardProps {
   food: FoodItem;
   className?: string;
+  size?: "md" | "lg";
   autoFlipped?: boolean;
   onFlipChange?: (flipped: boolean) => void;
 }
@@ -30,6 +32,7 @@ export interface FoodFlashCardProps {
 const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
   food,
   className = "",
+  size = "md",
   autoFlipped = false,
   onFlipChange,
 }) => {
@@ -73,6 +76,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
   // Image src path fallback
   const imageSrc =
     imgError || !food.imagePath ? "/logos/main-logo.png" : food.imagePath;
+  const cleanName = stripFoodCode(food.name) || food.name;
 
   // Toggle card flip
   const handleToggleFlip = useCallback(
@@ -248,9 +252,15 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
   };
 
 
+  const isLarge = size === "lg";
+
   return (
     <div
-      className={`w-full max-w-[260px] h-[345px] sm:h-[360px] select-none group perspective-1000 ${className}`}
+      className={`${
+        isLarge
+          ? "w-full max-w-[340px] sm:max-w-[370px] h-[480px] sm:h-[515px]"
+          : "w-full max-w-[320px] sm:max-w-[340px] h-[375px] sm:h-[395px]"
+      } select-none group perspective-1000 ${className}`}
     >
       <div
         className={`relative w-full h-full duration-500 preserve-3d transition-transform ease-out rounded-3xl transform-gpu ${
@@ -264,34 +274,59 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
           }`}
         >
           {/* Dish Image Container */}
-          <div className="relative h-[145px] sm:h-[160px] w-full overflow-hidden bg-muted/80 shrink-0">
+          <div
+            className={`relative ${
+              isLarge ? "h-[225px] sm:h-[250px]" : "h-[165px] sm:h-[185px]"
+            } w-full overflow-hidden bg-muted/80 shrink-0`}
+          >
             <Image
               src={imageSrc}
-              alt={food.name}
+              alt={cleanName}
               fill
               unoptimized
               draggable={false}
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              sizes={
+                isLarge
+                  ? "(max-width: 640px) 100vw, 400px"
+                  : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              }
               onError={() => setImgError(true)}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-108 select-none"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40" />
 
             {/* Top Badges Over Image */}
-            <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
+            <div
+              className={`absolute ${
+                isLarge ? "top-3 left-3 right-3" : "top-2.5 left-2.5 right-2.5"
+              } flex items-center justify-between z-10`}
+            >
               <div className="flex items-center gap-1.5">
                 <Badge
-                  className={`px-2.5 py-0.5 text-[9.5px] font-black rounded-full uppercase tracking-wider shadow-sm ${rarityStyle.badge}`}
+                  className={`${
+                    isLarge
+                      ? "px-3 py-0.5 text-[11px]"
+                      : "px-2.5 py-0.5 text-[9.5px]"
+                  } font-black rounded-full uppercase tracking-wider shadow-sm ${
+                    rarityStyle.badge
+                  }`}
                 >
                   {food.rarity}
                 </Badge>
                 {food.status === "PENDING" && (
-                  <Badge className="bg-amber-500/90 text-white text-[9.5px] px-2 py-0.5 rounded-full shadow-sm">
+                  <Badge
+                    className={`bg-amber-500/90 text-white ${
+                      isLarge ? "text-[11px] px-2.5 py-0.5" : "text-[9.5px] px-2 py-0.5"
+                    } rounded-full shadow-sm`}
+                  >
                     Chờ duyệt
                   </Badge>
                 )}
                 {food.status === "DISABLED" && (
-                  <Badge className="bg-destructive/90 text-white text-[9.5px] px-2 py-0.5 rounded-full shadow-sm">
+                  <Badge
+                    className={`bg-destructive/90 text-white ${
+                      isLarge ? "text-[11px] px-2.5 py-0.5" : "text-[9.5px] px-2 py-0.5"
+                    } rounded-full shadow-sm`}
+                  >
                     Đang ngưng
                   </Badge>
                 )}
@@ -300,17 +335,29 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
               {/* Status pill on image if marked + Quick Flip Button */}
               <div className="flex items-center gap-1.5">
                 {isFavorited && (
-                  <span className="h-5.5 w-5.5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10.5px] shadow-sm animate-in fade-in zoom-in duration-200">
+                  <span
+                    className={`${
+                      isLarge ? "h-6.5 w-6.5 text-xs" : "h-5.5 w-5.5 text-[10.5px]"
+                    } rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm animate-in fade-in zoom-in duration-200`}
+                  >
                     <FontAwesomeIcon icon={faHeart} />
                   </span>
                 )}
                 {isHated && (
-                  <span className="h-5.5 w-5.5 rounded-full bg-slate-700 text-white flex items-center justify-center text-[10.5px] shadow-sm animate-in fade-in zoom-in duration-200">
+                  <span
+                    className={`${
+                      isLarge ? "h-6.5 w-6.5 text-xs" : "h-5.5 w-5.5 text-[10.5px]"
+                    } rounded-full bg-slate-700 text-white flex items-center justify-center shadow-sm animate-in fade-in zoom-in duration-200`}
+                  >
                     <FontAwesomeIcon icon={faThumbsDown} />
                   </span>
                 )}
                 {isEaten && (
-                  <span className="h-5.5 w-5.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10.5px] shadow-sm animate-in fade-in zoom-in duration-200">
+                  <span
+                    className={`${
+                      isLarge ? "h-6.5 w-6.5 text-xs" : "h-5.5 w-5.5 text-[10.5px]"
+                    } rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-sm animate-in fade-in zoom-in duration-200`}
+                  >
                     <FontAwesomeIcon icon={faUtensils} />
                   </span>
                 )}
@@ -319,89 +366,108 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
                 <button
                   type="button"
                   onClick={handleToggleFlip}
-                  className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/80 text-white/90 hover:text-white flex items-center justify-center text-[11px] backdrop-blur-xs transition-colors shadow-sm cursor-pointer"
+                  className={`${
+                    isLarge ? "h-7 w-7 text-xs" : "h-6 w-6 text-[11px]"
+                  } rounded-full bg-black/50 hover:bg-black/80 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-xs transition-colors shadow-sm cursor-pointer`}
                   title="Lật thẻ"
                 >
-                  <FontAwesomeIcon icon={faRotate} className="text-[10px]" />
+                  <FontAwesomeIcon
+                    icon={faRotate}
+                    className={isLarge ? "text-xs" : "text-[10px]"}
+                  />
                 </button>
               </div>
             </div>
           </div>
 
           {/* Card Body */}
-          <div className="p-3 sm:p-3.5 flex-1 flex flex-col justify-between gap-2 relative">
-            <div className="space-y-1">
-              <h3 className="text-[14.5px] sm:text-[15.5px] font-bold text-foreground leading-tight truncate group-hover:text-secondary transition-colors">
-                {food.name}
+          <div
+            className={`${
+              isLarge ? "p-4 sm:p-5 gap-3" : "p-3 sm:p-3.5 gap-2"
+            } flex-1 flex flex-col justify-between relative`}
+          >
+            <div className={isLarge ? "space-y-1 sm:space-y-1.5" : "space-y-1"}>
+              <h3
+                className={`${
+                  isLarge
+                    ? "text-base sm:text-lg"
+                    : "text-[14.5px] sm:text-[15.5px]"
+                } font-bold text-foreground leading-tight truncate group-hover:text-secondary transition-colors`}
+              >
+                {cleanName}
               </h3>
 
-              <p className="text-[11.5px] sm:text-xs text-muted-foreground text-justify leading-relaxed line-clamp-2">
+              <p
+                className={`${
+                  isLarge
+                    ? "text-xs sm:text-[13px] line-clamp-3"
+                    : "text-[11.5px] sm:text-xs line-clamp-2"
+                } text-muted-foreground text-justify leading-relaxed`}
+              >
                 {food.description || "Món ngon hấp dẫn từ cộng đồng ẩm thực AnGi."}
               </p>
             </div>
 
-            {/* Real Status / Engagement Row with mini Maps & YouTube shortcuts */}
-            <div className="flex items-center justify-between text-[10px] py-1.5 px-2.5 bg-muted/60 rounded-xl border border-border/50 font-medium">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <FontAwesomeIcon
-                  icon={faCircleCheck}
-                  className="text-secondary text-[9px]"
+            {/* 2 Primary Actions: Quán Ăn (Google Maps) & Công Thức (YouTube) */}
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+              <a
+                href={`https://www.google.com/maps/search/${encodeURIComponent(
+                  `Quán ${cleanName}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className={`flex items-center justify-center gap-1.5 ${
+                  isLarge ? "h-9 sm:h-9.5 text-xs px-3" : "h-7.5 sm:h-8 text-[11px] px-2"
+                } rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50 font-bold transition-all shadow-2xs cursor-pointer`}
+                title={`Tìm quán ${cleanName} trên Google Maps`}
+              >
+                <img
+                  src="/other-images/googlemaps.webp"
+                  alt="Google Maps"
+                  className={`${isLarge ? "size-4" : "size-3.5"} object-contain shrink-0`}
+                  loading="lazy"
                 />
-                <span>
-                  {food.status === "ACTIVE"
-                    ? "Đã duyệt"
-                    : food.status === "PENDING"
-                    ? "Chờ duyệt"
-                    : "Đang ngưng"}
-                </span>
-              </span>
+                <span className="truncate">Tìm Quán</span>
+              </a>
 
-              <div className="flex items-center gap-1.5">
-                {/* Compact Google Maps shortcut */}
-                <a
-                  href={`https://www.google.com/maps/search/${encodeURIComponent(
-                    `Quán ${food.name}`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="size-5.5 rounded-md bg-background hover:bg-muted border border-border/70 hover:border-emerald-500/60 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
-                  title={`Tìm quán ${food.name} trên Google Maps`}
-                >
-                  <Image
-                    src="other-images/googlemaps.webp"
-                    alt="Maps"
-                    className="size-3.5 object-contain"
-                  />
-                </a>
-
-                {/* Compact YouTube recipe shortcut */}
-                <a
-                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
-                    `Công thức làm ${food.name}`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="size-5.5 rounded-md bg-background hover:bg-muted border border-border/70 hover:border-red-500/60 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
-                  title={`Xem công thức nấu ${food.name} trên YouTube`}
-                >
-                  <Image
-                    src="other-images/youtube.webp"
-                    alt="YouTube"
-                    className="size-3.5 object-contain"
-                  />
-                </a>
-              </div>
+              <a
+                href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                  `Công thức làm ${cleanName}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className={`flex items-center justify-center gap-1.5 ${
+                  isLarge ? "h-9 sm:h-9.5 text-xs px-3" : "h-7.5 sm:h-8 text-[11px] px-2"
+                } rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 hover:border-rose-500/50 font-bold transition-all shadow-2xs cursor-pointer`}
+                title={`Xem công thức nấu ${cleanName} trên YouTube`}
+              >
+                <img
+                  src="/other-images/youtube.webp"
+                  alt="YouTube"
+                  className={`${isLarge ? "size-4" : "size-3.5"} object-contain shrink-0`}
+                  loading="lazy"
+                />
+                <span className="truncate">Xem Công Thức</span>
+              </a>
             </div>
 
             {/* 3 Action Buttons: Yêu thích, Ghét, Đã ăn - only icon & count */}
-            <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+            <div
+              className={`grid grid-cols-3 ${
+                isLarge ? "gap-2 pt-1" : "gap-1.5 pt-0.5"
+              }`}
+            >
               {/* 1. Yêu thích */}
               <button
                 type="button"
                 onClick={handleToggleFavorite}
-                className={`h-7.5 sm:h-8 px-2 rounded-xl border flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all cursor-pointer shadow-2xs ${
+                className={`${
+                  isLarge
+                    ? "h-8.5 sm:h-9 text-xs gap-1.5"
+                    : "h-7.5 sm:h-8 text-[11px] gap-1.5"
+                } px-2 rounded-xl border flex items-center justify-center font-bold transition-all cursor-pointer shadow-2xs ${
                   isFavorited
                     ? "bg-rose-500 text-white border-rose-500 shadow-rose-500/20 shadow-xs"
                     : "bg-background hover:bg-muted text-muted-foreground hover:text-rose-500 border-border"
@@ -410,7 +476,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
               >
                 <FontAwesomeIcon
                   icon={faHeart}
-                  className={`text-[11px] ${
+                  className={`${isLarge ? "text-xs" : "text-[11px]"} ${
                     isFavorited ? "text-white" : "text-rose-500"
                   }`}
                 />
@@ -421,7 +487,11 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
               <button
                 type="button"
                 onClick={handleToggleHated}
-                className={`h-7.5 sm:h-8 px-2 rounded-xl border flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all cursor-pointer shadow-2xs ${
+                className={`${
+                  isLarge
+                    ? "h-8.5 sm:h-9 text-xs gap-1.5"
+                    : "h-7.5 sm:h-8 text-[11px] gap-1.5"
+                } px-2 rounded-xl border flex items-center justify-center font-bold transition-all cursor-pointer shadow-2xs ${
                   isHated
                     ? "bg-slate-700 dark:bg-slate-600 text-white border-slate-700 shadow-slate-700/20 shadow-xs"
                     : "bg-background hover:bg-muted text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300 border-border"
@@ -430,7 +500,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
               >
                 <FontAwesomeIcon
                   icon={faThumbsDown}
-                  className={`text-[11px] ${
+                  className={`${isLarge ? "text-xs" : "text-[11px]"} ${
                     isHated ? "text-white" : "text-muted-foreground"
                   }`}
                 />
@@ -440,7 +510,11 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
               {/* 3. Đã ăn with Hover Tooltip Action Bar */}
               <div className="relative group/eaten">
                 {/* Floating Tooltip Action Bar on hover */}
-                <div className="absolute bottom-full mb-2 right-0 z-40 opacity-0 invisible group-hover/eaten:opacity-100 group-hover/eaten:visible transition-all duration-200 pointer-events-none group-hover/eaten:pointer-events-auto shadow-xl rounded-xl bg-popover/95 backdrop-blur-md border border-border p-1 min-w-[145px] flex flex-col gap-0.5 text-[10.5px]">
+                <div
+                  className={`absolute bottom-full mb-2 right-0 z-40 opacity-0 invisible group-hover/eaten:opacity-100 group-hover/eaten:visible transition-all duration-200 pointer-events-none group-hover/eaten:pointer-events-auto shadow-xl rounded-xl bg-popover/95 backdrop-blur-md border border-border p-1 min-w-[150px] flex flex-col gap-0.5 ${
+                    isLarge ? "text-xs" : "text-[10.5px]"
+                  }`}
+                >
                   {/* Action 1: Đánh dấu đã ăn */}
                   <button
                     type="button"
@@ -448,7 +522,10 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
                     className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-foreground hover:bg-emerald-500/15 hover:text-emerald-600 transition-colors text-left font-bold cursor-pointer"
                     title="Đánh dấu đã ăn (+1)"
                   >
-                    <FontAwesomeIcon icon={faPlus} className="text-emerald-600 text-[9.5px]" />
+                    <FontAwesomeIcon
+                      icon={faPlus}
+                      className="text-emerald-600 text-[10px]"
+                    />
                     <span>Đánh dấu đã ăn</span>
                   </button>
 
@@ -459,7 +536,10 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
                     className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-foreground hover:bg-rose-500/15 hover:text-rose-500 transition-colors text-left font-bold cursor-pointer"
                     title="Bỏ lần ăn gần nhất"
                   >
-                    <FontAwesomeIcon icon={faRotateLeft} className="text-rose-500 text-[9.5px]" />
+                    <FontAwesomeIcon
+                      icon={faRotateLeft}
+                      className="text-rose-500 text-[10px]"
+                    />
                     <span>Bỏ lần ăn gần nhất</span>
                   </button>
 
@@ -471,7 +551,11 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
                 <button
                   type="button"
                   onClick={handleRecordEaten}
-                  className={`w-full h-7.5 sm:h-8 px-2 rounded-xl border flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all cursor-pointer shadow-2xs ${
+                  className={`w-full ${
+                    isLarge
+                      ? "h-8.5 sm:h-9 text-xs gap-1.5"
+                      : "h-7.5 sm:h-8 text-[11px] gap-1.5"
+                  } px-2 rounded-xl border flex items-center justify-center font-bold transition-all cursor-pointer shadow-2xs ${
                     isEaten
                       ? "bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/20 shadow-xs"
                       : "bg-background hover:bg-muted text-muted-foreground hover:text-emerald-600 border-border"
@@ -480,7 +564,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
                 >
                   <FontAwesomeIcon
                     icon={faUtensils}
-                    className={`text-[11px] ${
+                    className={`${isLarge ? "text-xs" : "text-[11px]"} ${
                       isEaten ? "text-white" : "text-emerald-600"
                     }`}
                   />
@@ -491,16 +575,17 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
           </div>
         </div>
 
-        {/* ================= BACK SIDE (COLLECTIBLE CARD BACK) ================= */}
+        {/* ================= BACK SIDE (DETAILED FOOD INFO) ================= */}
         <div
           className={`absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-3xl overflow-hidden ${
             !isFlipped ? "pointer-events-none" : "pointer-events-auto"
           }`}
         >
           <FoodCardBack
+            food={food}
             rarity={food.rarity}
             onFlip={handleToggleFlip}
-            size="sm"
+            size={isLarge ? "lg" : "sm"}
           />
         </div>
       </div>
