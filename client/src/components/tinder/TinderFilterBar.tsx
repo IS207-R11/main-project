@@ -99,7 +99,13 @@ export const TinderFilterBar: React.FC<TinderFilterBarProps> = ({
             onValueChange={(val) => val && onChange({ session: val as SessionFilter })}
           >
             <SelectTrigger className="w-full rounded-2xl">
-              <SelectValue placeholder="Chọn khung giờ" />
+              <SelectValue placeholder="Chọn khung giờ">
+                {filters.session === "auto"
+                  ? `Tự Động (${recommendedSession})`
+                  : filters.session === "all"
+                  ? "Tất Cả Khung Giờ"
+                  : filters.session}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="auto">Tự Động ({recommendedSession})</SelectItem>
@@ -123,7 +129,13 @@ export const TinderFilterBar: React.FC<TinderFilterBarProps> = ({
             onValueChange={(val) => val && onChange({ diet: val as DietaryFilter })}
           >
             <SelectTrigger className="w-full rounded-2xl">
-              <SelectValue placeholder="Chọn chế độ ăn" />
+              <SelectValue placeholder="Chọn chế độ ăn">
+                {filters.diet === "veg"
+                  ? "🌱 Chỉ Món Chay"
+                  : filters.diet === "meat"
+                  ? "🍖 Chỉ Món Mặn"
+                  : "Tất Cả Chế Độ (Chay & Mặn)"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất Cả Chế Độ (Chay & Mặn)</SelectItem>
@@ -144,7 +156,17 @@ export const TinderFilterBar: React.FC<TinderFilterBarProps> = ({
             onValueChange={(val) => val && onChange({ rarity: val as "all" | Rarity })}
           >
             <SelectTrigger className="w-full rounded-2xl">
-              <SelectValue placeholder="Chọn độ hiếm" />
+              <SelectValue placeholder="Chọn độ hiếm">
+                {filters.rarity === "SSR"
+                  ? "👑 SSR - Thượng Hạng"
+                  : filters.rarity === "SR"
+                  ? "💜 SR - Đặc Sắc"
+                  : filters.rarity === "UC"
+                  ? "💎 UC - Trung Cấp"
+                  : filters.rarity === "C"
+                  ? "🍀 C - Phổ Biến"
+                  : "Tất Cả Độ Hiếm"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất Cả Độ Hiếm</SelectItem>

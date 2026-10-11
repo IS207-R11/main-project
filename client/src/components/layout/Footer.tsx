@@ -51,7 +51,7 @@ export const Footer: React.FC = () => {
                     className="hover:text-primary transition-colors flex items-center gap-1.5"
                   >
                     <FontAwesomeIcon icon={faCompass} className="text-[10px] text-secondary" />
-                    <span>Trang Chủ (Gacha Gợi Ý)</span>
+                    <span>Trang Chủ (Gacha & Tinder)</span>
                   </Link>
                 </li>
                 <li>

@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Image } from '@/components/ui/image';
+import { stripFoodCode } from '@/lib/foodAdapter';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBookOpen,
@@ -90,7 +91,7 @@ export default function DiaryPage() {
     const timeout = setTimeout(async () => {
       try {
         const res = await foodsApi.list({ search: searchQuery.trim(), pageSize: 8 });
-        setFoodOptions(res.data.map((f) => ({ food_id: f.food_id, name: f.name })));
+        setFoodOptions(res.data.map((f) => ({ food_id: f.food_id, name: stripFoodCode(f.name) || f.name })));
       } catch {
         setFoodOptions([]);
       }
@@ -223,7 +224,7 @@ export default function DiaryPage() {
               <h1 className="text-2xl font-black text-foreground">Nhật Ký Ăn Uống</h1>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ghi nhận và quản lý những món bạn đã thưởng thức ({totalCount} bản ghi)
+              Ghi nhận và quản lý những món bạn đã thưởng thức.
             </p>
           </div>
 
@@ -295,7 +296,7 @@ export default function DiaryPage() {
                 {selectedFood ? (
                   <div className="flex items-center justify-between p-2.5 rounded-xl border border-secondary bg-secondary/10">
                     <span className="text-xs font-bold text-foreground">
-                      {selectedFood.name} (Mã: #{selectedFood.food_id})
+                      {stripFoodCode(selectedFood.name)}
                     </span>
                     <Button
                       type="button"
@@ -421,7 +422,7 @@ export default function DiaryPage() {
               const dateStr = item.created_at
                 ? new Date(item.created_at).toLocaleString('vi-VN')
                 : 'Vừa xong';
-              const foodName = item.food?.name || `Món ăn #${item.food_id}`;
+              const foodName = stripFoodCode(item.food?.name || '') || `Món ăn #${item.food_id}`;
 
               return (
                 <div

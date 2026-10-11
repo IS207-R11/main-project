@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapFoodCardToFoodItem } from './foodAdapter';
+import { mapFoodCardToFoodItem, stripFoodCode } from './foodAdapter';
 import type { FoodCard } from '@/api/types/foods';
 
 describe('foodAdapter - mapFoodCardToFoodItem', () => {
@@ -88,5 +88,23 @@ describe('foodAdapter - mapFoodCardToFoodItem', () => {
     expect(item.favorites_count).toBe(0);
     expect(item.hated_count).toBe(0);
     expect(item.eaten_count).toBe(0);
+  });
+
+  describe('stripFoodCode', () => {
+    it('Loại bỏ mã hex hoặc hash random ở cuối tên món', () => {
+      expect(stripFoodCode('Pho Ga 6ac4f54d3a645')).toBe('Pho Ga');
+      expect(stripFoodCode('Banh Mi 6ac6838f6d551')).toBe('Banh Mi');
+      expect(stripFoodCode('Food C 6ac50246a0376')).toBe('Food C');
+      expect(stripFoodCode('Bún Bò Huế #12')).toBe('Bún Bò Huế');
+      expect(stripFoodCode('Bún Bò Huế (#12)')).toBe('Bún Bò Huế');
+      expect(stripFoodCode('Cơm Tấm #abc123')).toBe('Cơm Tấm');
+      expect(stripFoodCode('Cơm Tấm (#abc123)')).toBe('Cơm Tấm');
+    });
+
+    it('Giữ nguyên tên món bình thường không có mã', () => {
+      expect(stripFoodCode('Phở Bò Tái Nạm')).toBe('Phở Bò Tái Nạm');
+      expect(stripFoodCode('Chicken Noodle Soup')).toBe('Chicken Noodle Soup');
+      expect(stripFoodCode('')).toBe('');
+    });
   });
 });

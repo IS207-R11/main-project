@@ -190,10 +190,23 @@ export const AuthDialog: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
-                  <span>Mật khẩu</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <FontAwesomeIcon icon={faLock} className="text-muted-foreground text-[11px]" />
+                    <span>Mật khẩu</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toast.info(
+                        'Vui lòng liên hệ Quản trị viên (Admin) hoặc đăng nhập bằng tài khoản khác nếu bạn quên mật khẩu.'
+                      );
+                    }}
+                    className="text-[11px] font-semibold text-secondary hover:underline cursor-pointer"
+                  >
+                    Quên mật khẩu?
+                  </button>
+                </div>
                 <PasswordInput
                   placeholder="••••••••"
                   value={loginPassword}

@@ -47,7 +47,7 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-card/85 backdrop-blur-md transition-all duration-300 shadow-xs">
+      <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-card/95 backdrop-blur-md transition-all duration-300 shadow-xs">
         <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           {/* Brand Logo & Name */}
           <Link
@@ -127,7 +127,7 @@ export const Navbar: React.FC = () => {
               />
               <DropdownMenuContent
                 align="start"
-                className="w-56 bg-card text-card-foreground border border-border shadow-xl rounded-2xl p-1.5"
+                className="w-56 bg-popover text-popover-foreground border border-border shadow-2xl rounded-2xl p-1.5 z-50"
               >
                 <DropdownMenuItem
                   render={
@@ -188,7 +188,7 @@ export const Navbar: React.FC = () => {
                   </Button>
                 }
               />
-              <DropdownMenuContent align="end" className="w-52 bg-card text-card-foreground border border-border shadow-xl rounded-2xl p-1.5">
+              <DropdownMenuContent align="end" className="w-52 bg-popover text-popover-foreground border border-border shadow-2xl rounded-2xl p-1.5 z-50">
                 <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
                   Chế Độ Sáng/Tối
                 </DropdownMenuLabel>

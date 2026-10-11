@@ -8,6 +8,7 @@ import {
   faHandshake,
   faUserShield,
   faScaleBalanced,
+  faShieldHalved,
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 
@@ -76,7 +77,10 @@ export default function TermsOfServicePage() {
         </div>
 
         <div className="p-6 rounded-3xl bg-card border border-border shadow-xs space-y-3">
-          <h3 className="text-foreground font-bold text-base">4. Giới Hạn Trách Nhiệm</h3>
+          <div className="flex items-center gap-2 text-foreground font-bold text-base">
+            <FontAwesomeIcon icon={faShieldHalved} className="text-emerald-500" />
+            <span>4. Giới Hạn Trách Nhiệm</span>
+          </div>
           <p>
             Thông tin thực phẩm và gợi ý bữa ăn được cung cấp nhằm mục đích tham khảo và giải trí thường nhật. Ăn Gì không thay thế cho lời khuyên y tế, dinh dưỡng chuyên sâu hoặc chỉ định điều trị từ bác sĩ chuyên khoa.
           </p>

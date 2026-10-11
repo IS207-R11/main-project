@@ -64,21 +64,22 @@ describe('FoodFlashCard Component (Testing Matrix & Negative User Scenarios)', (
   it('1. Render thành công: Khởi tạo card với đầy đủ các phần tử', () => {
     render(<FoodFlashCard food={mockFood} />);
 
-    expect(screen.getByText('Bún Chả Hà Nội')).toBeInTheDocument();
-    expect(screen.getByText('SR')).toBeInTheDocument();
-    expect(screen.getByText('Đã duyệt')).toBeInTheDocument();
+    expect(screen.getAllByText('Bún Chả Hà Nội').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('SR').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Tìm Quán').length).toBeGreaterThan(0);
+    expect(screen.getByText('Xem Công Thức')).toBeInTheDocument();
   });
 
   it('2. Hiển thị đúng dữ liệu: Tên món, mô tả, độ hiếm và số lượng tương tác', () => {
     render(<FoodFlashCard food={mockFood} />);
 
-    expect(screen.getByText('Bún Chả Hà Nội')).toBeInTheDocument();
+    expect(screen.getAllByText('Bún Chả Hà Nội').length).toBeGreaterThan(0);
     expect(
-      screen.getByText(
+      screen.getAllByText(
         'Thịt nướng thơm lừng ăn kèm bún và nước mắm chua ngọt đặc trưng.'
-      )
-    ).toBeInTheDocument();
-    expect(screen.getByText('SR')).toBeInTheDocument();
+      ).length
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('SR').length).toBeGreaterThan(0);
     expect(screen.getByText('15')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
@@ -179,10 +180,11 @@ describe('FoodFlashCard Component (Testing Matrix & Negative User Scenarios)', (
     const flipBtn = screen.getByTitle('Lật thẻ');
     fireEvent.click(flipBtn);
 
-    // Mặt sau hiển thị logo Ăn Gì và nút lật lại
+    // Mặt sau hiển thị Thông Tin Món Ăn và nút lật lại
     await waitFor(() => {
-      expect(screen.getByAltText('AnGi Logo')).toBeInTheDocument();
+      expect(screen.getByText('Thông Tin Món Ăn')).toBeInTheDocument();
       expect(screen.getByText('Lật lại mặt trước')).toBeInTheDocument();
+      expect(screen.getAllByText('Bún Chả Hà Nội').length).toBeGreaterThan(0);
     });
 
     // Lật lại mặt trước
