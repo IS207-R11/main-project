@@ -71,7 +71,12 @@ export default function AdminPage() {
   const [foodsTotal, setFoodsTotal] = useState(0);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [editingFood, setEditingFood] = useState<FoodCard | null>(null);
-  const [foodForm, setFoodForm] = useState({ name: '', description: '', image_url: '' });
+  const [foodForm, setFoodForm] = useState<{
+    name: string;
+    description: string;
+    image_url: string;
+    status: FoodStatus;
+  }>({ name: '', description: '', image_url: '', status: 'ACTIVE' });
   const [foodFormSaving, setFoodFormSaving] = useState(false);
 
   // =================== USERS STATE ===================
@@ -204,10 +209,16 @@ export default function AdminPage() {
         name: food.name || '',
         description: food.description || '',
         image_url: food.image_url || '',
+        status: food.status || 'ACTIVE',
       });
     } else {
       setEditingFood(null);
-      setFoodForm({ name: '', description: '', image_url: '' });
+      setFoodForm({
+        name: '',
+        description: '',
+        image_url: '',
+        status: 'PENDING',
+      });
     }
     setFoodModalOpen(true);
   };
@@ -231,6 +242,7 @@ export default function AdminPage() {
           name: foodForm.name.trim(),
           description: foodForm.description.trim(),
           image_url: foodForm.image_url.trim(),
+          status: foodForm.status,
         });
       } else {
         await foodsApi.create({
@@ -464,7 +476,7 @@ export default function AdminPage() {
                           <th className="p-3">Ngày tạo</th>
                           <th className="p-3">Độ hiếm</th>
                           <th className="p-3">Trạng thái</th>
-                          <th className="p-3 text-right">Hành động</th>
+                          <th className="p-3 text-right whitespace-nowrap min-w-[190px]">Hành động</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -479,7 +491,7 @@ export default function AdminPage() {
                             <td className="p-3"><Skeleton className="h-4 w-20" /></td>
                             <td className="p-3"><Skeleton className="h-5 w-8 rounded-full" /></td>
                             <td className="p-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                            <td className="p-3 text-right"><Skeleton className="h-7 w-24 ml-auto rounded-lg" /></td>
+                            <td className="p-3 text-right whitespace-nowrap"><Skeleton className="h-7 w-28 ml-auto rounded-lg" /></td>
                           </tr>
                         ))}
                       </tbody>
@@ -498,7 +510,7 @@ export default function AdminPage() {
                           <th className="p-3">Ngày tạo</th>
                           <th className="p-3">Độ hiếm</th>
                           <th className="p-3">Trạng thái</th>
-                          <th className="p-3 text-right">Hành động</th>
+                          <th className="p-3 text-right whitespace-nowrap min-w-[190px]">Hành động</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -515,7 +527,7 @@ export default function AdminPage() {
                                 <td className="p-3"><Skeleton className="h-4 w-20" /></td>
                                 <td className="p-3"><Skeleton className="h-5 w-8 rounded-full" /></td>
                                 <td className="p-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                                <td className="p-3 text-right"><Skeleton className="h-7 w-24 ml-auto rounded-lg" /></td>
+                                <td className="p-3 text-right whitespace-nowrap"><Skeleton className="h-7 w-28 ml-auto rounded-lg" /></td>
                               </tr>
                             );
                           }
@@ -560,53 +572,55 @@ export default function AdminPage() {
                                   {food.status}
                                 </Badge>
                               </td>
-                              <td className="p-3 text-right space-x-1">
-                                {food.status !== 'ACTIVE' && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleFoodStatusChange(food.food_id, 'ACTIVE')}
-                                    className="h-7 px-2 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 border-emerald-200"
-                                    title="Duyệt hoạt động"
-                                  >
-                                    <FontAwesomeIcon icon={faCheck} className="mr-1" />
-                                    Duyệt
-                                  </Button>
-                                )}
-                                {food.status !== 'DISABLED' && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleFoodStatusChange(food.food_id, 'DISABLED')}
-                                    className="h-7 px-2 text-[11px] font-bold text-amber-600 hover:bg-amber-50 border-amber-200"
-                                    title="Ẩn món"
-                                  >
-                                    <FontAwesomeIcon icon={faBan} className="mr-1" />
-                                    Ẩn
-                                  </Button>
-                                )}
-                                {isAdmin && (
-                                  <>
+                              <td className="p-3 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5 flex-nowrap">
+                                  {food.status !== 'ACTIVE' && (
                                     <Button
                                       size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleOpenFoodModal(food)}
-                                      className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                                      title="Sửa món"
+                                      variant="outline"
+                                      onClick={() => handleFoodStatusChange(food.food_id, 'ACTIVE')}
+                                      className="h-7 px-2 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 border-emerald-200 shrink-0"
+                                      title="Duyệt hoạt động"
                                     >
-                                      <FontAwesomeIcon icon={faPencil} />
+                                      <FontAwesomeIcon icon={faCheck} className="mr-1" />
+                                      Duyệt
                                     </Button>
+                                  )}
+                                  {food.status !== 'DISABLED' && (
                                     <Button
                                       size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleFoodDelete(food.food_id)}
-                                      className="h-7 px-2 text-destructive hover:bg-destructive/10"
-                                      title="Xóa món"
+                                      variant="outline"
+                                      onClick={() => handleFoodStatusChange(food.food_id, 'DISABLED')}
+                                      className="h-7 px-2 text-[11px] font-bold text-amber-600 hover:bg-amber-50 border-amber-200 shrink-0"
+                                      title="Ẩn món"
                                     >
-                                      <FontAwesomeIcon icon={faTrashCan} />
+                                      <FontAwesomeIcon icon={faBan} className="mr-1" />
+                                      Ẩn
                                     </Button>
-                                  </>
-                                )}
+                                  )}
+                                  {isAdmin && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleOpenFoodModal(food)}
+                                        className="h-7 px-2 text-muted-foreground hover:text-foreground shrink-0"
+                                        title="Sửa món"
+                                      >
+                                        <FontAwesomeIcon icon={faPencil} />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleFoodDelete(food.food_id)}
+                                        className="h-7 px-2 text-destructive hover:bg-destructive/10 shrink-0"
+                                        title="Xóa món"
+                                      >
+                                        <FontAwesomeIcon icon={faTrashCan} />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -661,7 +675,7 @@ export default function AdminPage() {
                           <th className="p-3">Email & Địa chỉ</th>
                           <th className="p-3">Vai trò</th>
                           <th className="p-3">Trạng thái</th>
-                          <th className="p-3 text-right">Hành động</th>
+                          <th className="p-3 text-right whitespace-nowrap min-w-[160px]">Hành động</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y border-border">
@@ -675,7 +689,7 @@ export default function AdminPage() {
                             </td>
                             <td className="p-3"><Skeleton className="h-7 w-20 rounded" /></td>
                             <td className="p-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                            <td className="p-3 text-right"><Skeleton className="h-7 w-28 ml-auto rounded-lg" /></td>
+                            <td className="p-3 text-right whitespace-nowrap"><Skeleton className="h-7 w-28 ml-auto rounded-lg" /></td>
                           </tr>
                         ))}
                       </tbody>
@@ -693,7 +707,7 @@ export default function AdminPage() {
                           <th className="p-3">Email & Địa chỉ</th>
                           <th className="p-3">Vai trò</th>
                           <th className="p-3">Trạng thái</th>
-                          <th className="p-3 text-right">Hành động</th>
+                          <th className="p-3 text-right whitespace-nowrap min-w-[160px]">Hành động</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -709,7 +723,7 @@ export default function AdminPage() {
                                 </td>
                                 <td className="p-3"><Skeleton className="h-7 w-20 rounded" /></td>
                                 <td className="p-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                                <td className="p-3 text-right"><Skeleton className="h-7 w-28 ml-auto rounded-lg" /></td>
+                                <td className="p-3 text-right whitespace-nowrap"><Skeleton className="h-7 w-28 ml-auto rounded-lg" /></td>
                               </tr>
                             );
                           }
@@ -761,53 +775,55 @@ export default function AdminPage() {
                                   {u.status}
                                 </Badge>
                               </td>
-                              <td className="p-3 text-right space-x-1">
-                                {u.status === 'ACTIVE' ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleUserStatusChange(u.user_id, 'DISABLED')}
-                                    className="h-7 px-2 text-[11px] font-bold text-destructive hover:bg-destructive/10 border-destructive/30"
-                                  >
-                                    <FontAwesomeIcon icon={faBan} className="mr-1" />
-                                    Khóa
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleUserStatusChange(u.user_id, 'ACTIVE')}
-                                    className="h-7 px-2 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 border-emerald-300"
-                                  >
-                                    <FontAwesomeIcon icon={faCheck} className="mr-1" />
-                                    Mở
-                                  </Button>
-                                )}
-                                {isAdmin && (
-                                  <>
+                              <td className="p-3 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5 flex-nowrap">
+                                  {u.status === 'ACTIVE' ? (
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => {
-                                        setPasswordModalUser(u);
-                                        setNewPasswordInput('');
-                                      }}
-                                      className="h-7 px-2 text-[11px] font-bold text-indigo-500 border-indigo-200 hover:bg-indigo-50"
-                                      title="Đặt lại mật khẩu"
+                                      onClick={() => handleUserStatusChange(u.user_id, 'DISABLED')}
+                                      className="h-7 px-2 text-[11px] font-bold text-destructive hover:bg-destructive/10 border-destructive/30 shrink-0"
                                     >
-                                      <FontAwesomeIcon icon={faKey} />
+                                      <FontAwesomeIcon icon={faBan} className="mr-1" />
+                                      Khóa
                                     </Button>
+                                  ) : (
                                     <Button
                                       size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleUserDelete(u.user_id)}
-                                      className="h-7 px-2 text-destructive hover:bg-destructive/10"
-                                      title="Xóa tài khoản"
+                                      variant="outline"
+                                      onClick={() => handleUserStatusChange(u.user_id, 'ACTIVE')}
+                                      className="h-7 px-2 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 border-emerald-300 shrink-0"
                                     >
-                                      <FontAwesomeIcon icon={faTrashCan} />
+                                      <FontAwesomeIcon icon={faCheck} className="mr-1" />
+                                      Mở
                                     </Button>
-                                  </>
-                                )}
+                                  )}
+                                  {isAdmin && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setPasswordModalUser(u);
+                                          setNewPasswordInput('');
+                                        }}
+                                        className="h-7 px-2 text-[11px] font-bold text-indigo-500 border-indigo-200 hover:bg-indigo-50 shrink-0"
+                                        title="Đặt lại mật khẩu"
+                                      >
+                                        <FontAwesomeIcon icon={faKey} />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleUserDelete(u.user_id)}
+                                        className="h-7 px-2 text-destructive hover:bg-destructive/10 shrink-0"
+                                        title="Xóa tài khoản"
+                                      >
+                                        <FontAwesomeIcon icon={faTrashCan} />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -1039,6 +1055,28 @@ export default function AdminPage() {
                   required
                 />
               </div>
+
+              {/* Chỉ hiện status khi admin vào chế độ chỉnh sửa món ăn */}
+              {editingFood && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-foreground">Trạng thái *</label>
+                  <Select
+                    value={foodForm.status}
+                    onValueChange={(val) =>
+                      val && setFoodForm({ ...foodForm, status: val as FoodStatus })
+                    }
+                  >
+                    <SelectTrigger className="w-full text-xs">
+                      <SelectValue placeholder="Chọn trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
+                      <SelectItem value="PENDING">Đang chờ duyệt</SelectItem>
+                      <SelectItem value="DISABLED">Đang ngưng</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"
