@@ -228,17 +228,9 @@ class FoodController extends Controller
 
         $selectedFood = $top10Foods->random();
 
-        // Ghi nhận lượt gacha vào GACHA_FOODS nếu user đã đăng nhập
+        // Ghi nhận lượt gacha vào GACHA_FOODS nếu user đã đăng nhập (duy trì tối đa 5 dòng cho mỗi user)
         if ($user) {
-            DB::table('GACHA_FOODS')->upsert(
-                [
-                    'user_id' => $user->user_id,
-                    'food_id' => $selectedFood->food_id,
-                    'created_at' => now(),
-                ],
-                ['user_id', 'food_id'],
-                ['created_at']
-            );
+            GachaFood::recordGacha($user->user_id, $selectedFood->food_id);
         }
 
         return (new FoodCardResource($selectedFood))->response();
