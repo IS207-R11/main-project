@@ -88,7 +88,7 @@ export const BoosterPack: React.FC<BoosterPackProps> = ({
                 Gói Gợi Ý Món Ăn
               </h3>
               <p className="text-xs text-muted-foreground font-medium max-w-[240px] mx-auto line-clamp-2">
-                Khám phá món ngon phù hợp theo khẩu vị, thời gian và chỉ số dinh dưỡng.
+                Khám phá món ngon.
               </p>
             </div>
 

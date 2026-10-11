@@ -511,7 +511,7 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
               <div className="relative group/eaten">
                 {/* Floating Tooltip Action Bar on hover */}
                 <div
-                  className={`absolute bottom-full mb-1.5 right-0 z-40 opacity-0 invisible group-hover/eaten:opacity-100 group-hover/eaten:visible transition-all duration-200 pointer-events-none group-hover/eaten:pointer-events-auto shadow-xl rounded-xl bg-popover/95 backdrop-blur-md border border-border p-1 min-w-[150px] flex flex-col gap-0.5 ${
+                  className={`absolute bottom-full mb-1.5 right-0 z-40 opacity-0 invisible group-hover/eaten:opacity-100 group-hover/eaten:visible transition-all duration-200 pointer-events-none group-hover/eaten:pointer-events-auto shadow-xl rounded-xl bg-popover/95 backdrop-blur-md border border-border p-1 w-max whitespace-nowrap flex flex-col gap-0.5 ${
                     isLarge ? "text-xs" : "text-[10.5px]"
                   }`}
                 >
@@ -522,28 +522,28 @@ const FoodFlashCardComponent: React.FC<FoodFlashCardProps> = ({
                   <button
                     type="button"
                     onClick={(e) => handleRecordEaten(e)}
-                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-foreground hover:bg-emerald-500/15 hover:text-emerald-600 transition-colors text-left font-bold cursor-pointer"
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-foreground hover:bg-emerald-500/15 hover:text-emerald-600 transition-colors text-left font-bold cursor-pointer whitespace-nowrap"
                     title="Đánh dấu đã ăn (+1)"
                   >
                     <FontAwesomeIcon
                       icon={faPlus}
-                      className="text-emerald-600 text-[10px]"
+                      className="text-emerald-600 text-[10px] shrink-0"
                     />
-                    <span>Đánh dấu đã ăn</span>
+                    <span className="whitespace-nowrap">Đánh dấu đã ăn</span>
                   </button>
 
                   {/* Action 2: Bỏ lần ăn gần nhất */}
                   <button
                     type="button"
                     onClick={(e) => handleRemoveNearlyEaten(e)}
-                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-foreground hover:bg-rose-500/15 hover:text-rose-500 transition-colors text-left font-bold cursor-pointer"
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-foreground hover:bg-rose-500/15 hover:text-rose-500 transition-colors text-left font-bold cursor-pointer whitespace-nowrap"
                     title="Bỏ lần ăn gần nhất"
                   >
                     <FontAwesomeIcon
                       icon={faRotateLeft}
-                      className="text-rose-500 text-[10px]"
+                      className="text-rose-500 text-[10px] shrink-0"
                     />
-                    <span>Bỏ lần ăn gần nhất</span>
+                    <span className="whitespace-nowrap">Bỏ lần ăn gần nhất</span>
                   </button>
 
                   {/* Arrow pointer */}

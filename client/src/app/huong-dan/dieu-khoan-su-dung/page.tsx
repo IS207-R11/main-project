@@ -82,7 +82,7 @@ export default function TermsOfServicePage() {
             <span>4. Giới Hạn Trách Nhiệm</span>
           </div>
           <p>
-            Thông tin thực phẩm và gợi ý bữa ăn được cung cấp nhằm mục đích tham khảo và giải trí thường nhật. Ăn Gì không thay thế cho lời khuyên y tế, dinh dưỡng chuyên sâu hoặc chỉ định điều trị từ bác sĩ chuyên khoa.
+            Thông tin thực phẩm và gợi ý bữa ăn được cung cấp nhằm mục đích tham khảo và giải trí thường nhật.
           </p>
         </div>
       </div>

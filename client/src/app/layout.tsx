@@ -34,10 +34,8 @@ export const metadata: Metadata = {
     "hôm nay ăn gì",
     "gợi ý món ăn",
     "gacha ẩm thực",
-    "dinh dưỡng món ăn",
     "thực đơn hàng ngày",
     "món ngon mỗi ngày",
-    "tra cứu calo",
   ],
   authors: [{ name: "Ăn gì? Team" }],
   creator: "Ăn gì?",
@@ -81,7 +79,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Ăn gì? - Khám Phá & Gợi Ý Ẩm Thực Thông Minh",
     description:
-      "Trải nghiệm gacha mở thẻ bài gợi ý món ăn dinh dưỡng thông minh mỗi ngày.",
+      "Trải nghiệm gacha mở thẻ bài gợi ý món ăn thông minh mỗi ngày.",
     images: ["/logos/main-logo.png"],
   },
 };
@@ -98,7 +96,7 @@ const jsonLd = {
     priceCurrency: "VND",
   },
   description:
-    "Ứng dụng gợi ý món ăn ngẫu nhiên theo khung giờ, tính toán lượng calo và dinh dưỡng cá nhân hóa.",
+    "Ứng dụng gợi ý món ăn ngẫu nhiên cá nhân hóa.",
   inLanguage: "vi",
 };
 

@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const metadata: Metadata = {
   title: "Trang Chủ | Ăn gì? - Gợi Ý & Khám Phá Ẩm Thực Thông Minh",
   description:
-    "Mở gói thẻ bài ẩm thực hoặc quẹt món ăn thông minh để nhận gợi ý món ăn dinh dưỡng ngẫu nhiên được tinh chọn riêng cho khẩu vị của bạn.",
+    "Mở gói thẻ bài ẩm thực hoặc quẹt món ăn thông minh để nhận gợi ý món ăn ngẫu nhiên được tinh chọn riêng cho khẩu vị của bạn.",
 };
 
 function HomeLoadingSkeleton() {

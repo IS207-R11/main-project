@@ -76,7 +76,7 @@ export function HomeTabs() {
               Hôm Nay Bạn Muốn Ăn Gì?
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Mở gói thẻ bài ngẫu nhiên để khám phá món ăn dinh dưỡng thơm ngon, chuẩn thông số calo và cân bằng dưỡng chất.
+              Mở gói thẻ bài ngẫu nhiên để khám phá món ăn thơm ngon.
             </p>
           </>
         ) : (

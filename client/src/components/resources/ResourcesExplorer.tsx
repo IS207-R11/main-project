@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -45,6 +46,23 @@ const sortLabels: Record<string, string> = {
 type SortOption = "name" | "rarity_desc" | "newest";
 
 export const ResourcesExplorer: React.FC = () => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Read initial values from URL query parameters
+  const urlSearch = searchParams.get("search") || searchParams.get("q") || "";
+  const rawRarity = searchParams.get("rarity");
+  const urlRarity: "all" | Rarity =
+    rawRarity && ["SSR", "SR", "UC", "C"].includes(rawRarity)
+      ? (rawRarity as Rarity)
+      : "all";
+  const rawSort = searchParams.get("sort");
+  const urlSort: SortOption =
+    rawSort && ["name", "rarity_desc", "newest"].includes(rawSort)
+      ? (rawSort as SortOption)
+      : "name";
+
   // Foods state from system API
   const [foods, setFoods] = useState<FoodItem[]>([]);
   const [initialLoading, setInitialLoading] = useState<boolean>(true);
@@ -57,13 +75,65 @@ export const ResourcesExplorer: React.FC = () => {
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(true);
 
-  // Search & Filters State
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRarity, setSelectedRarity] = useState<"all" | Rarity>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("name");
+  // Search & Filters State initialized from URL query params
+  const [searchQuery, setSearchQuery] = useState(urlSearch);
+  const [selectedRarity, setSelectedRarity] = useState<"all" | Rarity>(urlRarity);
+  const [sortBy, setSortBy] = useState<SortOption>(urlSort);
 
   // Sentinel ref for bottom intersection observer
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const isInitialMount = useRef(true);
+  const prevUrlSearchRef = useRef(urlSearch);
+  const prevUrlRarityRef = useRef(urlRarity);
+  const prevUrlSortRef = useRef(urlSort);
+
+  // Keep states in sync if URL query parameters change (e.g. back/forward or navigation from modal)
+  useEffect(() => {
+    if (prevUrlSearchRef.current !== urlSearch) {
+      prevUrlSearchRef.current = urlSearch;
+      setSearchQuery(urlSearch);
+    }
+    if (prevUrlRarityRef.current !== urlRarity) {
+      prevUrlRarityRef.current = urlRarity;
+      setSelectedRarity(urlRarity);
+    }
+    if (prevUrlSortRef.current !== urlSort) {
+      prevUrlSortRef.current = urlSort;
+      setSortBy(urlSort);
+    }
+  }, [urlSearch, urlRarity, urlSort]);
+
+  // Sync state changes to URL query parameters
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (searchQuery.trim()) {
+        params.set("search", searchQuery.trim());
+      }
+      if (selectedRarity !== "all") {
+        params.set("rarity", selectedRarity);
+      }
+      if (sortBy !== "name") {
+        params.set("sort", sortBy);
+      }
+
+      const queryString = params.toString();
+      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
+      const currentQueryString = searchParams.toString();
+      const currentUrl = currentQueryString ? `${pathname}?${currentQueryString}` : pathname;
+
+      if (newUrl !== currentUrl) {
+        router.replace(newUrl, { scroll: false });
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedRarity, sortBy, pathname, router, searchParams]);
 
   // Map filters to API params
   const getApiParams = useCallback(
@@ -199,6 +269,7 @@ export const ResourcesExplorer: React.FC = () => {
     setSearchQuery("");
     setSelectedRarity("all");
     setSortBy("name");
+    router.replace(pathname, { scroll: false });
   };
 
   const hasActiveFilters =

@@ -4,6 +4,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { TinderMatchModal } from './TinderMatchModal';
 import type { FoodItem } from '@/types/food';
 
+const mockPush = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 vi.mock('canvas-confetti', () => ({
   default: vi.fn(),
 }));
@@ -56,27 +64,36 @@ describe('TinderMatchModal Component (Testing Matrix & Interaction)', () => {
 
   it('3. Click các nút thao tác hoạt động bình thường', () => {
     const onRestart = vi.fn();
-    const onChangeFilter = vi.fn();
+    const onClose = vi.fn();
 
     render(
       <TinderMatchModal
         food={mockMatchedFood}
         isOpen={true}
-        onClose={vi.fn()}
+        onClose={onClose}
         onRestart={onRestart}
-        onChangeFilter={onChangeFilter}
       />
     );
 
-    // Bấm Quẹt lại
+    // Bấm Chơi lại
     const restartBtn = screen.getByRole('button', { name: /Chơi Lại/i });
     fireEvent.click(restartBtn);
     expect(onRestart).toHaveBeenCalledTimes(1);
 
-    // Bấm Quay lại / đổi bộ lọc
-    const backBtn = screen.getByRole('button', { name: /Quay Lại/i });
-    fireEvent.click(backBtn);
-    expect(onChangeFilter).toHaveBeenCalledTimes(1);
+    // Bấm Chia sẻ điều hướng đến trang tài nguyên kèm filter
+    const shareBtn = screen.getByRole('button', { name: /Chia Sẻ/i });
+    fireEvent.click(shareBtn);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringContaining(encodeURIComponent('Lẩu Thái Chua Cay'))
+    );
+
+    // Kiểm tra link Google Maps và YouTube
+    const mapsLink = screen.getByTitle(/Google Maps/i);
+    expect(mapsLink).toHaveAttribute('href', expect.stringContaining('maps/search'));
+
+    const youtubeLink = screen.getByTitle(/YouTube/i);
+    expect(youtubeLink).toHaveAttribute('href', expect.stringContaining('youtube.com/results'));
   });
 
   it('4. Tư duy sai / Biên dữ liệu: Modal đóng hoặc food = null không gây lỗi', () => {
@@ -86,7 +103,6 @@ describe('TinderMatchModal Component (Testing Matrix & Interaction)', () => {
         isOpen={false}
         onClose={vi.fn()}
         onRestart={vi.fn()}
-        onChangeFilter={vi.fn()}
       />
     );
 

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
-import { toast } from "react-toastify";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Image } from "@/components/ui/image";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
@@ -11,8 +11,6 @@ import {
   faStar,
   faRotate,
   faShareNodes,
-  faArrowLeft,
-  faMapLocationDot,
 } from "@fortawesome/free-solid-svg-icons";
 import type { FoodItem, Rarity } from "@/types/food";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +30,7 @@ interface TinderMatchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRestart: () => void;
-  onChangeFilter: () => void;
+  onChangeFilter?: () => void;
 }
 
 const rarityGlows: Record<Rarity, string> = {
@@ -48,9 +46,8 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
   isOpen,
   onClose,
   onRestart,
-  onChangeFilter,
 }) => {
-  const [copied, setCopied] = useState(false);
+  const router = useRouter();
   const [imgError, setImgError] = useState(false);
 
   // Trigger grand confetti celebration on open
@@ -97,27 +94,6 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
     });
   }, [isOpen, food]);
 
-  const handleShare = useCallback(() => {
-    if (!food) return;
-    const cleanName = stripFoodCode(food.name);
-    const text = `🎉 Tôi vừa chốt món "${cleanName}" cho bữa hôm nay trên Ứng Dụng Ăn Gì!`;
-    if (navigator.share) {
-      navigator
-        .share({
-          title: `Ăn gì hôm nay: ${cleanName}`,
-          text,
-          url: window.location.href,
-        })
-        .catch(() => {});
-    } else {
-      navigator.clipboard.writeText(`${text}\n${window.location.href}`).then(() => {
-        setCopied(true);
-        toast.success("Đã sao chép liên kết chia sẻ món ăn!");
-        setTimeout(() => setCopied(false), 2500);
-      });
-    }
-  }, [food]);
-
   if (!isOpen || !food) return null;
 
   const glowStyle = rarityGlows[food.rarity] || rarityGlows.C;
@@ -129,7 +105,7 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className={`rounded-2xl border-2 bg-gradient-to-b ${glowStyle} bg-popover text-popover-foreground p-5 sm:p-7 shadow-2xl overflow-hidden`}
+        className={`max-h-[85vh] h-[85vh] overflow-y-auto custom-scrollbar rounded-2xl border-2 bg-gradient-to-b ${glowStyle} bg-popover text-popover-foreground p-5 sm:p-7 shadow-2xl`}
       >
         <DialogHeader className="sr-only">
           <DialogTitle>
@@ -221,6 +197,7 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-11 w-full rounded-2xl text-xs font-bold gap-2 px-3 border border-border bg-card hover:bg-muted text-foreground inline-flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                title={`Tìm quán ${cleanDisplayName} trên Google Maps`}
               >
                 <img
                   src="/other-images/googlemaps.webp"
@@ -228,29 +205,39 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
                   className="w-4 h-4 object-contain shrink-0"
                   loading="lazy"
                 />
-                <span>Tìm Quán Ăn</span>
+                <span>Google Maps</span>
               </a>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleShare}
+              <a
+                href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`Công thức làm ${cleanDisplayName}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="h-11 w-full rounded-2xl text-xs font-bold gap-2 px-3 border border-border bg-card hover:bg-muted text-foreground inline-flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                title={`Xem công thức nấu ${cleanDisplayName} trên YouTube`}
               >
-                <FontAwesomeIcon icon={faShareNodes} className="text-sm text-secondary" />
-                <span>{copied ? "Đã Sao Chép!" : "Chia Sẻ Món"}</span>
-              </Button>
+                <img
+                  src="/other-images/youtube.webp"
+                  alt="YouTube"
+                  className="w-4 h-4 object-contain shrink-0"
+                  loading="lazy"
+                />
+                <span>YouTube</span>
+              </a>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 items-stretch">
               <Button
                 type="button"
                 variant="outline"
-                onClick={onChangeFilter}
-                className="h-11 w-full rounded-2xl text-xs font-bold gap-2 px-3 border border-border bg-card/70 hover:bg-muted text-foreground hover:text-foreground inline-flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                onClick={() => {
+                  onClose();
+                  router.push(`/tai-nguyen?search=${encodeURIComponent(cleanDisplayName)}`);
+                }}
+                className="h-11 w-full rounded-2xl text-xs font-bold gap-2 px-3 border border-border bg-card/70 hover:bg-muted text-foreground inline-flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                title="Khám phá món này trong Kho Tàng Món Ăn"
               >
-                <FontAwesomeIcon icon={faArrowLeft} className="text-sm" />
-                <span>Quay Lại</span>
+                <FontAwesomeIcon icon={faShareNodes} className="text-sm text-secondary" />
+                <span>Chia Sẻ</span>
               </Button>
 
               <Button
@@ -260,7 +247,7 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
                 className="h-11 w-full rounded-2xl text-xs font-bold gap-2 px-3 bg-primary text-primary-foreground hover:brightness-105 shadow-md inline-flex items-center justify-center cursor-pointer"
               >
                 <FontAwesomeIcon icon={faRotate} className="text-sm" />
-                <span>Chơi Lại / Quẹt Tiếp</span>
+                <span>Chơi Lại</span>
               </Button>
             </div>
           </div>

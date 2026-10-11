@@ -35,7 +35,7 @@ export const Footer: React.FC = () => {
               </p>
               <div className="inline-flex items-center gap-2 text-[11px] font-bold text-foreground bg-muted/80 px-3.5 py-1.5 rounded-full border border-border/60">
                 <FontAwesomeIcon icon={faStar} className="text-secondary text-xs" />
-                <span>Khám Phá Dễ Dàng • Dinh Dưỡng Minh Bạch • Trải Nghiệm Thú Vị</span>
+                <span>Dễ Dàng • Minh Bạch • Thú Vị</span>
               </div>
             </div>
 
@@ -91,7 +91,7 @@ export const Footer: React.FC = () => {
               Ý Nghĩa
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Mỗi món ăn là một câu chuyện dinh dưỡng và niềm vui thưởng thức.
+              Mỗi món ăn là một câu chuyện.
             </p>
           </div>
         </div>
