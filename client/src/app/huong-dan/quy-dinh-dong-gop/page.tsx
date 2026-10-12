@@ -91,7 +91,7 @@ export default function ContributionRulesPage() {
           </div>
           <div className="pl-12 text-xs sm:text-sm text-muted-foreground space-y-2 leading-relaxed">
             <p>
-              Mỗi khi bạn gửi một món mới, hệ thống sẽ tự động gán trạng thái <span className="font-bold text-amber-500">PENDING (Chờ duyệt)</span>. Đội ngũ Quản trị viên (Admin) và Điều phối viên (Moderator) sẽ kiểm tra tính xác thực trước khi chuyển sang trạng thái <span className="font-bold text-emerald-600">ACTIVE (Đã duyệt)</span> để xuất hiện trên toàn bộ hệ thống gợi ý và Gacha.
+              Mỗi khi bạn gửi một món mới, hệ thống sẽ tự động gán trạng thái <span className="font-bold text-amber-500">PENDING</span>. Đội ngũ Quản trị sẽ kiểm tra tính xác thực trước khi chuyển sang trạng thái <span className="font-bold text-emerald-600">ACTIVE</span> để xuất hiện trên toàn bộ hệ thống gợi ý và Gacha.
             </p>
           </div>
         </div>

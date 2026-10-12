@@ -769,7 +769,7 @@ export default function AdminPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="USER">USER</SelectItem>
-                                      <SelectItem value="MODERATOR">MODERATOR</SelectItem>
+                                      {/* <SelectItem value="MODERATOR">MODERATOR</SelectItem> */}
                                       <SelectItem value="ADMIN">ADMIN</SelectItem>
                                     </SelectContent>
                                   </Select>
