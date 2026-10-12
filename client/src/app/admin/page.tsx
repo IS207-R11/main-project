@@ -178,7 +178,11 @@ export default function AdminPage() {
       setFoods((prev) =>
         prev.map((f) => (f.food_id === foodId ? { ...f, status: newStatus } : f))
       );
-      toast.success(`Đã cập nhật trạng thái món ăn thành ${newStatus}!`);
+      toast.success(
+        newStatus === 'ACTIVE'
+          ? 'Đã kích hoạt món ăn thành công!'
+          : 'Đã tạm ngưng món ăn thành công!'
+      );
     } catch (err) {
       console.error('Failed to change food status:', err);
       toast.error('Lỗi khi đổi trạng thái món ăn');
@@ -286,7 +290,11 @@ export default function AdminPage() {
       setUsers((prev) =>
         prev.map((u) => (u.user_id === userId ? { ...u, status: newStatus } : u))
       );
-      toast.success(`Đã cập nhật trạng thái người dùng thành ${newStatus}!`);
+      toast.success(
+        newStatus === 'ACTIVE'
+          ? 'Đã mở khóa tài khoản người dùng!'
+          : 'Đã khóa tài khoản người dùng!'
+      );
     } catch (err) {
       console.error('Failed to change user status:', err);
       toast.error('Lỗi khi đổi trạng thái người dùng');
@@ -443,8 +451,8 @@ export default function AdminPage() {
                       <SelectContent>
                         <SelectItem value="all">Tất cả</SelectItem>
                         <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
-                        <SelectItem value="PENDING">Đang chờ duyệt</SelectItem>
-                        <SelectItem value="DISABLED">Đang ngưng</SelectItem>
+                        <SelectItem value="PENDING">Chờ duyệt</SelectItem>
+                        <SelectItem value="DISABLED">Tạm ngưng</SelectItem>
                       </SelectContent>
                     </Select>
                 </div>
@@ -569,33 +577,36 @@ export default function AdminPage() {
                                 <Badge
                                   className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${statusColor}`}
                                 >
-                                  {food.status}
+                                  {food.status === 'ACTIVE'
+                                    ? 'Đang hoạt động'
+                                    : food.status === 'PENDING'
+                                    ? 'Chờ duyệt'
+                                    : 'Tạm ngưng'}
                                 </Badge>
                               </td>
                               <td className="p-3 text-right whitespace-nowrap">
                                 <div className="flex items-center justify-end gap-1.5 flex-nowrap">
-                                  {food.status !== 'ACTIVE' && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleFoodStatusChange(food.food_id, 'ACTIVE')}
-                                      className="h-7 px-2 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 border-emerald-200 shrink-0"
-                                      title="Duyệt hoạt động"
-                                    >
-                                      <FontAwesomeIcon icon={faCheck} className="mr-1" />
-                                      Duyệt
-                                    </Button>
-                                  )}
-                                  {food.status !== 'DISABLED' && (
+                                  {food.status === 'ACTIVE' ? (
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleFoodStatusChange(food.food_id, 'DISABLED')}
                                       className="h-7 px-2 text-[11px] font-bold text-amber-600 hover:bg-amber-50 border-amber-200 shrink-0"
-                                      title="Ẩn món"
+                                      title="Tạm ngưng món"
                                     >
                                       <FontAwesomeIcon icon={faBan} className="mr-1" />
-                                      Ẩn
+                                      Tạm ngưng
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleFoodStatusChange(food.food_id, 'ACTIVE')}
+                                      className="h-7 px-2 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 border-emerald-200 shrink-0"
+                                      title="Kích hoạt món"
+                                    >
+                                      <FontAwesomeIcon icon={faCheck} className="mr-1" />
+                                      Kích hoạt
                                     </Button>
                                   )}
                                   {isAdmin && (
@@ -772,7 +783,11 @@ export default function AdminPage() {
                                 <Badge
                                   className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${statusColor}`}
                                 >
-                                  {u.status}
+                                  {u.status === 'ACTIVE'
+                                    ? 'Đang hoạt động'
+                                    : u.status === 'DISABLED'
+                                    ? 'Đã khóa'
+                                    : 'Bị cấm'}
                                 </Badge>
                               </td>
                               <td className="p-3 text-right whitespace-nowrap">
@@ -800,7 +815,7 @@ export default function AdminPage() {
                                   )}
                                   {isAdmin && (
                                     <>
-                                      <Button
+                                      {/* <Button
                                         size="sm"
                                         variant="outline"
                                         onClick={() => {
@@ -811,7 +826,7 @@ export default function AdminPage() {
                                         title="Đặt lại mật khẩu"
                                       >
                                         <FontAwesomeIcon icon={faKey} />
-                                      </Button>
+                                      </Button> */}
                                       <Button
                                         size="sm"
                                         variant="ghost"
@@ -878,7 +893,7 @@ export default function AdminPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tất cả</SelectItem>
-                      <SelectItem value="PENDING">Đang chờ duyệt</SelectItem>
+                      <SelectItem value="PENDING">Chờ xử lý</SelectItem>
                       <SelectItem value="RESOLVED">Đã giải quyết</SelectItem>
                     </SelectContent>
                   </Select>
@@ -956,7 +971,7 @@ export default function AdminPage() {
                                   : 'bg-amber-500/15 text-amber-600 border-amber-500/30'
                               }`}
                             >
-                              {report.status}
+                              {report.status === 'RESOLVED' ? 'Đã giải quyết' : 'Chờ xử lý'}
                             </Badge>
                             <span className="text-[11px] text-muted-foreground">
                               Gửi bởi: <strong>{report.author?.username || 'Ẩn danh'}</strong> •{' '}
@@ -1071,8 +1086,8 @@ export default function AdminPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
-                      <SelectItem value="PENDING">Đang chờ duyệt</SelectItem>
-                      <SelectItem value="DISABLED">Đang ngưng</SelectItem>
+                      <SelectItem value="PENDING">Chờ duyệt</SelectItem>
+                      <SelectItem value="DISABLED">Tạm ngưng</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
