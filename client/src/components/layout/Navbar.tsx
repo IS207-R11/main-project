@@ -47,156 +47,115 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-card/95 backdrop-blur-md transition-all duration-300 shadow-xs">
-        <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-card/90 backdrop-blur-md transition-all duration-300 shadow-xs">
+        <div className="container mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-6 gap-3">
           {/* Brand Logo & Name */}
           <Link
             href="/"
-            className="flex items-center gap-3 transition-transform hover:scale-102 group cursor-pointer"
+            className="flex items-center gap-2.5 transition-transform hover:scale-102 group cursor-pointer shrink-0"
           >
             <Image
               src="/logos/main-logo.png"
               alt="Logo Ăn gì?"
-              width={40}
-              height={40}
+              width={34}
+              height={34}
               draggable={false}
-              className="h-10 w-auto object-contain shrink-0 select-none"
+              className="h-8 w-auto object-contain shrink-0 select-none"
               priority
             />
-            <div>
-              <span className="font-heading font-extrabold text-2xl tracking-tight text-foreground flex items-center gap-1.5 leading-none">
-                ĂN GÌ <span className="text-secondary">?</span>
-              </span>
-              <span className="hidden sm:block text-[9.5px] text-muted-foreground font-semibold tracking-wider uppercase mt-1">
-                Gợi Ý & Khám Phá Ẩm Thực
-              </span>
-            </div>
+            <span className="font-heading font-black text-xl tracking-tight text-foreground flex items-center gap-0.5 leading-none">
+              ĂN GÌ<span className="text-secondary text-2xl leading-none">?</span>
+            </span>
           </Link>
 
-          {/* Desktop Nav Links - Shared Style */}
-          <nav className="hidden md:flex items-center gap-7 lg:gap-8">
-            {/* 1. Trang Chủ */}
+          {/* Desktop Nav Links - Single Line & Compact */}
+          <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+            {/* 1. Món Ngon Hệ Thống */}
             <Link
               href="/"
-              className={`relative py-1 text-sm tracking-normal transition-all duration-200 cursor-pointer ${
+              className={`relative px-3 py-1.5 text-xs lg:text-sm font-semibold whitespace-nowrap rounded-full transition-all duration-200 cursor-pointer ${
                 isHomeActive
-                  ? "text-foreground font-bold"
-                  : "text-muted-foreground hover:text-foreground font-medium"
+                  ? "bg-primary/10 text-primary font-bold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
               }`}
             >
-              Trang Chủ
-              {isHomeActive && (
-                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-              )}
+              Món Ngon Chuẩn Vị
             </Link>
 
-            {/* 2. Tài Nguyên */}
+            {/* 2. Mạng xã hội Ẩm thực (Cookpad style) */}
+            <Link
+              href="/cong-dong"
+              className={`relative px-3 py-1.5 text-xs lg:text-sm font-semibold whitespace-nowrap rounded-full transition-all duration-200 cursor-pointer ${
+                segment === "cong-dong"
+                  ? "bg-primary/10 text-primary font-bold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              }`}
+            >
+              Cộng Đồng Bếp Việt
+            </Link>
+
+            {/* 3. Mini-Games */}
+            <Link
+              href="/mini-games"
+              className={`relative px-3 py-1.5 text-xs lg:text-sm font-semibold whitespace-nowrap rounded-full transition-all duration-200 cursor-pointer ${
+                segment === "mini-games" || segment === "tinder"
+                  ? "bg-primary/10 text-primary font-bold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              }`}
+            >
+              🎮 Mini-Games
+            </Link>
+
+            {/* 4. Kho Tàng */}
             <Link
               href="/tai-nguyen"
-              className={`relative py-1 text-sm tracking-normal transition-all duration-200 cursor-pointer ${
+              className={`relative px-3 py-1.5 text-xs lg:text-sm font-semibold whitespace-nowrap rounded-full transition-all duration-200 cursor-pointer ${
                 isResourcesActive
-                  ? "text-foreground font-bold"
-                  : "text-muted-foreground hover:text-foreground font-medium"
+                  ? "bg-primary/10 text-primary font-bold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
               }`}
             >
-              Tài Nguyên
-              {isResourcesActive && (
-                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-              )}
+              Tra Cứu Món
             </Link>
-
-            {/* 3. Hướng Dẫn (Dropdown) */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <button
-                    type="button"
-                    className={`relative py-1 text-sm tracking-normal transition-all duration-200 cursor-pointer flex items-center gap-1.5 outline-none ${
-                      isGuideActive
-                        ? "text-foreground font-bold"
-                        : "text-muted-foreground hover:text-foreground font-medium"
-                    }`}
-                  >
-                    <span>Hướng Dẫn</span>
-                    <FontAwesomeIcon icon={faChevronDown} className="text-[10px] text-muted-foreground/70" />
-                    {isGuideActive && (
-                      <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                    )}
-                  </button>
-                }
-              />
-              <DropdownMenuContent
-                align="start"
-                className="w-56 bg-popover text-popover-foreground border border-border shadow-2xl rounded-2xl p-1.5 z-50"
-              >
-                <DropdownMenuItem
-                  render={
-                    <Link
-                      href="/huong-dan/quy-dinh-dong-gop"
-                      className="w-full flex items-center gap-2.5 p-2 text-xs font-semibold cursor-pointer rounded-xl"
-                    />
-                  }
-                >
-                  <FontAwesomeIcon icon={faBookOpen} className="text-secondary text-xs shrink-0" />
-                  <span>Quy Định Đóng Góp</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  render={
-                    <Link
-                      href="/huong-dan/dieu-khoan-su-dung"
-                      className="w-full flex items-center gap-2.5 p-2 text-xs font-semibold cursor-pointer rounded-xl"
-                    />
-                  }
-                >
-                  <FontAwesomeIcon icon={faFileContract} className="text-primary text-xs shrink-0" />
-                  <span>Điều Khoản Sử Dụng</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  render={
-                    <Link
-                      href="/huong-dan/chinh-sach-bao-mat"
-                      className="w-full flex items-center gap-2.5 p-2 text-xs font-semibold cursor-pointer rounded-xl"
-                    />
-                  }
-                >
-                  <FontAwesomeIcon icon={faUserShield} className="text-emerald-500 text-xs shrink-0" />
-                  <span>Chính Sách Bảo Mật</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </nav>
 
-          {/* Right Action Group */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            {/* Theme Mode Switcher */}
+          {/* Right Action Group - Sleek & Compact */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Cookpad CTA: Đăng Món Mới */}
+            <Link
+              href="/cong-dong/tao-mon"
+              className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-xs hover:shadow transition-all duration-200 active:scale-95 whitespace-nowrap"
+            >
+              <span className="text-sm font-black leading-none">+</span>
+              <span className="hidden sm:inline">Viết món mới</span>
+            </Link>
+
+            {/* Compact Theme Mode Switcher (Icon Button) */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="rounded-full gap-1.5 border-border bg-card/60 text-xs font-semibold hover:bg-muted text-foreground cursor-pointer"
-                    title="Chế độ sáng/tối"
+                    size="icon"
+                    className="size-8 rounded-full border-border/80 bg-background/60 hover:bg-muted text-foreground cursor-pointer shrink-0"
+                    title="Chế độ sáng / tối"
                   >
                     <FontAwesomeIcon
                       icon={colorTheme === "dark" ? faMoon : faSun}
                       className={colorTheme === "dark" ? "text-amber-400 text-xs" : "text-amber-500 text-xs"}
                     />
-                    <span className="hidden sm:inline">
-                      {themeMode === "system" ? "Hệ thống" : themeMode === "dark" ? "Tối" : "Sáng"}
-                    </span>
                   </Button>
                 }
               />
-              <DropdownMenuContent align="end" className="w-52 bg-popover text-popover-foreground border border-border shadow-2xl rounded-2xl p-1.5 z-50">
-                <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
-                  Chế Độ Sáng/Tối
+              <DropdownMenuContent align="end" className="w-48 bg-popover text-popover-foreground border border-border shadow-2xl rounded-2xl p-1.5 z-50">
+                <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-1">
+                  Chế Độ Giao Diện
                 </DropdownMenuLabel>
                 {themeOptions.map((opt) => (
                   <DropdownMenuItem
                     key={opt.mode}
                     onClick={() => setThemeMode(opt.mode)}
-                    className="flex items-center justify-between text-xs font-medium rounded-xl cursor-pointer py-2 px-2.5"
+                    className="flex items-center justify-between text-xs font-semibold rounded-xl cursor-pointer py-1.5 px-2.5"
                   >
                     <div className="flex items-center gap-2">
                       <FontAwesomeIcon
@@ -227,10 +186,10 @@ export const Navbar: React.FC = () => {
               variant="ghost"
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden rounded-full h-9 w-9 text-foreground cursor-pointer"
+              className="md:hidden rounded-full size-8 text-foreground cursor-pointer shrink-0"
               aria-label="Menu điều hướng"
             >
-              <FontAwesomeIcon icon={mobileMenuOpen ? faXmark : faBars} className="text-base" />
+              <FontAwesomeIcon icon={mobileMenuOpen ? faXmark : faBars} className="text-sm" />
             </Button>
           </div>
         </div>
@@ -248,7 +207,29 @@ export const Navbar: React.FC = () => {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                Trang Chủ
+                🍲 Món Ngon Chuẩn Vị
+              </Link>
+              <Link
+                href="/cong-dong"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors cursor-pointer ${
+                  segment === "cong-dong"
+                    ? "bg-primary text-primary-foreground font-bold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                👥 Cộng Đồng Bếp Việt (Cookpad)
+              </Link>
+              <Link
+                href="/mini-games"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors cursor-pointer ${
+                  segment === "mini-games" || segment === "tinder"
+                    ? "bg-primary text-primary-foreground font-bold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                🎮 Mini-Games (Tinder & Gacha)
               </Link>
               <Link
                 href="/tai-nguyen"
@@ -259,7 +240,14 @@ export const Navbar: React.FC = () => {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                Tài Nguyên
+                🔍 Tra Cứu Món Ăn
+              </Link>
+              <Link
+                href="/cong-dong/tao-mon"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-4 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer bg-gradient-to-r from-orange-500 to-amber-500 text-white"
+              >
+                ✍️ + Viết Món Mới
               </Link>
 
               {/* Guide Group Mobile */}

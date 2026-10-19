@@ -42,3 +42,70 @@ export function mapFoodCardToFoodItem(card: FoodCard): FoodItem {
   };
 }
 
+export function mapSystemDishToFoodItem(dish: any): FoodItem {
+  const calo = parseFloat(dish.total_calo) || 350;
+  const favCount = parseInt(dish.favourite_count, 10) || 0;
+
+  let rarity: Rarity = 'C';
+  if (favCount >= 120) rarity = 'SSR';
+  else if (favCount >= 70) rarity = 'SR';
+  else if (favCount >= 30) rarity = 'UC';
+
+  let instructionsDesc = '';
+  try {
+    const parsed = typeof dish.instructions === 'string' ? JSON.parse(dish.instructions) : dish.instructions;
+    instructionsDesc = parsed?.description || parsed?.so_che || '';
+  } catch {
+    instructionsDesc = typeof dish.instructions === 'string' ? dish.instructions : '';
+  }
+
+  const isVeg =
+    dish.title?.toLowerCase().includes('chay') ||
+    instructionsDesc?.toLowerCase().includes('chay');
+
+  const sessions: string[] = [];
+  const lowerTitle = (dish.title || '').toLowerCase();
+  const lowerDesc = instructionsDesc.toLowerCase();
+  if (lowerTitle.includes('sáng') || lowerDesc.includes('sáng') || lowerDesc.includes('15 phút') || lowerDesc.includes('10 phút')) {
+    sessions.push('Sáng sớm');
+  }
+  if (lowerTitle.includes('trưa') || lowerTitle.includes('cơm') || lowerDesc.includes('trưa') || lowerDesc.includes('canh')) {
+    sessions.push('Giữa trưa');
+  }
+  if (lowerTitle.includes('chiều') || lowerTitle.includes('chè') || lowerTitle.includes('bánh') || lowerTitle.includes('ăn vặt')) {
+    sessions.push('Chiều');
+  }
+  if (lowerTitle.includes('tối') || lowerTitle.includes('lẩu') || lowerTitle.includes('kho') || lowerDesc.includes('tối')) {
+    sessions.push('Tối');
+  }
+  if (sessions.length === 0) {
+    sessions.push('Giữa trưa', 'Tối');
+  }
+
+  return {
+    id: dish.id,
+    food_id: dish.id,
+    name: dish.title || 'Món ngon',
+    description: instructionsDesc || 'Món ngon mỗi ngày chuẩn vị Việt Nam',
+    sub: instructionsDesc || 'Món ngon mỗi ngày chuẩn vị Việt Nam',
+    image_url: dish.image_url || '/logos/main-logo.png',
+    imagePath: dish.image_url || '/logos/main-logo.png',
+    status: 'ACTIVE',
+    food_rank: rarity,
+    rarity: rarity,
+    rating_score: favCount,
+    cd: calo,
+    created_at: dish.created_at || new Date().toISOString(),
+    contributor_id: 1,
+    is_favorited: !!dish.is_favourited,
+    is_hated: !!dish.is_disliked,
+    is_eaten: false,
+    favorites_count: favCount,
+    hated_count: 0,
+    eaten_count: 0,
+    veg: isVeg,
+    sessions,
+  };
+}
+
+

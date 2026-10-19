@@ -36,6 +36,15 @@ vi.mock('@/components/food/CreateFoodModal', () => ({
   CreateFoodModal: () => null,
 }));
 
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({
+    user: { user_id: 1, email: 'test@example.com', username: 'tester', role: 'USER', status: 'ACTIVE' },
+    isAuthenticated: true,
+    isAdmin: false,
+    isModerator: false,
+  }),
+}));
+
 vi.mock('@/components/food/VirtualMasonryGrid', () => ({
   VirtualMasonryGrid: ({ foods }: { foods: unknown[] }) => (
     <div data-testid="virtual-grid">
@@ -55,7 +64,7 @@ describe('ResourcesExplorer Component (URL Query Params Sync)', () => {
     mockSearchParams = new URLSearchParams('search=Ph%E1%BB%9F%20B%C3%B2&rarity=SSR');
     render(<ResourcesExplorer />);
 
-    const searchInput = screen.getByPlaceholderText(/Tìm kiếm theo tên món ăn/i) as HTMLInputElement;
+    const searchInput = screen.getByPlaceholderText(/Tìm kiếm theo tên.*món ăn/i) as HTMLInputElement;
     expect(searchInput.value).toBe('Phở Bò');
 
     await waitFor(() => {

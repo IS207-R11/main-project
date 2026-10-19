@@ -6,9 +6,12 @@ export type UserStatus = 'ACTIVE' | 'DISABLED' | 'BANNED';
 
 export interface User {
   user_id: number;
+  id?: number;
   role: UserRole;
   email: string;
   username: string;
+  display_name?: string;
+  avatar_url?: string;
   address: string | null;
   status: UserStatus;
   created_at: string | null;

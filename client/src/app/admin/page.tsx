@@ -55,10 +55,14 @@ import {
   faPencil,
   faKey,
 } from '@fortawesome/free-solid-svg-icons';
+import { SystemDishesManager } from '@/components/admin/SystemDishesManager';
+import { ModerationManager } from '@/components/admin/ModerationManager';
 
 export default function AdminPage() {
   const { user, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'foods' | 'users' | 'reports'>('foods');
+  const [activeTab, setActiveTab] = useState<
+    'system_dishes' | 'moderation' | 'users' | 'foods' | 'reports'
+  >('system_dishes');
 
   // =================== FOODS STATE ===================
   const [foods, setFoods] = useState<FoodCard[]>([]);
@@ -381,20 +385,26 @@ export default function AdminPage() {
           <Tabs
             value={activeTab}
             onValueChange={(val) =>
-              setActiveTab(val as 'foods' | 'users' | 'reports')
+              setActiveTab(
+                val as 'system_dishes' | 'moderation' | 'users' | 'foods' | 'reports'
+              )
             }
             className="space-y-6"
           >
             <UnderlineTabs
               layoutId="admin-tab-indicator"
               align="left"
-              className="max-w-2xl"
+              className="max-w-3xl"
               tabs={[
                 {
-                  value: 'foods',
-                  label: 'Món Ăn',
+                  value: 'system_dishes',
+                  label: 'Món Chuẩn Vị (Hệ Thống)',
                   icon: <FontAwesomeIcon icon={faUtensils} />,
-                  count: foods.length,
+                },
+                {
+                  value: 'moderation',
+                  label: 'Kiểm Duyệt Cookpad',
+                  icon: <FontAwesomeIcon icon={faShieldHalved} />,
                 },
                 {
                   value: 'users',
@@ -403,19 +413,37 @@ export default function AdminPage() {
                   count: users.length,
                 },
                 {
+                  value: 'foods',
+                  label: 'Thẻ Món Cũ',
+                  icon: <FontAwesomeIcon icon={faUtensils} />,
+                  count: foods.length,
+                },
+                {
                   value: 'reports',
-                  label: 'Báo Cáo',
+                  label: 'Báo Cáo Lỗi Cũ',
                   icon: <FontAwesomeIcon icon={faFlag} />,
                   count: reports.length,
                 },
               ]}
               activeTab={activeTab}
               onChange={(val) =>
-                setActiveTab(val as 'foods' | 'users' | 'reports')
+                setActiveTab(
+                  val as 'system_dishes' | 'moderation' | 'users' | 'foods' | 'reports'
+                )
               }
             />
 
-            {/* TAB 1: FOOD MANAGEMENT */}
+            {/* TAB: SYSTEM DISHES (MON NGON CHUAN VI) */}
+            <TabsContent value="system_dishes" className="space-y-4">
+              <SystemDishesManager />
+            </TabsContent>
+
+            {/* TAB: MODERATION QUEUE (COOKPAD UGC) */}
+            <TabsContent value="moderation" className="space-y-4">
+              <ModerationManager adminId={user?.user_id} />
+            </TabsContent>
+
+            {/* TAB: LEGACY FOOD MANAGEMENT */}
             <TabsContent value="foods" className="space-y-4">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto flex-1">

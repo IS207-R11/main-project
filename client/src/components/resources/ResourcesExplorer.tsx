@@ -19,6 +19,8 @@ import { foodsApi } from "@/api";
 import { mapFoodCardToFoodItem } from "@/lib/foodAdapter";
 import { VirtualMasonryGrid } from "@/components/food/VirtualMasonryGrid";
 import { CreateFoodModal } from "@/components/food/CreateFoodModal";
+import { MonNgonCard, MonNgonDish } from "@/components/food/MonNgonCard";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -68,6 +70,17 @@ export const ResourcesExplorer: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
+
+  // System Dishes (Mon Ngon Chuan Vi) state
+  const { user } = useAuth();
+  const [resourceTab, setResourceTab] = useState<'system' | 'cards'>(
+    rawRarity ? 'cards' : 'system'
+  );
+  const [systemDishes, setSystemDishes] = useState<MonNgonDish[]>([]);
+  const [systemTotal, setSystemTotal] = useState<number>(0);
+  const [systemLoading, setSystemLoading] = useState<boolean>(true);
+  const [systemLoadingMore, setSystemLoadingMore] = useState<boolean>(false);
+  const [nutritionCategory, setNutritionCategory] = useState<string>('all');
 
   // Pagination state (infinite scroll)
   const [page, setPage] = useState<number>(1);
@@ -238,6 +251,52 @@ export const ResourcesExplorer: React.FC = () => {
     fetchFirstPage();
   }, [fetchFirstPage]);
 
+  // Fetch System Dishes (Mon Ngon Chuan Vi)
+  const fetchSystemDishes = useCallback(async () => {
+    try {
+      setSystemLoading(true);
+      const categoryParam = nutritionCategory !== 'all' ? `&category=${nutritionCategory}` : '';
+      const userParam = user?.user_id ? `&user_id=${user.user_id}` : '&user_id=1';
+      const searchParam = searchQuery.trim() ? `&search=${encodeURIComponent(searchQuery.trim())}` : '';
+      const res = await fetch(`/api/system-dishes?limit=24&offset=0${userParam}${categoryParam}${searchParam}`);
+      const data = await res.json();
+      if (data.status === 'success') {
+        setSystemDishes(data.data || []);
+        setSystemTotal(data.total || 0);
+      }
+    } catch (e) {
+      console.error('Failed to load system dishes:', e);
+    } finally {
+      setSystemLoading(false);
+    }
+  }, [user, nutritionCategory, searchQuery]);
+
+  const loadMoreSystemDishes = useCallback(async () => {
+    if (systemLoadingMore || systemDishes.length >= systemTotal) return;
+    try {
+      setSystemLoadingMore(true);
+      const categoryParam = nutritionCategory !== 'all' ? `&category=${nutritionCategory}` : '';
+      const userParam = user?.user_id ? `&user_id=${user.user_id}` : '&user_id=1';
+      const searchParam = searchQuery.trim() ? `&search=${encodeURIComponent(searchQuery.trim())}` : '';
+      const res = await fetch(`/api/system-dishes?limit=24&offset=${systemDishes.length}${userParam}${categoryParam}${searchParam}`);
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        setSystemDishes((prev) => [...prev, ...data.data]);
+        if (data.total !== undefined) setSystemTotal(data.total);
+      }
+    } catch (e) {
+      console.error('Failed to load more system dishes:', e);
+    } finally {
+      setSystemLoadingMore(false);
+    }
+  }, [systemLoadingMore, systemDishes.length, systemTotal, user, nutritionCategory, searchQuery]);
+
+  useEffect(() => {
+    if (resourceTab === 'system') {
+      fetchSystemDishes();
+    }
+  }, [resourceTab, fetchSystemDishes]);
+
   // Calculate index of sentinel item (the 10th item before the end of the batch, since pageSize is 20)
   const sentinelIndex =
     hasMore && foods.length > 0
@@ -277,233 +336,383 @@ export const ResourcesExplorer: React.FC = () => {
 
   return (
     <div className="space-y-6 min-h-[calc(100vh-14rem)]">
-      {/* ================= SEARCH & CONTROLS BAR ================= */}
-      <div className="p-5 rounded-3xl bg-card text-card-foreground border border-border shadow-md backdrop-blur-md space-y-4">
-        {/* Top Search Input & Action Button */}
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="relative w-full">
-            <FontAwesomeIcon
-              icon={faMagnifyingGlass}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-sm"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm theo tên món ăn, mô tả hương vị..."
-              className="w-full pl-11 pr-10 py-3 bg-background border border-border text-foreground text-sm rounded-2xl focus:ring-2 focus:ring-primary focus:outline-hidden transition-all shadow-xs placeholder:text-muted-foreground"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <FontAwesomeIcon icon={faXmark} className="text-sm" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchFirstPage}
-              disabled={initialLoading}
-              className="rounded-2xl h-11 px-4 text-xs font-bold gap-1.5 cursor-pointer"
-              title="Tải lại từ hệ thống"
-            >
-              <FontAwesomeIcon
-                icon={faRotate}
-                className={initialLoading ? "animate-spin" : ""}
-              />
-              <span className="hidden md:inline">Làm Mới</span>
-            </Button>
-
-            <Button
-              onClick={() => setCreateModalOpen(true)}
-              className="rounded-2xl h-11 px-5 text-xs font-bold gap-2 shadow-md cursor-pointer w-full sm:w-auto"
-            >
-              <FontAwesomeIcon icon={faPlus} />
-              <span>Đóng Góp Món Mới</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Filter & Sort Controls Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Rarity Filter */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-              <FontAwesomeIcon
-                icon={faFilter}
-                className="text-secondary text-[10px]"
-              />
-              Độ Hiếm / Phổ Biến
-            </label>
-            <Select
-              value={selectedRarity}
-              onValueChange={(val) => val && setSelectedRarity(val as "all" | Rarity)}
-            >
-              <SelectTrigger className="w-full rounded-2xl">
-                <SelectValue placeholder="Chọn độ hiếm">
-                  {rarityLabels[selectedRarity] || "Tất Cả Độ Hiếm"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất Cả Độ Hiếm</SelectItem>
-                <SelectItem value="SSR">👑 SSR - Thượng Hạng</SelectItem>
-                <SelectItem value="SR">💜 SR - Đặc Sắc</SelectItem>
-                <SelectItem value="UC">💎 UC - Trung Cấp</SelectItem>
-                <SelectItem value="C">🍀 C - Phổ Biến</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Sort Options */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-              <FontAwesomeIcon
-                icon={faArrowDownWideShort}
-                className="text-secondary text-[10px]"
-              />
-              Sắp xếp
-            </label>
-            <Select
-              value={sortBy}
-              onValueChange={(val) => val && setSortBy(val as SortOption)}
-            >
-              <SelectTrigger className="w-full rounded-2xl">
-                <SelectValue placeholder="Sắp xếp">
-                  {sortLabels[sortBy] || "Tên (A - Z)"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Tên (A - Z)</SelectItem>
-                <SelectItem value="rarity_desc">Độ Hiếm Cao Nhất</SelectItem>
-                <SelectItem value="newest">Mới Nhất</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Results Count & Reset Filter Badge */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
-          <span className="text-muted-foreground font-semibold">
-            Đã tải <strong>{foods.length}</strong> / <strong>{totalRecords}</strong> món ăn từ hệ thống
-          </span>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetFilters}
-              className="h-7 text-xs text-destructive hover:bg-destructive/10 rounded-full px-3 cursor-pointer"
-            >
-              <FontAwesomeIcon
-                icon={faRotateLeft}
-                className="mr-1.5 text-[10px]"
-              />
-              Đặt Lại Bộ Lọc
-            </Button>
-          )}
-        </div>
+      {/* Switcher: Món Ngon Chuẩn Vị vs Thẻ Bài Gamification */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-card rounded-2xl border border-border shadow-xs w-fit">
+        <button
+          onClick={() => setResourceTab('system')}
+          className={`py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            resourceTab === 'system'
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <FontAwesomeIcon icon={faUtensils} className="mr-1.5" />
+          Món Ngon Chuẩn Vị ({systemTotal > 0 ? systemTotal.toLocaleString('vi-VN') : systemDishes.length})
+        </button>
+        <button
+          onClick={() => setResourceTab('cards')}
+          className={`py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            resourceTab === 'cards'
+              ? 'bg-secondary text-secondary-foreground shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Bộ Sưu Tập Thẻ Bài ({totalRecords})
+        </button>
       </div>
 
-      {/* ================= VIRTUAL MASONRY FOOD FLASHCARDS GRID ================= */}
-      {initialLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center w-full">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="w-full max-w-[260px] h-[345px] sm:h-[360px] rounded-3xl bg-card border border-border p-3.5 flex flex-col justify-between shadow-xs"
-            >
-              <Skeleton className="w-full h-[145px] sm:h-[160px] rounded-2xl" />
-              <div className="space-y-2 py-2">
-                <Skeleton className="h-4 w-3/4 rounded-md" />
-                <Skeleton className="h-3 w-full rounded-md" />
-                <Skeleton className="h-3 w-2/3 rounded-md" />
+      {resourceTab === 'system' ? (
+        <div className="space-y-6">
+          {/* Controls Bar for System Dishes */}
+          <div className="p-5 rounded-3xl bg-card border border-border shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="relative w-full">
+                <FontAwesomeIcon
+                  icon={faMagnifyingGlass}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-primary text-sm"
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm món chuẩn vị (VD: Canh chua, Bò kho, Gà hấp...)"
+                  className="w-full pl-11 pr-10 py-3 bg-background border border-border text-foreground text-sm rounded-2xl focus:ring-2 focus:ring-primary focus:outline-hidden transition-all shadow-xs placeholder:text-muted-foreground"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <FontAwesomeIcon icon={faXmark} className="text-sm" />
+                  </button>
+                )}
               </div>
-              <div className="flex justify-between items-center pt-2 border-t border-border/40">
-                <Skeleton className="h-4 w-12 rounded-full" />
-                <div className="flex gap-1.5">
-                  <Skeleton className="h-6 w-6 rounded-md" />
-                  <Skeleton className="h-6 w-6 rounded-md" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : foods.length > 0 ? (
-        <div className="space-y-6 w-full">
-          <VirtualMasonryGrid
-            foods={foods}
-            sentinelRef={sentinelRef}
-            sentinelIndex={sentinelIndex}
-          />
-
-          {/* Loading More Indicator */}
-          {loadingMore && (
-            <div className="py-6 flex flex-col items-center justify-center space-y-2">
-              <div className="flex items-center gap-2.5 text-xs font-semibold text-muted-foreground px-4 py-2 rounded-full bg-muted/60 border border-border/40 shadow-xs">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchSystemDishes}
+                disabled={systemLoading}
+                className="rounded-2xl h-11 px-4 text-xs font-bold gap-1.5 cursor-pointer shrink-0"
+              >
                 <FontAwesomeIcon
                   icon={faRotate}
-                  className="animate-spin text-secondary text-xs"
+                  className={systemLoading ? 'animate-spin' : ''}
                 />
-                <span>Đang tải thêm món ăn...</span>
-              </div>
+                <span>Làm Mới</span>
+              </Button>
             </div>
-          )}
 
-          {/* End of results message */}
-          {!hasMore && foods.length > 0 && (
-            <div className="py-10 text-center flex items-center justify-center gap-3 text-xs text-muted-foreground/70">
-              <span className="h-px w-20 bg-border/60" />
-              <span className="font-medium">
-                Đã hiển thị toàn bộ {totalRecords} món ăn
-              </span>
-              <span className="h-px w-20 bg-border/60" />
+            {/* Nutrition focus pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
+              <span className="text-xs font-bold text-muted-foreground mr-1">Mục tiêu dinh dưỡng:</span>
+              {[
+                { id: 'all', label: 'Tất Cả Món' },
+                { id: 'giam_mo', label: '🥗 Giảm Mỡ / Eat Clean (≤ 400 kcal)' },
+                { id: 'co_xuong', label: '💪 Cơ Xương (Giàu Đạm)' },
+                { id: 'bo_mau', label: '🥩 Bổ Máu (Giàu Sắt & Bò)' },
+                { id: 'tri_nao', label: '🧠 Trí Não (Omega 3 & Cá)' },
+                { id: 'quick', label: '⚡ Nấu Nhanh 15 Phút' },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setNutritionCategory(cat.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    nutritionCategory === cat.id
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Dishes Grid */}
+          {systemLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-80 rounded-2xl bg-card border border-border p-4 space-y-3">
+                  <Skeleton className="w-full h-44 rounded-xl" />
+                  <Skeleton className="h-4 w-3/4 rounded-md" />
+                  <Skeleton className="h-3 w-1/2 rounded-md" />
+                </div>
+              ))}
+            </div>
+          ) : systemDishes.length === 0 ? (
+            <div className="py-20 text-center space-y-4 rounded-3xl bg-card border border-dashed border-border p-8">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-muted flex items-center justify-center text-muted-foreground text-2xl">
+                <FontAwesomeIcon icon={faUtensils} />
+              </div>
+              <h3 className="text-lg text-foreground font-bold">Chưa tìm thấy món ăn phù hợp</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                Món ăn này có thể đã được ẩn do bạn đánh dấu dị ứng nguyên liệu hoặc chưa có trong danh mục.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {systemDishes.map((dish) => (
+                  <MonNgonCard
+                    key={dish.id}
+                    dish={dish}
+                    userId={user?.user_id || 1}
+                    onInteractionChange={fetchSystemDishes}
+                  />
+                ))}
+              </div>
+
+              {systemDishes.length < systemTotal && (
+                <div className="pt-6 text-center">
+                  <Button
+                    variant="outline"
+                    onClick={loadMoreSystemDishes}
+                    disabled={systemLoadingMore}
+                    className="rounded-full px-8 py-3 text-xs font-black border-primary/40 text-primary hover:bg-primary hover:text-white transition-all shadow-sm cursor-pointer"
+                  >
+                    <FontAwesomeIcon icon={faRotate} className={`mr-2 ${systemLoadingMore ? 'animate-spin' : ''}`} />
+                    <span>
+                      {systemLoadingMore
+                        ? 'Đang tải thêm món ngon...'
+                        : `Xem Thêm 24 Món Ngon (Còn lại ${(systemTotal - systemDishes.length).toLocaleString('vi-VN')} món)`}
+                    </span>
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
       ) : (
-        <div className="py-20 text-center space-y-4 rounded-3xl bg-card border border-dashed border-border p-8">
-          <div className="w-16 h-16 mx-auto rounded-3xl bg-muted flex items-center justify-center text-muted-foreground text-2xl">
-            <FontAwesomeIcon icon={faUtensils} />
+        <div className="space-y-6">
+          {/* ================= SEARCH & CONTROLS BAR FOR CARDS ================= */}
+          <div className="p-5 rounded-3xl bg-card text-card-foreground border border-border shadow-md backdrop-blur-md space-y-4">
+            {/* Top Search Input & Action Button */}
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="relative w-full">
+                <FontAwesomeIcon
+                  icon={faMagnifyingGlass}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-sm"
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm theo tên thẻ món ăn, mô tả..."
+                  className="w-full pl-11 pr-10 py-3 bg-background border border-border text-foreground text-sm rounded-2xl focus:ring-2 focus:ring-primary focus:outline-hidden transition-all shadow-xs placeholder:text-muted-foreground"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <FontAwesomeIcon icon={faXmark} className="text-sm" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchFirstPage}
+                  disabled={initialLoading}
+                  className="rounded-2xl h-11 px-4 text-xs font-bold gap-1.5 cursor-pointer"
+                  title="Tải lại từ hệ thống"
+                >
+                  <FontAwesomeIcon
+                    icon={faRotate}
+                    className={initialLoading ? "animate-spin" : ""}
+                  />
+                  <span className="hidden md:inline">Làm Mới</span>
+                </Button>
+
+                <Button
+                  onClick={() => setCreateModalOpen(true)}
+                  className="rounded-2xl h-11 px-5 text-xs font-bold gap-2 shadow-md cursor-pointer w-full sm:w-auto"
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                  <span>Đóng Góp Thẻ Mới</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter & Sort Controls Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Rarity Filter */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <FontAwesomeIcon
+                    icon={faFilter}
+                    className="text-secondary text-[10px]"
+                  />
+                  Độ Hiếm / Phổ Biến
+                </label>
+                <Select
+                  value={selectedRarity}
+                  onValueChange={(val) => val && setSelectedRarity(val as "all" | Rarity)}
+                >
+                  <SelectTrigger className="w-full rounded-2xl">
+                    <SelectValue placeholder="Chọn độ hiếm">
+                      {rarityLabels[selectedRarity] || "Tất Cả Độ Hiếm"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất Cả Độ Hiếm</SelectItem>
+                    <SelectItem value="SSR">👑 SSR - Thượng Hạng</SelectItem>
+                    <SelectItem value="SR">💜 SR - Đặc Sắc</SelectItem>
+                    <SelectItem value="UC">💎 UC - Trung Cấp</SelectItem>
+                    <SelectItem value="C">🍀 C - Phổ Biến</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sort Options */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <FontAwesomeIcon
+                    icon={faArrowDownWideShort}
+                    className="text-secondary text-[10px]"
+                  />
+                  Sắp xếp
+                </label>
+                <Select
+                  value={sortBy}
+                  onValueChange={(val) => val && setSortBy(val as SortOption)}
+                >
+                  <SelectTrigger className="w-full rounded-2xl">
+                    <SelectValue placeholder="Sắp xếp">
+                      {sortLabels[sortBy] || "Tên (A - Z)"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Tên (A - Z)</SelectItem>
+                    <SelectItem value="rarity_desc">Độ Hiếm Cao Nhất</SelectItem>
+                    <SelectItem value="newest">Mới Nhất</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Results Count & Reset Filter Badge */}
+            <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
+              <span className="text-muted-foreground font-semibold">
+                Đã tải <strong>{foods.length}</strong> / <strong>{totalRecords}</strong> thẻ bài từ hệ thống
+              </span>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  className="h-7 text-xs text-destructive hover:bg-destructive/10 rounded-full px-3 cursor-pointer"
+                >
+                  <FontAwesomeIcon
+                    icon={faRotateLeft}
+                    className="mr-1.5 text-[10px]"
+                  />
+                  Đặt Lại Bộ Lọc
+                </Button>
+              )}
+            </div>
           </div>
-          <h3 className="text-lg text-foreground font-bold">
-            Chưa tìm thấy món ăn phù hợp
-          </h3>
-          <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-            Hãy thử điều chỉnh từ khóa tìm kiếm hoặc bấm nút bên dưới để đóng góp món mới đầu tiên.
-          </p>
-          <div className="flex items-center justify-center gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleResetFilters}
-              className="rounded-full text-xs font-bold border-border"
-            >
-              Đặt Lại Bộ Lọc
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setCreateModalOpen(true)}
-              className="rounded-full text-xs font-bold gap-1.5"
-            >
-              <FontAwesomeIcon icon={faPlus} className="text-xs" />
-              <span>Đóng Góp Món Mới</span>
-            </Button>
-          </div>
+
+          {/* ================= VIRTUAL MASONRY FOOD FLASHCARDS GRID ================= */}
+          {initialLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center w-full">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-full max-w-[260px] h-[345px] sm:h-[360px] rounded-3xl bg-card border border-border p-3.5 flex flex-col justify-between shadow-xs"
+                >
+                  <Skeleton className="w-full h-[145px] sm:h-[160px] rounded-2xl" />
+                  <div className="space-y-2 py-2">
+                    <Skeleton className="h-4 w-3/4 rounded-md" />
+                    <Skeleton className="h-3 w-full rounded-md" />
+                    <Skeleton className="h-3 w-2/3 rounded-md" />
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-border/40">
+                    <Skeleton className="h-4 w-12 rounded-full" />
+                    <div className="flex gap-1.5">
+                      <Skeleton className="h-6 w-6 rounded-md" />
+                      <Skeleton className="h-6 w-6 rounded-md" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : foods.length > 0 ? (
+            <div className="space-y-6 w-full">
+              <VirtualMasonryGrid
+                foods={foods}
+                sentinelRef={sentinelRef}
+                sentinelIndex={sentinelIndex}
+              />
+
+              {/* Loading More Indicator */}
+              {loadingMore && (
+                <div className="py-6 flex flex-col items-center justify-center space-y-2">
+                  <div className="flex items-center gap-2.5 text-xs font-semibold text-muted-foreground px-4 py-2 rounded-full bg-muted/60 border border-border/40 shadow-xs">
+                    <FontAwesomeIcon
+                      icon={faRotate}
+                      className="animate-spin text-secondary text-xs"
+                    />
+                    <span>Đang tải thêm món ăn...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* End of results message */}
+              {!hasMore && foods.length > 0 && (
+                <div className="py-10 text-center flex items-center justify-center gap-3 text-xs text-muted-foreground/70">
+                  <span className="h-px w-20 bg-border/60" />
+                  <span className="font-medium">
+                    Đã hiển thị toàn bộ {totalRecords} thẻ món ăn
+                  </span>
+                  <span className="h-px w-20 bg-border/60" />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-20 text-center space-y-4 rounded-3xl bg-card border border-dashed border-border p-8">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-muted flex items-center justify-center text-muted-foreground text-2xl">
+                <FontAwesomeIcon icon={faUtensils} />
+              </div>
+              <h3 className="text-lg text-foreground font-bold">
+                Chưa tìm thấy thẻ bài phù hợp
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                Hãy thử điều chỉnh từ khóa tìm kiếm hoặc bấm nút bên dưới để đóng góp món mới đầu tiên.
+              </p>
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  className="rounded-full text-xs font-bold border-border"
+                >
+                  Đặt Lại Bộ Lọc
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setCreateModalOpen(true)}
+                  className="rounded-full text-xs font-bold gap-1.5"
+                >
+                  <FontAwesomeIcon icon={faPlus} className="text-xs" />
+                  <span>Đóng Góp Món Mới</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Modal create food */}
+          <CreateFoodModal
+            open={createModalOpen}
+            onOpenChange={setCreateModalOpen}
+            onSuccess={() => {
+              fetchFirstPage();
+            }}
+          />
         </div>
       )}
-
-      {/* Modal create food */}
-      <CreateFoodModal
-        open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
-        onSuccess={() => {
-          fetchFirstPage();
-        }}
-      />
     </div>
   );
 };

@@ -225,8 +225,8 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
               </a>
             </div>
 
-            <div className="grid grid-cols-1 gap-2.5 items-stretch">
-              {/* <Button
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-stretch">
+              <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
@@ -238,7 +238,7 @@ export const TinderMatchModal: React.FC<TinderMatchModalProps> = ({
               >
                 <FontAwesomeIcon icon={faShareNodes} className="text-sm text-secondary" />
                 <span>Chia Sẻ</span>
-              </Button> */}
+              </Button>
 
               <Button
                 type="button"

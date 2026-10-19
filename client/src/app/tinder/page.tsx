@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function TinderPage() {
-  redirect("/?tab=tinder");
+  redirect("/mini-games?tab=tinder");
 }

@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+
 @theme inline {
   --font-sans: var(--font-sans), 'Montserrat', system-ui, -apple-system, sans-serif;
   --font-heading: var(--font-heading), 'Montserrat', system-ui, sans-serif;
@@ -36,84 +38,86 @@
 }
 
 /* =========================================================================
-   TIME-BASED COLOR SYSTEM (2 THEMES: SÁNG & TỐI)
-   1. Buổi sáng: #fff3d6 -> #ffe9b0 | text #4a2c1a | sec #f4a261 | CTA #2e7d32
-   2. Buổi tối:  #5c2a1e -> #2e0f0c | text #fff7ed | sec #f4a261 | CTA #ff9f1c
+   AUTHENTIC CULINARY PALETTE (Mon Ngon Moi Ngay & Cookpad)
+   Warm Red: #E52D27 / #D32F2F (Mon Ngon branding & highlights)
+   Warm Orange: #FA8C16 / #F97316 (Cookpad community action & warmth)
+   Light Canvas: #FAF8F5 / #FFFFFF (Fresh clean culinary feel)
    ========================================================================= */
 
 :root,
 [data-theme="light"],
 [data-time-theme="morning"] {
-  --theme-bg-start: #fff3d6;
-  --theme-bg-end: #ffe9b0;
-  --theme-text: #4a2c1a;
-  --theme-secondary: #f4a261;
-  --theme-cta: #2e7d32;
+  --theme-bg-start: #FAF8F5;
+  --theme-bg-end: #F5EFEB;
+  --theme-text: #26211E;
+  --theme-secondary: #FA8C16;
+  --theme-cta: #D32F2F;
   --theme-cta-text: #ffffff;
-  --theme-nav: rgba(255, 243, 214, 0.88);
-  --theme-border: rgba(74, 44, 26, 0.12);
+  --theme-nav: rgba(255, 255, 255, 0.94);
+  --theme-border: rgba(38, 33, 30, 0.08);
 
-  --background: #fff3d6;
-  --foreground: #4a2c1a;
-  --card: rgba(255, 255, 255, 0.88);
-  --card-foreground: #4a2c1a;
-  --popover: #ffffff;
-  --popover-foreground: #4a2c1a;
-  --primary: #2e7d32;
-  --primary-foreground: #ffffff;
-  --secondary: #f4a261;
-  --secondary-foreground: #4a2c1a;
-  --muted: rgba(74, 44, 26, 0.08);
-  --muted-foreground: rgba(74, 44, 26, 0.72);
-  --accent: rgba(244, 162, 97, 0.18);
-  --accent-foreground: #4a2c1a;
-  --destructive: #d62828;
-  --destructive-foreground: #ffffff;
-  --border: rgba(74, 44, 26, 0.14);
-  --input: rgba(74, 44, 26, 0.16);
-  --ring: #2e7d32;
-  --radius: 0.875rem;
+  --background: #FAF8F5;
+  --foreground: #26211E;
+  --card: #FFFFFF;
+  --card-foreground: #26211E;
+  --popover: #FFFFFF;
+  --popover-foreground: #26211E;
+  --primary: #D32F2F;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FA8C16;
+  --secondary-foreground: #FFFFFF;
+  --muted: #F2ECE7;
+  --muted-foreground: #736862;
+  --accent: #FDF3E7;
+  --accent-foreground: #D32F2F;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #E8E2DC;
+  --input: #E4DDD6;
+  --ring: #D32F2F;
+  --radius: 0.75rem;
 
-  --badge-glow: rgba(46, 125, 50, 0.25);
-  --card-shadow: 0 10px 25px -5px rgba(74, 44, 26, 0.08), 0 8px 10px -6px rgba(74, 44, 26, 0.04);
+  --badge-glow: rgba(211, 47, 47, 0.15);
+  --card-shadow: 0 4px 16px -2px rgba(38, 33, 30, 0.06), 0 2px 6px -1px rgba(38, 33, 30, 0.03);
 }
 
 .dark,
 [data-theme="dark"],
 [data-time-theme="night"] {
-  --theme-bg-start: #111827;
-  --theme-bg-end: #030712;
-  --theme-text: #f8fafc;
-  --theme-secondary: #f4a261;
-  --theme-cta: #ff9f1c;
-  --theme-cta-text: #030712;
-  --theme-nav: rgba(17, 24, 39, 0.88);
-  --theme-border: rgba(244, 162, 97, 0.18);
+  --theme-bg-start: #1C1917;
+  --theme-bg-end: #12100E;
+  --theme-text: #F5F0EB;
+  --theme-secondary: #FA8C16;
+  --theme-cta: #EF4444;
+  --theme-cta-text: #FFFFFF;
+  --theme-nav: rgba(28, 25, 23, 0.94);
+  --theme-border: rgba(235, 225, 215, 0.1);
 
-  --background: #030712;
-  --foreground: #f8fafc;
-  --card: rgba(17, 24, 39, 0.82);
-  --card-foreground: #f8fafc;
-  --popover: #111827;
-  --popover-foreground: #f8fafc;
-  --primary: #ff9f1c;
-  --primary-foreground: #030712;
-  --secondary: #f4a261;
-  --secondary-foreground: #030712;
-  --muted: rgba(248, 250, 252, 0.08);
-  --muted-foreground: rgba(248, 250, 252, 0.72);
-  --accent: rgba(244, 162, 97, 0.22);
-  --accent-foreground: #f8fafc;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: rgba(244, 162, 97, 0.18);
-  --input: rgba(244, 162, 97, 0.18);
-  --ring: #ff9f1c;
-  --radius: 0.875rem;
+  --background: #171513;
+  --foreground: #F5F0EB;
+  --card: #211E1C;
+  --card-foreground: #F5F0EB;
+  --popover: #211E1C;
+  --popover-foreground: #F5F0EB;
+  --primary: #EF4444;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FA8C16;
+  --secondary-foreground: #FFFFFF;
+  --muted: #2C2825;
+  --muted-foreground: #A89F97;
+  --accent: #332822;
+  --accent-foreground: #FA8C16;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #332E2A;
+  --input: #38322E;
+  --ring: #EF4444;
+  --radius: 0.75rem;
 
-  --badge-glow: rgba(255, 159, 28, 0.3);
-  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.55), 0 8px 10px -6px rgba(0, 0, 0, 0.45);
+  --badge-glow: rgba(239, 68, 68, 0.2);
+  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
 }
+
 
 @layer base {
   * {

@@ -41,7 +41,9 @@ import {
   faGear,
   faRotate,
   faCheck,
+  faShieldHeart,
 } from '@fortawesome/free-solid-svg-icons';
+import { AllergyProfileTab } from '@/components/profile/AllergyProfileTab';
 
 const AUTO_RESET_KEY = 'an_gi_auto_reset_eaten_config';
 
@@ -63,7 +65,7 @@ export default function ProfilePage() {
     useAuth();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'profile' | 'eaten' | 'preferences' | 'security'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'allergies' | 'eaten' | 'preferences' | 'security'>('profile');
 
   // Profile update form state
   const [username, setUsername] = useState('');
@@ -757,7 +759,7 @@ export default function ProfilePage() {
         <Tabs
           value={activeTab}
           onValueChange={(val) =>
-            setActiveTab(val as 'profile' | 'eaten' | 'preferences' | 'security')
+            setActiveTab(val as 'profile' | 'allergies' | 'eaten' | 'preferences' | 'security')
           }
           className="space-y-6 w-full"
         >
@@ -770,6 +772,11 @@ export default function ProfilePage() {
                   value: 'profile',
                   label: 'Cá Nhân',
                   icon: <FontAwesomeIcon icon={faUser} />,
+                },
+                {
+                  value: 'allergies',
+                  label: 'Bộ Lọc Dị Ứng (FR-SYS-04)',
+                  icon: <FontAwesomeIcon icon={faShieldHeart} className="text-amber-500" />,
                 },
                 {
                   value: 'eaten',
@@ -789,11 +796,16 @@ export default function ProfilePage() {
               ]}
               activeTab={activeTab}
               onChange={(val) =>
-                setActiveTab(val as 'profile' | 'eaten' | 'preferences' | 'security')
+                setActiveTab(val as 'profile' | 'allergies' | 'eaten' | 'preferences' | 'security')
               }
               tabClassName="px-4 sm:px-6 py-3"
             />
           </div>
+
+          {/* TAB 0: BỘ LỌC DỊ ỨNG & TƯƠNG TÁC (FR-SYS-04) */}
+          <TabsContent value="allergies" className="w-full">
+            <AllergyProfileTab userId={user.user_id || (user as any).id || 1} />
+          </TabsContent>
 
           {/* TAB 1: THÔNG TIN CÁ NHÂN */}
           <TabsContent value="profile" className="w-full">
