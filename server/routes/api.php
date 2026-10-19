@@ -108,3 +108,37 @@ Route::prefix('upload')->group(function () {
         Route::post('/', [UploadController::class, 'uploadImage']);
     });
 });
+
+// =========================================================================
+// 1. Phân hệ Món ăn Hệ thống & Mini-Games (Món Ngon Mỗi Ngày)
+// =========================================================================
+Route::prefix('system-dishes')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\SystemDishController::class, 'index']);
+    Route::get('/tinder', [\App\Http\Controllers\Api\SystemDishController::class, 'tinder']);
+    Route::post('/gacha', [\App\Http\Controllers\Api\SystemDishController::class, 'gacha']);
+    Route::post('/interact', [\App\Http\Controllers\Api\SystemDishController::class, 'interact']);
+    Route::get('/{slug}', [\App\Http\Controllers\Api\SystemDishController::class, 'show']);
+    Route::post('/', [\App\Http\Controllers\Api\SystemDishController::class, 'store']);
+});
+
+// =========================================================================
+// 2. Phân hệ Mạng xã hội Ẩm thực (Cookpad style)
+// =========================================================================
+Route::prefix('community')->group(function () {
+    Route::get('/topics', [\App\Http\Controllers\Api\CommunityController::class, 'topics']);
+    Route::post('/topics', [\App\Http\Controllers\Api\CommunityController::class, 'createTopic']);
+    Route::get('/posts', [\App\Http\Controllers\Api\CommunityController::class, 'posts']);
+    Route::get('/posts/{id}', [\App\Http\Controllers\Api\CommunityController::class, 'showPost']);
+    Route::post('/posts', [\App\Http\Controllers\Api\CommunityController::class, 'storePost']);
+    Route::post('/comments', [\App\Http\Controllers\Api\CommunityController::class, 'addComment']);
+});
+
+// =========================================================================
+// 3. Phân hệ Báo cáo Vi phạm & Kiểm duyệt (Moderation)
+// =========================================================================
+Route::prefix('moderation')->group(function () {
+    Route::post('/report', [\App\Http\Controllers\Api\ModerationController::class, 'report']);
+    Route::get('/queue', [\App\Http\Controllers\Api\ModerationController::class, 'queue']);
+    Route::post('/resolve/{id}', [\App\Http\Controllers\Api\ModerationController::class, 'resolve']);
+});
+

@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\UserRole;
-use App\Enums\UserStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,76 +12,93 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $table = 'USERS';
-
-    protected $primaryKey = 'user_id';
-
-    public $timestamps = false;
+    protected $table = 'users';
 
     protected $fillable = [
         'email',
-        'username',
-        'address',
+        'password_hash',
+        'display_name',
+        'avatar_url',
         'role',
         'status',
-        'hashed_password',
     ];
 
     protected $hidden = [
-        'hashed_password',
+        'password_hash',
     ];
 
-    /**
-     * Get the password for the user.
-     */
     public function getAuthPassword(): string
     {
-        return $this->hashed_password;
+        return $this->password_hash;
     }
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    public function allergyIngredients(): BelongsToMany
     {
-        return [
-            'role' => UserRole::class,
-            'status' => UserStatus::class,
-            'created_at' => 'datetime',
-        ];
+        return $this->belongsToMany(
+            NutritionIngredient::class,
+            'user_allergy_ingredients',
+            'user_id',
+            'ingredient_id'
+        );
     }
 
-    public function favoriteFoods(): BelongsToMany
+    public function dishInteractions(): HasMany
     {
-        return $this->belongsToMany(Food::class, 'FAVORITE_FOODS', 'user_id', 'food_id')
-            ->withPivot('note');
+        return $this->hasMany(UserDishInteraction::class, 'user_id', 'id');
     }
 
-    public function hatedFoods(): BelongsToMany
+    public function favouriteDishes(): BelongsToMany
     {
-        return $this->belongsToMany(Food::class, 'HATED_FOODS', 'user_id', 'food_id')
-            ->withPivot('note');
+        return $this->belongsToMany(
+            SystemDish::class,
+            'user_dish_interactions',
+            'user_id',
+            'dish_id'
+        )->wherePivot('interaction_type', 'FAVOURITE');
     }
 
-    public function eatenFoods(): HasMany
+    public function dislikedDishes(): BelongsToMany
     {
-        return $this->hasMany(EatenFood::class, 'user_id', 'user_id');
+        return $this->belongsToMany(
+            SystemDish::class,
+            'user_dish_interactions',
+            'user_id',
+            'dish_id'
+        )->wherePivot('interaction_type', 'DISLIKE');
     }
 
-    public function gachaFoods(): HasMany
+    public function allergicDishes(): BelongsToMany
     {
-        return $this->hasMany(GachaFood::class, 'user_id', 'user_id');
+        return $this->belongsToMany(
+            SystemDish::class,
+            'user_dish_interactions',
+            'user_id',
+            'dish_id'
+        )->wherePivot('interaction_type', 'ALLERGY');
     }
 
-    public function reports(): HasMany
+    public function communityTopics(): HasMany
     {
-        return $this->hasMany(Report::class, 'author_id', 'user_id');
+        return $this->hasMany(CommunityTopic::class, 'created_by', 'id');
     }
 
-    public function contributedFoods(): HasMany
+    public function communityPosts(): HasMany
     {
-        return $this->hasMany(Food::class, 'contributor_id', 'user_id');
+        return $this->hasMany(CommunityPost::class, 'author_id', 'id');
+    }
+
+    public function communityComments(): HasMany
+    {
+        return $this->hasMany(CommunityComment::class, 'user_id', 'id');
+    }
+
+    public function submittedReports(): HasMany
+    {
+        return $this->hasMany(ModerationReport::class, 'reporter_id', 'id');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'ADMIN';
     }
 }
